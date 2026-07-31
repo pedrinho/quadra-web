@@ -69,13 +69,22 @@ headlessly.
 - [x] Piece movement, rotation, the single-nudge wall kick, DAS
 - [x] Gravity, stamping, scoring, levels
 - [x] Fixed 100 Hz loop with backlog skipping
+- [x] Rendering — indexed framebuffer, original 18px bevelled art, real backgrounds
+- [x] Browser input and a playable game shell
+- [x] Validated against the original on a real captured position
 - [ ] Garbage and attacks
-- [ ] Rendering (original 18px bevelled art)
-- [ ] Browser input and game shell
 - [ ] Multiplayer
 
-A full game runs headlessly today: `npm run demo` drives a cascade through the real module
-stack and prints it frame by frame.
+It is playable in a browser: `npm run dev`. `npm run demo` drives a cascade through the
+real module stack and prints it frame by frame.
+
+### Verified against the original
+
+A position was captured from Quadra 1.3.0 with `QUADRA_DUMP=1`, before and after one move.
+The real game reported Score 22000, Lines 8, one 8-line clear. The port reproduces it
+exactly — chain 7, 8 lines, 22000 points, and the resulting board matching cell for cell
+including which cells stay welded. `web/test/oracle.test.ts` asserts it, and that the
+matching placement is the only one that produces that board.
 
 Design decisions, the mechanic written out in full, and the known fidelity hazards are recorded
 in the project plan.

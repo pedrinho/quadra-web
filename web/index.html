@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Quadra Web</title>
+    <style>
+      :root { color-scheme: dark; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0; min-height: 100vh; display: flex; flex-direction: column;
+        align-items: center; justify-content: center; gap: 12px;
+        background: #14161a; color: #d6d9de;
+        font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+      canvas {
+        image-rendering: pixelated;
+        border: 1px solid #2a2f37;
+        max-width: 100%;
+      }
+      .hud { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; }
+      .hud b { color: #fff; font-weight: 600; }
+      .keys { color: #767d89; font-size: 12px; text-align: center; }
+      #status { min-height: 1.5em; color: #e0a45e; }
+    </style>
+  </head>
+  <body>
+    <canvas id="screen" width="640" height="480"></canvas>
+    <div class="hud">
+      <span>score <b id="score">0</b></span>
+      <span>lines <b id="lines">0</b></span>
+      <span>level <b id="level">1</b></span>
+      <span>best chain <b id="chain">0</b></span>
+    </div>
+    <div id="status"></div>
+    <div class="keys">
+      &larr; &rarr; move &nbsp;·&nbsp; &darr; soft drop &nbsp;·&nbsp; space hard drop
+      &nbsp;·&nbsp; Z / X rotate &nbsp;·&nbsp; right-shift flip &nbsp;·&nbsp; P pause
+      &nbsp;·&nbsp; R restart
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
