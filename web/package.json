@@ -2,7 +2,7 @@
   "name": "quadra-web",
   "version": "0.1.0",
   "private": true,
-  "description": "Browser port of Quadra (Ludus Design, 1998) \u2014 faithful connectivity-gravity engine",
+  "description": "Browser port of Quadra (Ludus Design, 1998) — faithful connectivity-gravity engine",
   "license": "LGPL-2.1-or-later",
   "type": "module",
   "scripts": {
@@ -15,6 +15,7 @@
     "demo": "vite-node tools/demo-cascade.ts"
   },
   "devDependencies": {
+    "@types/node": "^26.1.2",
     "typescript": "^5.6.3",
     "vite": "^5.4.10",
     "vitest": "^2.1.4"
