@@ -24,7 +24,8 @@ export class Framebuffer {
   /** 256 entries, RGB triples. */
   readonly palette = new Uint8Array(768);
 
-  private readonly rgba: ImageData;
+  /** Allocated on first present(). Drawing needs no browser; only showing the result does. */
+  private rgba: ImageData | null = null;
 
   /* Clip rectangle. The original gets this for free: every pane and board draws into its
    * own Video_bitmap, which is a sub-rectangle view of the screen, so a piece sliding in
@@ -40,10 +41,6 @@ export class Framebuffer {
     this.pixels = new Uint8Array(width * height);
     this.clipW = width;
     this.clipH = height;
-    this.rgba = new ImageData(width, height);
-    // Alpha is constant; only RGB is rewritten each frame.
-    const d = this.rgba.data;
-    for (let i = 3; i < d.length; i += 4) d[i] = 255;
   }
 
   /** Restrict drawing to a rectangle, as a Video_bitmap sub-view does. */
@@ -175,6 +172,12 @@ export class Framebuffer {
   /** Expand the indexed buffer through the palette and present it. */
   present(ctx: CanvasRenderingContext2D): void {
     const { pixels, palette } = this;
+    if (!this.rgba) {
+      this.rgba = new ImageData(this.width, this.height);
+      // Alpha is constant; only RGB is rewritten each frame.
+      const d = this.rgba.data;
+      for (let i = 3; i < d.length; i += 4) d[i] = 255;
+    }
     const out = this.rgba.data;
     for (let i = 0, o = 0; i < pixels.length; i++, o += 4) {
       const p = pixels[i]! * 3;

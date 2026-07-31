@@ -94,7 +94,17 @@ export function drawFallingPiece(fb: Framebuffer, bloc: Bloc, ghost = false): vo
   });
 }
 
-/** Draw a preview piece. `small` uses the 6px cell size, as the two nearer previews do. */
+/**
+ * Draw a preview piece. `small` uses the 6px cell size, as the two nearer previews do.
+ *
+ * A preview zone is four cells wide but only **two** tall (`Zone_next`, source/zone.h:98),
+ * and the piece is drawn one cell *above* the zone (source/zone.cc:41-44, :57-61). That
+ * looks odd until you notice every piece occupies grid rows 1 and 2 at rotation 0, so the
+ * offset lands them exactly inside the two-cell zone.
+ *
+ * Getting either half of that wrong matters: the full-size third preview sits at y=0, so a
+ * four-cell-tall erase reaches 35px past BOARD_Y and wipes the piece descending into view.
+ */
 export function drawPreview(
   fb: Framebuffer,
   bg: QImage,
@@ -104,15 +114,16 @@ export function drawPreview(
   small = false,
 ): void {
   const size = small ? SMALL_CELL : CELL;
-  eraseRegion(fb, bg, x, y, size * 4, size * 4);
+  eraseRegion(fb, bg, x, y, size * 4, size * 2);
   if (!bloc) return;
   const grid = bloc.grid();
+  const top = y - size;
   for (let j = 0; j < 4; j++)
     for (let i = 0; i < 4; i++) {
       const t = grid[j]![i]!;
       if (!t) continue;
-      if (small) drawBlocSmall(fb, x + i * size, y + j * size, t, bloc.col);
-      else drawBloc(fb, x + i * size, y + j * size, t, bloc.col);
+      if (small) drawBlocSmall(fb, x + i * size, top + j * size, t, bloc.col);
+      else drawBloc(fb, x + i * size, top + j * size, t, bloc.col);
     }
 }
 
