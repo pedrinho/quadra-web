@@ -46,7 +46,7 @@ function dropAndSettle(canvas: Canvas, piece: number, rot: number, col: number) 
   bloc.calcXY();
 
   const overmind = new Overmind();
-  const env: PlayerEnv = { overmind, videoFrame: 0, levelUp: true, paused: false };
+  const env: PlayerEnv = { overmind, videoFrame: 0, levelUp: true, paused: false, sounds: [] };
   const executor = new Executor();
   executor.add(new PlayerStamp(canvas, env));
   overmind.start(executor);
@@ -59,7 +59,7 @@ function dropAndSettle(canvas: Canvas, piece: number, rot: number, col: number) 
     assertWeldInvariant(canvas);
     chain = Math.max(chain, canvas.complexity);
   }
-  return { frames, chain };
+  return { frames, chain, sounds: env.sounds };
 }
 
 describe('oracle — matches the original C++ game on a real position', () => {
@@ -82,6 +82,23 @@ describe('oracle — matches the original C++ game on a real position', () => {
     expect(board.linesTot).toBe(8);
     // 200*8*8 = 12800 for the lines, + 200*(7-1)^2 = 7200 for the chain, +10% at level 1.
     expect(board.score).toBe(22000);
+  });
+
+  it('walks the chain up one step per cascade in its sound events', () => {
+    // The pitch of the line-clear sound drops 256 per chain step (source/player.cc:762),
+    // so on this seven-deep cascade the audio should count 1..7 with no gaps or repeats.
+    const board = loadBoard('tchain-before.dump');
+    const { sounds } = dropAndSettle(board, PIECE_T, 1, 8);
+
+    const chains = sounds.filter((s) => s.kind === 'lineClear').map((s) => s.chain);
+    expect(chains).toEqual([1, 2, 3, 4, 5, 6, 7]);
+
+    // One landing, and a settle for each fall that actually moved something.
+    expect(sounds.filter((s) => s.kind === 'land')).toHaveLength(1);
+    expect(sounds.filter((s) => s.kind === 'cascadeSettled').length).toBeGreaterThan(0);
+    for (const s of sounds) {
+      if (s.kind === 'cascadeSettled') expect(s.rowsFallen).toBeGreaterThan(0);
+    }
   });
 
   it('is the only hard drop that reproduces this board', () => {

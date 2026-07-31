@@ -20,6 +20,9 @@ import { Keyboard } from './input/keyboard.js';
 import { Bloc } from './engine/bloc.js';
 import { loadSettings, saveSettings } from './settings.js';
 import { SettingsPanel, bindingsHelp } from './ui/settings-panel.js';
+import { createMixer, WebAudioMixer } from './audio/mixer.js';
+import { loadSoundBank, type SoundBuffer } from './audio/sound-bank.js';
+import { SoundPlayer } from './audio/sound-player.js';
 
 const el = <T extends HTMLElement>(id: string): T => {
   const found = document.getElementById(id);
@@ -43,9 +46,22 @@ async function main(): Promise<void> {
   const backgrounds: QImage[] = [];
   for (let i = 0; i < 10; i++) backgrounds.push(await loadQimg(`assets/fond${i}.qimg`));
 
+  // Audio is optional: a browser without Web Audio, or a checkout where the asset bank has
+  // not been generated, must still leave the game fully playable.
+  const { mixer, ctx: audioCtx } = createMixer();
+  let bank: ReadonlyMap<string, SoundBuffer> = new Map();
+  if (audioCtx) {
+    try {
+      bank = await loadSoundBank('assets/sounds.qsnd', audioCtx);
+    } catch (err) {
+      console.warn('sound disabled:', err);
+    }
+  }
+
   const fb = new Framebuffer();
   const settings = loadSettings();
   const keyboard = new Keyboard(settings.keys);
+  const sounds = new SoundPlayer(bank, mixer);
 
   let game: Game;
   let currentLevel = -1;
@@ -63,6 +79,8 @@ async function main(): Promise<void> {
     });
     keyboard.attach(window, game.canvas);
     currentLevel = -1;
+    game.drainSounds(); // discard anything queued during construction
+    sounds.playStart();
   };
   startGame();
 
@@ -75,6 +93,7 @@ async function main(): Promise<void> {
     game.canvas.reinit();
     // Order matters: Keyboard pushes the bindings into the canvas, so its grouping wins.
     keyboard.setBindings(settings.keys);
+    if (mixer instanceof WebAudioMixer) mixer.setVolume(settings.volume);
     helpEl.textContent = bindingsHelp(settings);
   };
 
@@ -145,6 +164,9 @@ async function main(): Promise<void> {
     const delta = Math.min(now - last, 250);
     last = now;
     if (!game.isOver) game.advance(delta);
+    // The level picks the sample theme, as Canvas::change_level does in the original.
+    sounds.level = game.canvas.level;
+    sounds.play(game.drainSounds());
     render();
     requestAnimationFrame(frame);
   };
@@ -158,11 +180,18 @@ async function main(): Promise<void> {
       get game() {
         return game;
       },
+      mixer,
+      sounds,
+      audioCtx,
       step(frames = 1) {
         for (let i = 0; i < frames; i++) {
           game.beginRenderFrame();
           game.step();
         }
+        // Same as the rAF loop does, so stepping by hand behaves like real play. Without
+        // this the sound queue just grows, since rAF stops in a background tab.
+        sounds.level = game.canvas.level;
+        sounds.play(game.drainSounds());
         render();
         return {
           score: game.canvas.score,
@@ -198,6 +227,14 @@ async function main(): Promise<void> {
     };
   }
 
+  // Browsers hold an AudioContext suspended until the page sees a real user gesture, so
+  // the first keypress or click is what actually switches sound on.
+  const wakeAudio = () => {
+    if (mixer instanceof WebAudioMixer) void mixer.resume();
+  };
+  window.addEventListener('keydown', wakeAudio);
+  window.addEventListener('pointerdown', wakeAudio);
+
   window.addEventListener('keydown', (e) => {
     if (e.code === 'Escape') {
       e.preventDefault();
@@ -212,7 +249,10 @@ async function main(): Promise<void> {
       startGame();
       applySettings();
     }
-    if (e.code === 'KeyP') game.paused = !game.paused;
+    if (e.code === 'KeyP') {
+      game.paused = !game.paused;
+      sounds.playPause();
+    }
   });
 
   requestAnimationFrame(frame);

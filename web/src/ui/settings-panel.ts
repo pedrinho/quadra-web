@@ -39,6 +39,8 @@ export class SettingsPanel {
   private readonly hSlider: HTMLInputElement;
   private readonly vSlider: HTMLInputElement;
   private readonly continuousBox: HTMLInputElement;
+  private readonly volumeSlider: HTMLInputElement;
+  private readonly volumeReadout: HTMLElement;
   private readonly hint: HTMLElement;
 
   /** Slots still to be bound; the head is armed. Empty means not capturing. */
@@ -85,6 +87,16 @@ export class SettingsPanel {
       this.commit();
     });
 
+    this.volumeSlider = slider();
+    // No preset ticks here — the original has no volume setting to take them from.
+    this.volumeSlider.removeAttribute('list');
+    this.volumeReadout = document.createElement('div');
+    this.volumeReadout.className = 'readout';
+    this.volumeSlider.addEventListener('input', () => {
+      this.settings.volume = Number(this.volumeSlider.value);
+      this.commit();
+    });
+
     const title = document.createElement('h2');
     title.textContent = 'Settings';
     const close = button('close', () => this.hide());
@@ -102,6 +114,10 @@ export class SettingsPanel {
       checkboxRow('Continuous down', this.continuousBox, 'Keep soft-dropping into the next piece'),
       presets,
     );
+
+    const sound = document.createElement('div');
+    sound.className = 'group';
+    sound.append(sectionTitle('Sound'), field('Volume', this.volumeSlider, this.volumeReadout));
 
     const keys = document.createElement('div');
     keys.className = 'group';
@@ -125,7 +141,7 @@ export class SettingsPanel {
 
     const panel = document.createElement('div');
     panel.className = 'panel';
-    panel.append(head, speeds, keys, actions, this.hint);
+    panel.append(head, speeds, sound, keys, actions, this.hint);
     this.root.append(panel);
     opts.host.append(this.root);
 
@@ -211,6 +227,9 @@ export class SettingsPanel {
     this.hSlider.value = String(this.settings.hSensitivity);
     this.vSlider.value = String(this.settings.vSensitivity);
     this.continuousBox.checked = this.settings.continuous;
+    this.volumeSlider.value = String(this.settings.volume);
+    this.volumeReadout.textContent =
+      this.settings.volume === 0 ? 'muted' : `${this.settings.volume}%`;
 
     const tuning = deriveRepeat(this.settings.hSensitivity, this.settings.vSensitivity);
     this.hReadout.textContent =

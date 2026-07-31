@@ -202,7 +202,7 @@ function run(scenario: Scenario, opts: Opts) {
     return;
   }
   const overmind = new Overmind();
-  const env: PlayerEnv = { overmind, videoFrame: 0, levelUp: true, paused: false };
+  const env: PlayerEnv = { overmind, videoFrame: 0, levelUp: true, paused: false, sounds: [] };
 
   console.log('\nsetup');
   console.log(render(canvas, opts.height));

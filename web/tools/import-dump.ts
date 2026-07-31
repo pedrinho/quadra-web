@@ -137,7 +137,7 @@ assertWeldInvariant(canvas);
 console.log(render(canvas));
 
 const overmind = new Overmind();
-const env: PlayerEnv = { overmind, videoFrame: 0, levelUp: true, paused: false };
+const env: PlayerEnv = { overmind, videoFrame: 0, levelUp: true, paused: false, sounds: [] };
 for (const spec of drops) drop(canvas, env, overmind, parseDrop(spec));
 
 console.log(`\nscore ${canvas.score}   lines ${canvas.linesTot}   level ${canvas.level}\n`);

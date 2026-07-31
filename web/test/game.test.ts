@@ -246,6 +246,71 @@ describe('continuous down', () => {
   });
 });
 
+describe('sound events', () => {
+  it('reports a landing with the column it landed in', () => {
+    const g = new Game({ seed: 42 });
+    g.runFrames(10);
+    g.drainSounds();
+    const column = g.canvas.bloc!.bx;
+
+    g.canvas.pressKey(Action.Drop);
+    g.runUntil(() => g.canvas.bloc === null, 2000);
+
+    expect(g.drainSounds()).toContainEqual({ kind: 'land', column });
+  });
+
+  it('reports a rotation only when the rotation succeeded', () => {
+    const g = new Game({ seed: 11 });
+    g.runFrames(4);
+    while (g.canvas.bloc!.quel === 0) {
+      g.canvas.pressKey(Action.Drop);
+      g.runUntil(() => g.canvas.bloc === null, 500);
+      g.runFrames(20);
+    }
+    g.drainSounds();
+
+    g.canvas.pressKey(Action.RotateLeft);
+    g.runFrames(2);
+    // Rotations fire on release, so nothing yet.
+    expect(g.drainSounds()).toEqual([]);
+
+    g.canvas.releaseKey(Action.RotateLeft);
+    g.runFrames(2);
+    expect(g.drainSounds()).toEqual([{ kind: 'rotate', column: g.canvas.bloc!.bx }]);
+  });
+
+  it('announces the end of the game exactly once', () => {
+    const g = new Game({ seed: 20260730 });
+    let overs = 0;
+    let frames = 0;
+    while (!g.isOver && frames < 60_000) {
+      g.runFrames(1);
+      frames++;
+      for (const ev of g.drainSounds()) if (ev.kind === 'gameOver') overs++;
+    }
+    expect(g.isOver).toBe(true);
+    expect(overs).toBe(1);
+  });
+
+  it('cannot affect the simulation', () => {
+    // The whole reason sound is a drained queue rather than a callback: the audio layer
+    // must not be able to perturb the game. Draining every frame has to produce a
+    // bit-identical game to never draining at all.
+    const play = (drain: boolean) => {
+      const g = new Game({ seed: 555 });
+      for (let i = 0; i < 4000; i++) {
+        if (i % 37 === 0) g.canvas.pressKey(Action.Left);
+        if (i % 53 === 0) g.canvas.releaseKey(Action.Left);
+        if (i % 71 === 0) g.canvas.pressKey(Action.Drop);
+        g.runFrames(1);
+        if (drain) g.drainSounds();
+      }
+      return { score: g.canvas.score, lines: g.canvas.linesTot, board: boardToAscii(g.canvas) };
+    };
+    expect(play(true)).toEqual(play(false));
+  });
+});
+
 describe('scoring', () => {
   it('matches the original score curve', () => {
     expect(baseScore(1, 1, false)).toBe(250);

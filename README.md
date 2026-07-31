@@ -72,6 +72,7 @@ Playable. The engine was ported and verified headlessly before any rendering exi
 - [x] Browser input and a playable game shell
 - [x] Validated against the original on a real captured position
 - [x] Configurable keys and repeat sensitivity, persisted in the browser
+- [x] Sound — the original samples, per-level themes, and the 8-voice mixer policy
 - [ ] Garbage and attacks
 - [ ] Multiplayer
 
@@ -98,6 +99,17 @@ stays an integer frame count so the DAS loop keeps matching `source/player.cc` l
 
 That is a config-layer divergence only. The simulation it feeds, and the position validated
 above, are unaffected.
+
+The same panel has a **volume** slider, which the original does not have at all — it offers
+only a `-nosound` flag. Sound itself is faithful: the original samples, the ten per-level
+sample themes, the pitch that drops 256 units per cascade step, and the 8-voice limit that
+drops rather than steals, so a deep chain thins out the way it always did. There is no music
+to port — the `cdmusic` setting is vestigial from the DOS original and is read nowhere.
+
+The simulation stays silent and pure: it queues plain event records and the audio layer,
+which owns its own randomness, decides how they sound. The original is equally careful,
+drawing every sound wobble from the global RNG rather than the seeded game LCG — reading the
+game LCG for audio would shift the piece sequence.
 
 Design decisions, the mechanic written out in full, and the known fidelity hazards are recorded
 in the project plan.

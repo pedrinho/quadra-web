@@ -14,10 +14,16 @@ import { Bloc } from './bloc.js';
 import { COLS, PLAY_BOTTOM, ROWS, idx } from './board.js';
 import { clearFullLines, computeSupport, dropUnsupported } from './cascade.js';
 import { giveLine } from './rules.js';
+import type { SoundEvent } from './sound-events.js';
 
 /** Shared environment for the player modules. */
 export interface PlayerEnv {
   overmind: Overmind;
+  /**
+   * Sounds the simulation wants played, oldest first. Write-only from in here — the engine
+   * never reads it back, so draining it cannot change the game. See sound-events.ts.
+   */
+  sounds: SoundEvent[];
   /**
    * Rendered-frame counter. Input is sampled at most once per rendered frame
    * (source/player.cc:299-304), so DAS ticks at render rate, not simulation rate. The
@@ -68,6 +74,7 @@ export class PlayerBase extends Module {
     const t = (b.rot - 1) & 3;
     if (!c.collide(b.bx, b.by, t)) {
       b.rot = t;
+      this.env.sounds.push({ kind: 'rotate', column: b.bx });
       return true;
     }
     return false;
@@ -80,6 +87,7 @@ export class PlayerBase extends Module {
     const t = (b.rot + (twice ? 2 : 1)) & 3;
     if (!c.collide(b.bx, b.by, t)) {
       b.rot = t;
+      this.env.sounds.push({ kind: 'rotate', column: b.bx });
       return true;
     }
     return false;
@@ -378,6 +386,8 @@ export class PlayerStamp extends PlayerBase {
     }
     c.lastX += b.bx;
 
+    this.env.sounds.push({ kind: 'land', column: b.bx });
+
     c.bloc = null;
     c.blocShadow = null;
   }
@@ -404,10 +414,18 @@ export class PlayerCheckLine extends PlayerBase {
       c.depth += cleared.count;
       c.complexity++;
       if (c.isClean()) c.sendForClean = true;
+      // The original plays this from the Player_flash_lines constructor, after complexity
+      // has been bumped — so the pitch drop reflects the chain step just entered.
+      this.env.sounds.push({ kind: 'lineClear', chain: c.complexity });
       // call(), not exec() — so this module runs again once the fall has settled.
       this.call(new PlayerFlashLines(c, this.env));
     } else {
+      // The original spawns a whole Player_level_up module from Canvas::give_line just to
+      // play this (source/player.cc:973-976); here the level bump is a plain field, so
+      // watch it rather than teaching the scoring rules about sound.
+      const levelBefore = c.level;
       giveLine(c, this.env.levelUp);
+      if (c.level !== levelBefore) this.env.sounds.push({ kind: 'levelUp' });
       this.ret();
     }
   }
@@ -465,6 +483,14 @@ export class PlayerCheckLink extends PlayerBase {
       // marks accumulate: supported cells never move, so their marks stay valid, and
       // clearing would also wipe `moved`, which carries the garbage hole positions.
     } else {
+      // Only when something actually fell — source/player.cc:849.
+      if (this.tombe) {
+        this.env.sounds.push({
+          kind: 'cascadeSettled',
+          chain: c.complexity,
+          rowsFallen: this.tombe,
+        });
+      }
       this.ret();
     }
   }
@@ -478,6 +504,7 @@ export class PlayerDead extends PlayerBase {
   override init(): void {
     const c = this.canvas;
     c.dead = true;
+    this.env.sounds.push({ kind: 'gameOver' });
     c.bloc = null;
     c.blocShadow = null;
     this.ret();

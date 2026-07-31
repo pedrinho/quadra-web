@@ -10,6 +10,7 @@ import { Executor, Overmind } from './modules.js';
 import { Canvas } from './canvas.js';
 import { PlayerNormal, type PlayerEnv } from './player.js';
 import { DEFAULT_SENSITIVITY } from './sensitivity.js';
+import type { SoundEvent } from './sound-events.js';
 
 /** Milliseconds per simulation tick. The simulation is a fixed 100 Hz. */
 export const TICK_MS = 10;
@@ -78,7 +79,7 @@ export class Game {
     if (keys) this.canvas.applyBindings(keys);
     this.canvas.calcSpeed();
 
-    this.env = { overmind: this.overmind, videoFrame: 0, levelUp, paused: false };
+    this.env = { overmind: this.overmind, videoFrame: 0, levelUp, paused: false, sounds: [] };
 
     this.executor.add(new PlayerNormal(this.canvas, this.env));
     this.overmind.start(this.executor);
@@ -98,6 +99,14 @@ export class Game {
 
   get paused(): boolean {
     return this.env.paused;
+  }
+
+  /**
+   * Take the sounds queued since the last call. Purely an output — the simulation never
+   * reads them, so a host that ignores sound plays an identical game.
+   */
+  drainSounds(): SoundEvent[] {
+    return this.env.sounds.splice(0, this.env.sounds.length);
   }
 
   /** Advance exactly one 10 ms simulation tick. */

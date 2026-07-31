@@ -26,7 +26,12 @@ export interface Settings {
   vSensitivity: number;
   /** When false the soft-drop key must be re-pressed for each new piece. */
   continuous: boolean;
+  /** Master volume, 0-100. The original has no volume setting at all, only `-nosound`. */
+  volume: number;
 }
+
+/** Loud enough to enjoy, quiet enough not to startle on first load. */
+export const DEFAULT_VOLUME = 70;
 
 /**
  * The original binds UP to both rotate slots (source/cfgfile.cc:85-91), which works there
@@ -67,11 +72,12 @@ export function defaultSettings(): Settings {
     hSensitivity: DEFAULT_SENSITIVITY,
     vSensitivity: DEFAULT_SENSITIVITY,
     continuous: true,
+    volume: DEFAULT_VOLUME,
   };
 }
 
-const clampPercent = (v: unknown): number => {
-  if (typeof v !== 'number' || !Number.isFinite(v)) return DEFAULT_SENSITIVITY;
+const clampPercent = (v: unknown, fallback: number): number => {
+  if (typeof v !== 'number' || !Number.isFinite(v)) return fallback;
   return Math.min(100, Math.max(0, Math.round(v)));
 };
 
@@ -91,8 +97,9 @@ export function normalizeSettings(raw: unknown): Settings {
       if (typeof code === 'string' && code !== '' && !RESERVED_KEYS.has(code)) s.keys[i] = code;
     }
   }
-  s.hSensitivity = clampPercent(o['hSensitivity']);
-  s.vSensitivity = clampPercent(o['vSensitivity']);
+  s.hSensitivity = clampPercent(o['hSensitivity'], DEFAULT_SENSITIVITY);
+  s.vSensitivity = clampPercent(o['vSensitivity'], DEFAULT_SENSITIVITY);
+  s.volume = clampPercent(o['volume'], DEFAULT_VOLUME);
   if (typeof o['continuous'] === 'boolean') s.continuous = o['continuous'];
   return s;
 }
