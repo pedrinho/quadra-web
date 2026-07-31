@@ -1,113 +1,94 @@
-Quadra Source Release
-=====================
+# Quadra Web
 
-This is the Quadra source release.
+A browser port of **Quadra**, the 1998 action puzzle game by Ludus Design.
 
-Requirements
-------------
+This project exists for one reason: Quadra's **connectivity gravity**. Cleared lines don't
+collapse row by row. Cells stay welded to the tetromino they arrived in, a line clear *severs*
+those welds, and whatever is left unsupported falls as a **rigid body** — which can complete more
+lines, cascading. No other Tetris-like plays quite the same.
 
- - a C++ compiler (gcc was tested on Linux and Visual C++ on Windows)
- - zlib (http://www.info-zip.org/pub/infozip/zlib/)
- - libpng (http://www.libpng.org/pub/png/libpng.html)
- - SDL 2.0 (http://www.libsdl.org/)
- - Boost::System and Boost::Filesystem libraries
+---
 
-On Ubuntu, the following packages are needed to build:
+## Credit and licensing
 
- - make
- - g++
- - libsdl2-dev
- - libpng12-dev
- - libboost-dev
- - libboost-filesystem-dev
+This is a derivative work. **Quadra was created by Ludus Design**, released as free software, and
+maintained thereafter by Pierre Phaneuf and contributors.
 
-Auto-update feature
--------------------
+| | |
+|---|---|
+| Original game | Quadra |
+| Copyright | © 1998–2000 Ludus Design |
+| | © 2006 Pierre Phaneuf and contributors |
+| Upstream | https://github.com/quadra-game/quadra |
+| License | GNU Lesser General Public License, version 2.1 or later |
 
-Some users have expressed privacy and performance concerns about the
-auto-update feature. This auto-update is implemented by fetching a small file
-using HTTP, no more than once per day. The information sent to the server is
-very limited: your IP address (from the connection itself) and the Quadra
-version you are currently using (from the HTTP User-Agent header). At the time
-of this writing, the Quadra team does not even have access to the logs where
-this information is stored (this file is hosted by Google Code). In the
-interest of full disclosure, similar information is sent to Qserv when using
-the Internet multi-player mode, with a few more technical informations (such
-as the platform and the display driver in use), and this information is
-accessible by the Quadra team (not used for anything at the moment, but could
-be used to gauge the interest for support of specific platforms). We will not
-release the specifics of any information collected, only aggregate (for
-example, the percentages of users using Linux or Mac OS X), if ever.
+Quadra is licensed under the **GNU LGPL v2.1 or later**. Porting its source from C++ to
+TypeScript produces a *translation*, which under copyright law is a derivative work — so this
+port is licensed under the **same terms**, LGPL-2.1-or-later. The full license text is in
+[`LICENSE`](LICENSE) and must stay with any copy or fork.
 
-This auto-update feature serves two purposes. One is to inform the user of new
-versions of Quadra, which might have important security or bug fixes. The
-other is to get the URL to use as the default Qserv address. The latter is so
-that we have some flexibility in moving Qserv (which has been a problem in the
-past, with downtime for Internet players). Fetching this file is done in the
-background, and does not delay starting up the game.
+Ported files carry a header naming the original source file they derive from. Please keep those
+headers intact; they are both the license obligation and the map back to the reference
+implementation.
 
-Packagers which provide automatic updating (such as Ubuntu and openSUSE) can
-disable the new version notification (with the --disable-version-check
-configure option), as it would be redundant and unhelpful to the user. Note
-that this does NOT disable fetching the file, as it is still necessary for
-obtaining the Qserv address.
+The original C++ source, artwork, sounds, fonts and text are included unmodified under the same
+license. The upstream build instructions are preserved in
+[`UPSTREAM-README.md`](UPSTREAM-README.md).
 
-Building on Unix-style systems
-------------------------------
+**This project is not affiliated with or endorsed by Ludus Design.**
 
-To compile and install this software on a Unix-like system, do this:
+---
 
-If you checked out the source code from GitHub (if not, you can skip this
-step):
+## What this repository contains
 
-    $ autoreconf -i
+```
+source/  images/  sons/  fonts/  textes/  demos/   the original C++ game, unmodified
+web/                                               the TypeScript browser port
+```
 
-And then the traditional build procedure:
+The C++ tree is deliberately left buildable. It is the reference implementation, and it doubles
+as a test oracle — golden values are generated from it rather than assumed.
 
-    $ ./configure
-    $ make
-    $ make install (optional)
+## Status
 
-There you go! There is a 'quadra' binary and a 'quadra.res' resource
-file in the top-level directory. If not, then something went
-wrong. :-)
+Early. The engine is being ported before any rendering exists, so the mechanic can be verified
+headlessly.
 
-You can run this with the following command (in bash):
+- [x] LCG — bit-exact with the original, verified against the compiled C++
+- [x] Piece tables and the exposed-edge encoding
+- [x] Board geometry and collision
+- [x] The cascade: weld severing, group support, rigid-body fall
+- [ ] Piece movement, rotation, wall kicks, lock behaviour
+- [ ] Scoring, levels, garbage
+- [ ] Rendering (original 18px bevelled art)
+- [ ] Input
+- [ ] Multiplayer
 
-    QUADRADIR=. ./quadra
+Design decisions, the mechanic written out in full, and the known fidelity hazards are recorded
+in the project plan.
 
-If you ran the ```make install``` command, then you have 'quadra'
-installed on your system and you can just run it (no need to
-set ```QUADRADIR```).
+## Working on it
 
-Building on Windows
--------------------
+```sh
+cd web
+npm install
+npm test          # engine tests, headless
+npm run typecheck
+npm run dev       # not useful yet — no renderer
+```
 
-To compile Quadra on a Windows machine, use the Visual C++ workspace
-and project file in the VisualC++ subdirectory. Make sure you have
-zlib, libpng and DirectX (August 2007 SDK or earlier) properly installed
-for development on your machine. Run ```res.bat``` after building to
-create the resource file (quadra.res).
+### Fidelity
 
-Building on Mac OS X
---------------------
+The port follows the original's rules exactly rather than modernising them: no 7-bag, no hold
+piece, no lock delay, no SRS kicks. That is a deliberate choice — it means the native build can be
+used to check the port's behaviour, which is worth more than a slightly nicer feel.
 
-A common problem on Mac OS X is that the libpng library is not available. This
-is relatively easy to work around, by downloading the libpng sources (available
-at http://www.libpng.org/pub/png/libpng.html), compiling them (no need to
-install it on your system!) and then adding a ```CPPFLAGS=-I/path/to/libpng
-LDFLAGS=-LCPPFLAGS=-I/path/to/libpng/.libs``` to the ```configure``` command
-line. It's possible that the LIBS variable will have to be adjusted in the
-Makefile, depending on the libpng version.
+Two hazards worth knowing before touching the engine:
 
-Any questions?
---------------
-
-If you have any problem, patches, suggestions, bug reports or are simply
-looking for help, please take advantage of the resources available on our web
-site (https://github.com/quadra-game/quadra)! Among others, we have a support
-request system, mailing lists, a bug tracking system and plenty of other
-goodies, check it out!
-
-Good luck, and have fun!
-
+- **The LCG is 64-bit, not 32-bit.** `seed` is a `time_t` (`source/random.h:27`), so the
+  multiply-accumulate happens in 64 bits and is narrowed afterwards. A `Math.imul` port looks
+  right and produces a completely different piece sequence. Golden vectors in
+  `web/test/random.test.ts` pin it; regenerate them with `web/tools/oracle/rnd.cc`.
+- **A clear edge bit means "welded to an occupied neighbour".** The support flood fill relies on
+  it and does not test occupancy, so breaking the invariant makes support leak across empty space
+  and silently disables gravity. `assertWeldInvariant()` guards it in tests.

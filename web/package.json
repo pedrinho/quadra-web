@@ -1,0 +1,21 @@
+{
+  "name": "quadra-web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Browser port of Quadra (Ludus Design, 1998) — faithful connectivity-gravity engine",
+  "license": "LGPL-2.1-or-later",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vite": "^5.4.10",
+    "vitest": "^2.1.4"
+  }
+}
