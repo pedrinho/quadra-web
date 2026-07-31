@@ -15,7 +15,12 @@
  * and is played at 11000, an octave down. Keeping the raw 8-bit PCM and its rate lets
  * `createBuffer` reproduce that exactly.
  *
- *   npx vite-node tools/extract-assets.ts
+ * The originals are not vendored here, so this needs a checkout of upstream Quadra:
+ *
+ *   git clone https://github.com/quadra-game/quadra ../../quadra-upstream
+ *   QUADRA_SRC=../../quadra-upstream npm run assets
+ *
+ * Its output is committed, so this only has to be run when the asset set changes.
  *
  * Output in public/assets/:
  *   <name>.qimg   "QIMG"  uint16 width  uint16 height  768 B RGB palette  w*h indices
@@ -28,8 +33,8 @@ import { join, basename } from 'node:path';
 import { SOUND_FILES } from '../src/audio/sounds.js';
 import { decodeIndexedPng, encodeQimg, decodeWav, encodeQsnd, type WavPcm } from './codecs.js';
 
-const REPO = new URL('../../', import.meta.url).pathname;
-const OUT = join(REPO, 'web/public/assets');
+const OUT = new URL('../public/assets', import.meta.url).pathname;
+const SRC = process.env.QUADRA_SRC ?? process.argv[2];
 
 /* Backgrounds are all that is needed so far: fond0-9 are the per-level playfield
  * backdrops, and each carries the palette the blocks are shaded from. */
@@ -38,11 +43,25 @@ const WANTED = [
   'images/black.png',
 ];
 
+/* A missing upstream checkout has to be fatal. The per-file skips below are fine for one
+ * absent sample, but silently writing an empty bank from a wrong path would overwrite
+ * assets that nothing else in this repository can reproduce. */
+if (!SRC || !existsSync(join(SRC, WANTED[0]!))) {
+  console.error(
+    SRC
+      ? `no Quadra source tree at ${SRC} (expected ${WANTED[0]} under it)`
+      : 'set QUADRA_SRC to a checkout of upstream Quadra, or pass it as the first argument',
+  );
+  console.error('  git clone https://github.com/quadra-game/quadra ../../quadra-upstream');
+  console.error('  QUADRA_SRC=../../quadra-upstream npm run assets');
+  process.exit(1);
+}
+
 if (!existsSync(OUT)) mkdirSync(OUT, { recursive: true });
 
 let total = 0;
 for (const rel of WANTED) {
-  const src = join(REPO, rel);
+  const src = join(SRC, rel);
   if (!existsSync(src)) {
     console.warn(`  skip ${rel} (missing)`);
     continue;
@@ -58,7 +77,7 @@ for (const rel of WANTED) {
 
 const sounds = new Map<string, WavPcm>();
 for (const name of SOUND_FILES) {
-  const src = join(REPO, 'sons', `${name}.wav`);
+  const src = join(SRC, 'sons', `${name}.wav`);
   if (!existsSync(src)) {
     console.warn(`  skip sons/${name}.wav (missing)`);
     continue;
@@ -73,3 +92,4 @@ if (sounds.size) {
 }
 
 console.log(`\nwrote ${(total / 1024) | 0} KB to web/public/assets/`);
+console.log('these are committed — remember to commit the change');

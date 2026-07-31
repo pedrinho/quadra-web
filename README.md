@@ -1,60 +1,63 @@
 # Quadra Web
 
-A browser port of **Quadra**, the 1998 action puzzle game by Ludus Design.
+A browser port of **Quadra**, the 1998 action puzzle game by **Ludus Design**.
 
 This project exists for one reason: Quadra's **connectivity gravity**. Cleared lines don't
 collapse row by row. Cells stay welded to the tetromino they arrived in, a line clear *severs*
 those welds, and whatever is left unsupported falls as a **rigid body** — which can complete more
 lines, cascading. No other Tetris-like plays quite the same.
 
+**Version 0.5.0** — the solo game is complete and playable. `1.0.0` is reserved for online
+multiplayer. See [ROADMAP.md](ROADMAP.md).
+
 ---
 
-## Credit and licensing
+## Credit
 
-This is a derivative work. **Quadra was created by Ludus Design**, released as free software, and
-maintained thereafter by Pierre Phaneuf and contributors.
+**Quadra was created by Ludus Design.** It was released as free software and maintained
+thereafter by Pierre Phaneuf and contributors. All of the game design, the rules, the artwork and
+the sound are theirs. This repository contains a translation of their work, not an original game.
 
 | | |
 |---|---|
-| Original game | Quadra |
+| Original game | **Quadra**, by **Ludus Design** |
 | Copyright | © 1998–2000 Ludus Design |
 | | © 2006 Pierre Phaneuf and contributors |
-| Upstream | https://github.com/quadra-game/quadra |
+| Upstream source | **https://github.com/quadra-game/quadra** |
+| Ported from | Quadra 1.3.0 (tag [`v1.3.0`](https://github.com/quadra-game/quadra/tree/v1.3.0)) |
 | License | GNU Lesser General Public License, version 2.1 or later |
-
-Quadra is licensed under the **GNU LGPL v2.1 or later**. Porting its source from C++ to
-TypeScript produces a *translation*, which under copyright law is a derivative work — so this
-port is licensed under the **same terms**, LGPL-2.1-or-later. The full license text is in
-[`LICENSE`](LICENSE) and must stay with any copy or fork.
-
-Ported files carry a header naming the original source file they derive from. Please keep those
-headers intact; they are both the license obligation and the map back to the reference
-implementation.
-
-The original C++ source, artwork, sounds, fonts and text are included under the same license, and
-the upstream build instructions are preserved in [`UPSTREAM-README.md`](UPSTREAM-README.md).
-
-Changes made to the upstream source, as the LGPL requires be stated:
-
-- `source/player.cc` — added `dump_board_for_port()`, a debug board dump used to transfer real
-  in-game positions to the port. Off unless `QUADRA_DUMP=1` is set, and writes only to stdout.
-
-Everything else is upstream 1.3.0 as released; the pristine tree is the first commit in this
-repository's history.
 
 **This project is not affiliated with or endorsed by Ludus Design.**
 
+If you want to play the game as it was made — with its full multiplayer, its menus and its
+history — go get it from upstream. It still builds and it is still excellent.
+
+## Licensing
+
+Quadra is licensed under the **GNU LGPL v2.1 or later**. Translating its source from C++ to
+TypeScript produces, under copyright law, a derivative work — so this port carries the **same
+licence**, LGPL-2.1-or-later. The full text is in [`LICENSE`](LICENSE) and must stay with any copy
+or fork.
+
+**The artwork and sound are Ludus Design's.** `web/public/assets/` holds the original backgrounds
+and sound samples, converted into two formats the browser can load without destroying what the
+port needs (see [docs/FIDELITY.md](docs/FIDELITY.md) for why the conversion is necessary at all).
+They are format conversions of someone else's assets, redistributed under the same licence — not
+original work of this project. They are regenerable from an upstream checkout; nothing in them
+is invented here.
+
+**Ported files cite their origin.** Roughly 120 comments across `web/src/` name the original file
+and line a behaviour came from — `web/src/engine/random.ts:2` cites `source/random.cc`,
+`web/src/audio/mixer.ts:20` cites `source/sound.cc:33`, and so on. Those paths refer to **upstream
+Quadra 1.3.0**, not to files in this repository. Please keep them intact: they are both the licence
+trail and the map back to the reference implementation.
+
+**Changes to the original**, as the LGPL requires be stated: one, a debug board dump used to
+transfer real in-game positions into the port. It is preserved as
+[`patches/0001-dump-board-for-port.patch`](patches/0001-dump-board-for-port.patch). Nothing else
+upstream was modified.
+
 ---
-
-## What this repository contains
-
-```
-source/  images/  sons/  fonts/  textes/  demos/   the original C++ game, unmodified
-web/                                               the TypeScript browser port
-```
-
-The C++ tree is deliberately left buildable. It is the reference implementation, and it doubles
-as a test oracle — golden values are generated from it rather than assumed.
 
 ## Status
 
@@ -73,11 +76,8 @@ Playable. The engine was ported and verified headlessly before any rendering exi
 - [x] Validated against the original on a real captured position
 - [x] Configurable keys and repeat sensitivity, persisted in the browser
 - [x] Sound — the original samples, per-level themes, and the 8-voice mixer policy
-- [ ] Garbage and attacks
-- [ ] Multiplayer
-
-It is playable in a browser: `npm run dev`. `npm run demo` drives a cascade through the
-real module stack and prints it frame by frame.
+- [ ] Garbage and attacks — 0.6.0
+- [ ] Multiplayer — 0.8.0 through 1.0.0
 
 ### Verified against the original
 
@@ -87,56 +87,38 @@ exactly — chain 7, 8 lines, 22000 points, and the resulting board matching cel
 including which cells stay welded. `web/test/oracle.test.ts` asserts it, and that the
 matching placement is the only one that produces that board.
 
-### Where this deliberately differs
-
-Press `Esc` in the browser for key bindings and repeat speed. The original offers repeat speed
-as four presets — Slow / Normal / Fast / Faster — stored as an index and switched into a frame
-delay in `Canvas::reinit`. This port takes a **0-100% sensitivity** instead, mapped linearly
-onto the same delay range so all four original settings stay exactly reachable (0% Slow, 50%
-Normal, 80% Fast, 100% Faster), with 80% the default. Everything below that mapping is the
-original derivation unchanged, integer truncation and the 180 clamp included, and the delay
-stays an integer frame count so the DAS loop keeps matching `source/player.cc` line for line.
-
-That is a config-layer divergence only. The simulation it feeds, and the position validated
-above, are unaffected.
-
-The same panel has a **volume** slider, which the original does not have at all — it offers
-only a `-nosound` flag. Sound itself is faithful: the original samples, the ten per-level
-sample themes, the pitch that drops 256 units per cascade step, and the 8-voice limit that
-drops rather than steals, so a deep chain thins out the way it always did. There is no music
-to port — the `cdmusic` setting is vestigial from the DOS original and is read nowhere.
-
-The simulation stays silent and pure: it queues plain event records and the audio layer,
-which owns its own randomness, decides how they sound. The original is equally careful,
-drawing every sound wobble from the global RNG rather than the seeded game LCG — reading the
-game LCG for audio would shift the piece sequence.
-
-Design decisions, the mechanic written out in full, and the known fidelity hazards are recorded
-in the project plan.
-
-## Working on it
+## Running it
 
 ```sh
 cd web
 npm install
 npm run dev       # play it
-npm test          # 95 tests, headless
+npm test          # 151 tests, headless
 npm run typecheck
 npm run demo      # watch a cascade resolve, frame by frame
 ```
 
-### Fidelity
+Press `Esc` in the browser for key bindings, repeat speed and volume.
+
+## Layout
+
+```
+web/src/engine/     the simulation — a port, kept faithful line by line
+web/src/render/     indexed-palette framebuffer and board drawing
+web/src/audio/      mixer, sample bank, event-to-sound mapping
+web/src/input/      keyboard and DAS
+web/public/assets/  the original art and sound, converted (see Licensing)
+web/test/           151 tests, including fixtures captured from the real game
+patches/            the one modification made to the upstream C++
+docs/FIDELITY.md    hazards, deliberate divergences, regenerating from upstream
+```
+
+## Fidelity
 
 The port follows the original's rules exactly rather than modernising them: no 7-bag, no hold
-piece, no lock delay, no SRS kicks. That is a deliberate choice — it means the native build can be
-used to check the port's behaviour, which is worth more than a slightly nicer feel.
+piece, no lock delay, no SRS kicks. That is deliberate — it means the native C++ build can be used
+to check the port's behaviour, which is worth more than a slightly nicer feel.
 
-Two hazards worth knowing before touching the engine:
-
-- **The LCG is 64-bit, not 32-bit.** `seed` is a `time_t` (`source/random.h:27`), so the
-  multiply-accumulate happens in 64 bits and is narrowed afterwards. A `Math.imul` port looks
-  right and produces a completely different piece sequence. Golden vectors in
-  `web/test/random.test.ts` pin it; regenerate them with `web/tools/oracle/rnd.cc`.
-- **A clear edge bit means "welded to an occupied neighbour".** The support flood fill relies on
-  it and does not test occupancy, so breaking the invariant makes support leak across empty space
-  and silently disables gravity. `assertWeldInvariant()` guards it in tests.
+Two things will bite anyone touching the engine — the LCG is **64-bit**, and a *clear* edge bit
+means "welded". Both are written up, along with the handful of places this port knowingly departs
+from the original, in **[docs/FIDELITY.md](docs/FIDELITY.md)**.

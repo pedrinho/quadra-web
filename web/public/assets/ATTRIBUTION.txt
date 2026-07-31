@@ -1,0 +1,22 @@
+The artwork and sound in this directory are NOT original work of the Quadra Web project.
+
+They are the backgrounds and sound samples from Quadra, created by Ludus Design and
+released as free software:
+
+    Quadra                  (c) 1998-2000 Ludus Design
+                            (c) 2006 Pierre Phaneuf and contributors
+    Upstream source         https://github.com/quadra-game/quadra
+    Ported from             Quadra 1.3.0 (tag v1.3.0)
+    License                 GNU LGPL, version 2.1 or later
+
+The only change made to them is one of container format. The images were paletted PNGs and
+are stored here as .qimg (raw indices plus their palette); the sounds were 8-bit mono WAVs
+and are packed here into a single .qsnd bank at their original sample rates. No pixel and no
+sample was altered. Both conversions exist because the browser's own decoders discard the
+palette indices and the source sample rate, which this port depends on. They are
+regenerable from an upstream checkout -- see docs/FIDELITY.md.
+
+They are redistributed under the same LGPL-2.1-or-later licence as the original. The full
+licence text ships with this project as LICENSE.
+
+The Quadra Web project is not affiliated with or endorsed by Ludus Design.

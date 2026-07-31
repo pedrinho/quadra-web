@@ -2,9 +2,9 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { SoundPlayer, type RandomInt } from '../src/audio/sound-player.js';
 import { SOUND_THEMES, themeForLevel, GLOBAL_SOUNDS, SOUND_FILES } from '../src/audio/sounds.js';
-import { decodeQsnd, type SoundBuffer } from '../src/audio/sound-bank.js';
+import { decodeQsnd, type RawSample, type SoundBuffer } from '../src/audio/sound-bank.js';
 import { MAX_VOICES, VOLUME_FLOOR, HEADROOM } from '../src/audio/mixer.js';
-import { encodeQsnd, decodeWav } from '../tools/codecs.js';
+import { encodeQsnd } from '../tools/codecs.js';
 import type { Mixer } from '../src/audio/mixer.js';
 import type { SoundEvent } from '../src/engine/sound-events.js';
 
@@ -181,17 +181,19 @@ describe('.qsnd bank', () => {
     expect(() => decodeQsnd(toArrayBuffer(bogus))).toThrow(/not a \.qsnd/);
   });
 
-  it('reads the real WAVs as 8-bit mono at their original rates', () => {
-    const wav = decodeWav(readRepo('sons/blip1.wav'));
-    expect(wav.rate).toBe(11025);
-    expect(wav.pcm.length).toBeGreaterThan(0);
+  it('keeps each sample at its own rate through extraction', () => {
+    const bank = shippedBank();
+    expect(bank.get('blip1')!.rate).toBe(11025);
+    expect(bank.get('blip1')!.pcm.length).toBeGreaterThan(0);
     // glissup is one of the eight 22050 Hz files, and is played at 11000 — an octave down.
-    expect(decodeWav(readRepo('sons/glissup.wav')).rate).toBe(22050);
+    // If extraction ever normalised the rates, that octave would silently disappear.
+    expect(bank.get('glissup')!.rate).toBe(22050);
   });
 
   it('ships every sample the game asks for', () => {
+    const bank = shippedBank();
     for (const name of SOUND_FILES) {
-      expect(() => readRepo(`sons/${name}.wav`), `sons/${name}.wav`).not.toThrow();
+      expect(bank.has(name), `${name} missing from sounds.qsnd`).toBe(true);
     }
   });
 });
@@ -200,6 +202,12 @@ function toArrayBuffer(buf: Buffer): ArrayBuffer {
   return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer;
 }
 
-function readRepo(rel: string): Buffer {
-  return readFileSync(new URL(`../../${rel}`, import.meta.url).pathname);
+/**
+ * The bank as actually shipped. This is the only copy of the original audio in the
+ * repository — the upstream `sons/` tree is not vendored — so these tests assert the
+ * artifact users download rather than a source file that is not here.
+ */
+function shippedBank(): Map<string, RawSample> {
+  const path = new URL('../public/assets/sounds.qsnd', import.meta.url).pathname;
+  return decodeQsnd(toArrayBuffer(readFileSync(path)));
 }

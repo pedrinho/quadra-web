@@ -1,0 +1,68 @@
+Subject: [PATCH] Dump the settled board so positions can be moved to the port
+
+Applies to: upstream Quadra, tag v1.3.0 (https://github.com/quadra-game/quadra)
+Apply with: git apply patches/0001-dump-board-for-port.patch
+
+This is the only modification made to the original C++ source in the course of
+writing this port, recorded here because the LGPL requires that changes to the
+licensed work be stated, and because the upstream tree is not vendored in this
+repository.
+
+Why it exists: a screenshot shows colours but not which cells are welded to
+which, and welding is what decides how a cascade behaves. Transferring a real
+in-game position to the port by eye is therefore guesswork. This prints the
+settled board as raw block[] bytes -- high nibble colour, low nibble exposed-edge
+mask -- which web/src/engine/dump.ts parses.
+
+It is inert unless QUADRA_DUMP=1 is set and writes only to stdout, so normal play
+is unaffected.
+
+Used to produce web/test/fixtures/*.dump. See docs/FIDELITY.md for the full
+regeneration workflow.
+
+diff --git a/source/player.cc b/source/player.cc
+index 113e929..2004120 100644
+--- a/source/player.cc
++++ b/source/player.cc
+@@ -525,6 +525,33 @@ bool Player_process_key::check_first_frag() {
+ Player_check_line::Player_check_line(Canvas *c): Player_base(c) {
+ }
+ 
++/*
++ * Debug aid for the TypeScript port (web/): dump the settled board so a real in-game
++ * position can be moved across exactly, welds included. A screenshot cannot show which
++ * cells are welded to which, and that is precisely what decides how a cascade behaves.
++ *
++ * Enable with QUADRA_DUMP=1. Each cell is the raw block[] byte in hex (high nibble
++ * colour, low nibble exposed-edge mask) or "--" when empty. Off by default and writes
++ * only to stdout, so normal play is unaffected.
++ */
++static void dump_board_for_port(const Canvas *c) {
++	if(!getenv("QUADRA_DUMP"))
++		return;
++	printf("=== QUADRA_BOARD_DUMP ===\n");
++	for(int j = 12; j < 32; j++) {
++		printf("  ");
++		for(int i = 4; i < 14; i++) {
++			if(c->occupied[j][i])
++				printf("%02x ", c->block[j][i]);
++			else
++				printf("-- ");
++		}
++		printf("\n");
++	}
++	printf("=== END QUADRA_BOARD_DUMP ===\n");
++	fflush(stdout);
++}
++
+ void Player_check_line::step() {
+ 	Player_base::step();
+ 	int co = check_nb_line();
+@@ -542,6 +569,7 @@ void Player_check_line::step() {
+ 				for(i=0; i<18; i++)
+ 					canvas->moved[j][i]=hole_pos[j][i];
+ 			canvas->give_line();
++			dump_board_for_port(canvas);
+ 		} else { // if dead, useless
+ 			canvas->depth = 0;
+ 			canvas->complexity=0;
