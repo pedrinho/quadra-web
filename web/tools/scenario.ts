@@ -26,6 +26,7 @@ import { Executor, Overmind } from '../src/engine/modules.js';
 import { PlayerStamp, type PlayerEnv } from '../src/engine/player.js';
 import { assertWeldInvariant } from '../src/engine/cascade.js';
 import { PIECE_NAMES } from '../src/engine/pieces.js';
+import { formatDump } from '../src/engine/dump.js';
 
 interface Drop {
   /** Piece index: 0=O 1=S 2=Z 3=J 4=L 5=I 6=T */
@@ -184,6 +185,7 @@ function dropPiece(canvas: Canvas, env: PlayerEnv, overmind: Overmind, drop: Dro
 interface Opts {
   quiet: boolean;
   height: number;
+  dump: boolean;
 }
 
 function run(scenario: Scenario, opts: Opts) {
@@ -193,6 +195,12 @@ function run(scenario: Scenario, opts: Opts) {
   console.log(scenario.description);
 
   const canvas = canvasFromAscii(scenario.board);
+  if (opts.dump) {
+    // Emit in the same format the patched C++ produces, so the importer can be exercised
+    // without needing a real game session.
+    console.log(formatDump(canvas));
+    return;
+  }
   const overmind = new Overmind();
   const env: PlayerEnv = { overmind, videoFrame: 0, levelUp: true, paused: false };
 
@@ -209,6 +217,7 @@ function run(scenario: Scenario, opts: Opts) {
 
 const args = process.argv.slice(2);
 const quiet = args.includes('-q');
+const dump = args.includes('--dump');
 const name = args.find((a) => !a.startsWith('-'));
 
 if (!name) {
@@ -222,5 +231,5 @@ if (!name) {
     console.error(`unknown scenario "${name}"`);
     throw new Error('unknown scenario');
   }
-  run(s, { quiet, height: Math.min(PLAY_HEIGHT, s.board.length + 5) });
+  run(s, { quiet, dump, height: Math.min(PLAY_HEIGHT, s.board.length + 5) });
 }

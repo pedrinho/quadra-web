@@ -31,9 +31,16 @@ Ported files carry a header naming the original source file they derive from. Pl
 headers intact; they are both the license obligation and the map back to the reference
 implementation.
 
-The original C++ source, artwork, sounds, fonts and text are included unmodified under the same
-license. The upstream build instructions are preserved in
-[`UPSTREAM-README.md`](UPSTREAM-README.md).
+The original C++ source, artwork, sounds, fonts and text are included under the same license, and
+the upstream build instructions are preserved in [`UPSTREAM-README.md`](UPSTREAM-README.md).
+
+Changes made to the upstream source, as the LGPL requires be stated:
+
+- `source/player.cc` — added `dump_board_for_port()`, a debug board dump used to transfer real
+  in-game positions to the port. Off unless `QUADRA_DUMP=1` is set, and writes only to stdout.
+
+Everything else is upstream 1.3.0 as released; the pristine tree is the first commit in this
+repository's history.
 
 **This project is not affiliated with or endorsed by Ludus Design.**
 
