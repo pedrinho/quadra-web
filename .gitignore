@@ -1,0 +1,37 @@
+# --- Original C++ build artifacts (kept buildable as the reference oracle) ---
+*.o
+*.a
+*.lo
+*.la
+.deps/
+.libs/
+/quadra
+/quadra.res
+/wadder
+/dumpwad
+/test_version
+/Quadra.app/
+config.log
+config.status
+config.h
+Makefile
+stamp-h1
+autom4te.cache/
+/quadra.spec
+/packages/quadra.nsi
+/packages/quadra.spec
+/packages/readme-win32.txt
+
+# --- Web port ---
+node_modules/
+dist/
+web/public/assets/
+*.tsbuildinfo
+.vite/
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
