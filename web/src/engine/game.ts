@@ -9,6 +9,7 @@
 import { Executor, Overmind } from './modules.js';
 import { Canvas } from './canvas.js';
 import { PlayerNormal, type PlayerEnv } from './player.js';
+import { DEFAULT_SENSITIVITY } from './sensitivity.js';
 
 /** Milliseconds per simulation tick. The simulation is a fixed 100 Hz. */
 export const TICK_MS = 10;
@@ -25,6 +26,14 @@ export interface GameOptions {
   levelUp?: boolean;
   /** Draw the ghost piece. */
   shadow?: boolean;
+  /** Horizontal repeat speed, 0-100%. See engine/sensitivity.ts. */
+  hSensitivity?: number;
+  /** Soft-drop speed, 0-100%. */
+  vSensitivity?: number;
+  /** When false the soft-drop key must be re-pressed for each new piece. */
+  continuous?: boolean;
+  /** `KeyboardEvent.code` per action slot, so actions sharing a key share sticky state. */
+  keys?: readonly string[];
 }
 
 /**
@@ -48,11 +57,25 @@ export class Game {
   ticks = 0;
 
   constructor(opts: GameOptions = {}) {
-    const { seed = 0, level = 1, levelUp = true, shadow = false } = opts;
+    const {
+      seed = 0,
+      level = 1,
+      levelUp = true,
+      shadow = false,
+      hSensitivity = DEFAULT_SENSITIVITY,
+      vSensitivity = DEFAULT_SENSITIVITY,
+      continuous = true,
+      keys,
+    } = opts;
 
     this.canvas = new Canvas(seed);
     this.canvas.level = level;
     this.canvas.shadow = shadow;
+    this.canvas.hSensitivity = hSensitivity;
+    this.canvas.vSensitivity = vSensitivity;
+    this.canvas.continuous = continuous;
+    this.canvas.reinit();
+    if (keys) this.canvas.applyBindings(keys);
     this.canvas.calcSpeed();
 
     this.env = { overmind: this.overmind, videoFrame: 0, levelUp, paused: false };

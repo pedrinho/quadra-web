@@ -143,6 +143,59 @@ describe('movement', () => {
     expect(g.canvas.bloc!.bx).toBeLessThan(startX - 1);
   });
 
+  it('waits hRepeatDelay + 10 frames before the first repeat, at every sensitivity', () => {
+    // The original arms a longer delay for the first repeat than for later ones
+    // (source/player.cc:395-404), and the delay is what the sensitivity setting controls.
+    const framesToRepeat = (hSensitivity: number) => {
+      const g = new Game({ seed: 3, level: 1, levelUp: false, hSensitivity });
+      g.runFrames(10);
+      const startX = g.canvas.bloc!.bx;
+
+      g.canvas.pressKey(Action.Left);
+      g.runFrames(1);
+      expect(g.canvas.bloc!.bx).toBe(startX - 1); // the first press always moves at once
+
+      let frames = 0;
+      while (g.canvas.bloc!.bx === startX - 1 && frames < 200) {
+        g.runFrames(1);
+        frames++;
+      }
+      return frames;
+    };
+
+    expect(framesToRepeat(0)).toBe(11 + 10); // Slow
+    expect(framesToRepeat(50)).toBe(6 + 10); // Normal
+    expect(framesToRepeat(80)).toBe(3 + 10); // Fast — the default
+    expect(framesToRepeat(100)).toBe(1 + 10); // Faster
+  });
+
+  it('rotates once when one key drives both rotate slots', () => {
+    // The stock config binds UP to rotate-CCW *and* rotate-CW (source/cfgfile.cc:85-91).
+    // That works because the original keys its sticky state by scancode, so clearing one
+    // slot clears the other. Firing both would cancel out to no rotation at all.
+    const rotate = (keys?: string[]) => {
+      const g = new Game(keys ? { seed: 11, keys } : { seed: 11 });
+      g.runFrames(4);
+      // The square does not change shape when rotated, so skip past it.
+      while (g.canvas.bloc!.quel === 0) {
+        g.canvas.pressKey(Action.Drop);
+        g.runUntil(() => g.canvas.bloc === null, 500);
+        g.runFrames(20);
+      }
+      const before = g.canvas.bloc!.rot;
+      g.canvas.pressKey(Action.RotateLeft);
+      g.runFrames(2);
+      g.canvas.releaseKey(Action.RotateLeft);
+      g.runFrames(2);
+      return { before, after: g.canvas.bloc!.rot };
+    };
+
+    const shared = ['a', 'b', 'ArrowUp', 'c', 'ArrowUp', 'd', 'e'];
+    const oneRotation = rotate();
+    expect(oneRotation.after).not.toBe(oneRotation.before);
+    expect(rotate(shared)).toEqual(oneRotation);
+  });
+
   it('will not push a piece through the wall', () => {
     const g = new Game({ seed: 3, level: 1 });
     g.runFrames(4);
@@ -171,6 +224,25 @@ describe('movement', () => {
     g.canvas.releaseKey(Action.RotateLeft);
     g.runFrames(2);
     expect(g.canvas.bloc!.rot).not.toBe(rot0);
+  });
+});
+
+describe('continuous down', () => {
+  it('carries the held soft-drop key into the next piece only when enabled', () => {
+    // `Player_process_key::init` clears the down key on each new piece unless the player
+    // asked for continuous down (source/player.cc:424-433).
+    const heldOnNextPiece = (continuous: boolean) => {
+      const g = new Game({ seed: 42, continuous });
+      g.runFrames(4);
+      g.canvas.pressKey(Action.Down);
+      // Drop the current piece and let the next one enter its key-handling module.
+      g.canvas.pressKey(Action.Drop);
+      g.runUntil(() => g.canvas.bloc === null, 2000);
+      g.runFrames(20);
+      return g.canvas.checkKey(Action.Down);
+    };
+    expect(heldOnNextPiece(true)).not.toBe(0);
+    expect(heldOnNextPiece(false)).toBe(0);
   });
 });
 

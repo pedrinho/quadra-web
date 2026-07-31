@@ -20,8 +20,43 @@
       }
       .hud { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; }
       .hud b { color: #fff; font-weight: 600; }
-      .keys { color: #767d89; font-size: 12px; text-align: center; }
+      .keys { color: #767d89; font-size: 12px; text-align: center; max-width: 640px; }
       #status { min-height: 1.5em; color: #e0a45e; }
+
+      /* Settings overlay */
+      .settings {
+        position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+        background: #0b0d10cc; padding: 16px; overflow: auto; z-index: 10;
+      }
+      .settings[hidden] { display: none; }
+      .settings .panel {
+        width: min(460px, 100%); max-height: 100%; overflow: auto;
+        background: #1b1f25; border: 1px solid #333a44; border-radius: 6px; padding: 16px;
+        display: flex; flex-direction: column; gap: 14px;
+      }
+      .settings header { display: flex; align-items: baseline; justify-content: space-between; }
+      .settings h2 { margin: 0; font-size: 14px; letter-spacing: 0.08em; text-transform: uppercase; }
+      .settings h3 {
+        margin: 0 0 6px; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+        color: #767d89;
+      }
+      .settings .group { display: flex; flex-direction: column; gap: 10px; }
+      .settings .field { display: flex; flex-direction: column; gap: 2px; }
+      .settings .row { display: flex; align-items: center; gap: 12px; }
+      .settings .row label { flex: 1; }
+      .settings .readout { color: #767d89; font-size: 11px; }
+      .settings input[type='range'] { flex: 1 1 180px; accent-color: #e0a45e; }
+      .settings button {
+        font: inherit; color: #d6d9de; background: #262b33; border: 1px solid #3a424e;
+        border-radius: 4px; padding: 4px 10px; cursor: pointer;
+      }
+      .settings button:hover { background: #313843; }
+      .settings button.key { min-width: 130px; }
+      .settings button.arming { border-color: #e0a45e; color: #e0a45e; }
+      .settings button.duplicate { border-color: #7a6033; }
+      .settings button.close { padding: 2px 8px; }
+      .settings .actions { display: flex; gap: 8px; }
+      .settings .hint { color: #767d89; font-size: 11px; min-height: 1.4em; }
     </style>
   </head>
   <body>
@@ -33,11 +68,8 @@
       <span>best chain <b id="chain">0</b></span>
     </div>
     <div id="status"></div>
-    <div class="keys">
-      &larr; &rarr; move &nbsp;·&nbsp; &darr; soft drop &nbsp;·&nbsp; space hard drop
-      &nbsp;·&nbsp; Z / X rotate &nbsp;·&nbsp; right-shift flip &nbsp;·&nbsp; P pause
-      &nbsp;·&nbsp; R restart
-    </div>
+    <!-- Filled from the live bindings by main.ts; press Esc to change them. -->
+    <div class="keys" id="keys"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

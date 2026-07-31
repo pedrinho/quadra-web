@@ -18,6 +18,8 @@ import {
 } from './render/board-view.js';
 import { Keyboard } from './input/keyboard.js';
 import { Bloc } from './engine/bloc.js';
+import { loadSettings, saveSettings } from './settings.js';
+import { SettingsPanel, bindingsHelp } from './ui/settings-panel.js';
 
 const el = <T extends HTMLElement>(id: string): T => {
   const found = document.getElementById(id);
@@ -42,17 +44,58 @@ async function main(): Promise<void> {
   for (let i = 0; i < 10; i++) backgrounds.push(await loadQimg(`assets/fond${i}.qimg`));
 
   const fb = new Framebuffer();
-  const keyboard = new Keyboard();
+  const settings = loadSettings();
+  const keyboard = new Keyboard(settings.keys);
 
   let game: Game;
   let currentLevel = -1;
 
   const startGame = () => {
-    game = new Game({ seed: Date.now() & 0x7fffffff, level: 1, levelUp: true, shadow: true });
+    game = new Game({
+      seed: Date.now() & 0x7fffffff,
+      level: 1,
+      levelUp: true,
+      shadow: true,
+      hSensitivity: settings.hSensitivity,
+      vSensitivity: settings.vSensitivity,
+      continuous: settings.continuous,
+      keys: settings.keys,
+    });
     keyboard.attach(window, game.canvas);
     currentLevel = -1;
   };
   startGame();
+
+  const helpEl = el('keys');
+  const applySettings = () => {
+    saveSettings(settings);
+    game.canvas.hSensitivity = settings.hSensitivity;
+    game.canvas.vSensitivity = settings.vSensitivity;
+    game.canvas.continuous = settings.continuous;
+    game.canvas.reinit();
+    // Order matters: Keyboard pushes the bindings into the canvas, so its grouping wins.
+    keyboard.setBindings(settings.keys);
+    helpEl.textContent = bindingsHelp(settings);
+  };
+
+  let pausedBeforePanel = false;
+  const panel = new SettingsPanel({
+    host: document.body,
+    settings,
+    onChange: applySettings,
+    onVisibility: (open) => {
+      if (open) {
+        pausedBeforePanel = game.paused;
+        game.paused = true;
+        keyboard.suspend();
+      } else {
+        // Restoring rather than clearing, so a game paused with P stays paused.
+        game.paused = pausedBeforePanel;
+        keyboard.resume();
+      }
+    },
+  });
+  applySettings();
 
   const scoreEl = el('score');
   const linesEl = el('lines');
@@ -91,7 +134,11 @@ async function main(): Promise<void> {
     linesEl.textContent = String(game.canvas.linesTot);
     levelEl.textContent = String(game.canvas.level);
     chainEl.textContent = String(bestChain);
-    status.textContent = game.isOver ? 'game over — press R to restart' : '';
+    status.textContent = game.isOver
+      ? 'game over — press R to restart'
+      : game.paused
+        ? 'paused'
+        : '';
   };
 
   const frame = (now: number) => {
@@ -152,10 +199,18 @@ async function main(): Promise<void> {
   }
 
   window.addEventListener('keydown', (e) => {
+    if (e.code === 'Escape') {
+      e.preventDefault();
+      panel.toggle();
+      return;
+    }
+    // A key the player bound to a game action wins over these hotkeys.
+    if (keyboard.isBound(e.code) || panel.isOpen) return;
     if (e.code === 'KeyR') {
       keyboard.dispose();
       bestChain = 0;
       startGame();
+      applySettings();
     }
     if (e.code === 'KeyP') game.paused = !game.paused;
   });

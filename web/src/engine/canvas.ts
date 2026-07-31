@@ -8,6 +8,7 @@
 import { Board } from './board.js';
 import { Bloc } from './bloc.js';
 import { Random } from './random.js';
+import { DEFAULT_SENSITIVITY, deriveRepeat } from './sensitivity.js';
 
 /** Key state bits, from source/input.h:30-31. Keys are sticky: a press leaves PRESSED set
  *  until cleared, and a release replaces the state with RELEASED. */
@@ -53,12 +54,26 @@ export class Canvas extends Board {
 
   readonly rnd: Random;
 
-  /** Sticky key state, one entry per Action. */
+  /**
+   * Sticky key state, one entry per Action.
+   *
+   * The original keys this by physical scancode and resolves the binding on every read
+   * (source/canvas.cc:831-855), which is what makes one key bound to two slots behave
+   * sensibly: clearing the first also clears the second. Here the state is per-action, so
+   * `keyGroup` reproduces that sharing — see `applyBindings`.
+   */
   readonly keys = new Uint8Array(ACTION_COUNT);
 
-  /* Repeat tuning, 0..3, from the player's config. reinit() derives the rest. */
-  hRepeat = 2;
-  vRepeat = 2;
+  /**
+   * Action -> canonical action for the physical key it is bound to. Identity unless two
+   * actions share a key, in which case both map to the lower slot and therefore share one
+   * entry in `keys`.
+   */
+  private readonly keyGroup = Uint8Array.from({ length: ACTION_COUNT }, (_, i) => i);
+
+  /* Repeat tuning, 0-100%, from the player's settings. reinit() derives the rest. */
+  hSensitivity = DEFAULT_SENSITIVITY;
+  vSensitivity = DEFAULT_SENSITIVITY;
   hRepeatDelay = 3;
   vRepeatDelay = 3;
   /** Cosmetic horizontal chase speed, 1/16-px per frame. */
@@ -96,26 +111,43 @@ export class Canvas extends Board {
   }
 
   /**
-   * `Canvas::reinit` repeat-speed derivation — source/canvas.cc:214-245.
-   * Integer division throughout, matching C++.
+   * Re-derive the repeat tuning from the sensitivity percentages. Safe to call mid-game:
+   * every consumer reads these fields fresh each frame.
    */
   reinit(): void {
-    const delays = [11, 6, 3, 1];
-    this.hRepeatDelay = delays[this.hRepeat] ?? 3;
-    this.sideSpeed = ((18 << 4) / this.hRepeatDelay) | 0;
-    this.vRepeatDelay = delays[this.vRepeat] ?? 3;
-    this.downSpeed = (340 / this.vRepeatDelay) | 0;
-    if (this.downSpeed > 180) this.downSpeed = 180;
+    const t = deriveRepeat(this.hSensitivity, this.vSensitivity);
+    this.hRepeatDelay = t.hRepeatDelay;
+    this.sideSpeed = t.sideSpeed;
+    this.vRepeatDelay = t.vRepeatDelay;
+    this.downSpeed = t.downSpeed;
   }
 
   /* --- input ------------------------------------------------------------- */
 
+  /**
+   * Tell the canvas which physical key drives each action, so that actions sharing a key
+   * also share their sticky state. `codes` is indexed by Action; entries may repeat.
+   */
+  applyBindings(codes: readonly string[]): void {
+    for (let i = 0; i < ACTION_COUNT; i++) {
+      let group = i;
+      for (let j = 0; j < i; j++) {
+        if (codes[j] !== undefined && codes[j] === codes[i]) {
+          group = this.keyGroup[j]!;
+          break;
+        }
+      }
+      this.keyGroup[i] = group;
+    }
+    this.clearKeyAll();
+  }
+
   checkKey(i: Action): number {
-    return this.keys[i]!;
+    return this.keys[this.keyGroup[i]!]!;
   }
 
   clearKey(i: Action): void {
-    this.keys[i] = 0;
+    this.keys[this.keyGroup[i]!] = 0;
   }
 
   clearKeyAll(): void {
@@ -124,17 +156,17 @@ export class Canvas extends Board {
 
   /** Drop only the RELEASED bit, leaving PRESSED intact — used by auto-repeating actions. */
   unreleaseKey(i: Action): void {
-    this.keys[i]! &= ~RELEASED;
+    this.keys[this.keyGroup[i]!]! &= ~RELEASED;
   }
 
   /** Called by the host when a key goes down. Presses are sticky (`|=`). */
   pressKey(i: Action): void {
-    this.keys[i]! |= PRESSED;
+    this.keys[this.keyGroup[i]!]! |= PRESSED;
   }
 
   /** Called by the host when a key goes up. A release *replaces* the state. */
   releaseKey(i: Action): void {
-    this.keys[i] = RELEASED;
+    this.keys[this.keyGroup[i]!] = RELEASED;
   }
 
   /* --- collision --------------------------------------------------------- */

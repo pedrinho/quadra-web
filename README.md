@@ -71,6 +71,7 @@ Playable. The engine was ported and verified headlessly before any rendering exi
 - [x] Rendering — indexed framebuffer, original 18px bevelled art, real backgrounds
 - [x] Browser input and a playable game shell
 - [x] Validated against the original on a real captured position
+- [x] Configurable keys and repeat sensitivity, persisted in the browser
 - [ ] Garbage and attacks
 - [ ] Multiplayer
 
@@ -84,6 +85,19 @@ The real game reported Score 22000, Lines 8, one 8-line clear. The port reproduc
 exactly — chain 7, 8 lines, 22000 points, and the resulting board matching cell for cell
 including which cells stay welded. `web/test/oracle.test.ts` asserts it, and that the
 matching placement is the only one that produces that board.
+
+### Where this deliberately differs
+
+Press `Esc` in the browser for key bindings and repeat speed. The original offers repeat speed
+as four presets — Slow / Normal / Fast / Faster — stored as an index and switched into a frame
+delay in `Canvas::reinit`. This port takes a **0-100% sensitivity** instead, mapped linearly
+onto the same delay range so all four original settings stay exactly reachable (0% Slow, 50%
+Normal, 80% Fast, 100% Faster), with 80% the default. Everything below that mapping is the
+original derivation unchanged, integer truncation and the 180 clamp included, and the delay
+stays an integer frame count so the DAS loop keeps matching `source/player.cc` line for line.
+
+That is a config-layer divergence only. The simulation it feeds, and the position validated
+above, are unaffected.
 
 Design decisions, the mechanic written out in full, and the known fidelity hazards are recorded
 in the project plan.
