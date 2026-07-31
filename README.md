@@ -58,11 +58,17 @@ headlessly.
 - [x] Piece tables and the exposed-edge encoding
 - [x] Board geometry and collision
 - [x] The cascade: weld severing, group support, rigid-body fall
-- [ ] Piece movement, rotation, wall kicks, lock behaviour
-- [ ] Scoring, levels, garbage
+- [x] Module/Executor coroutine scheduler
+- [x] Piece movement, rotation, the single-nudge wall kick, DAS
+- [x] Gravity, stamping, scoring, levels
+- [x] Fixed 100 Hz loop with backlog skipping
+- [ ] Garbage and attacks
 - [ ] Rendering (original 18px bevelled art)
-- [ ] Input
+- [ ] Browser input and game shell
 - [ ] Multiplayer
+
+A full game runs headlessly today: `npm run demo` drives a cascade through the real module
+stack and prints it frame by frame.
 
 Design decisions, the mechanic written out in full, and the known fidelity hazards are recorded
 in the project plan.
@@ -72,8 +78,9 @@ in the project plan.
 ```sh
 cd web
 npm install
-npm test          # engine tests, headless
+npm test          # 82 engine tests, headless
 npm run typecheck
+npm run demo      # watch a cascade resolve, frame by frame
 npm run dev       # not useful yet — no renderer
 ```
 

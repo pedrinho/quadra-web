@@ -128,9 +128,12 @@ export function dropUnsupported(board: Board): boolean {
  * steps the phases individually.
  */
 export function settle(board: Board): number {
+  // Cleared once on entry, matching Player_flash_lines before it hands over to
+  // Player_check_link. The marks then accumulate across passes: supported cells never
+  // move, so their marks stay valid, and clearing would also wipe `moved`.
+  board.clearTmp();
   let rows = 0;
   for (;;) {
-    board.clearTmp();
     computeSupport(board);
     if (!dropUnsupported(board)) return rows;
     rows++;
