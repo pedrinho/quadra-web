@@ -58,8 +58,7 @@ as a test oracle — golden values are generated from it rather than assumed.
 
 ## Status
 
-Early. The engine is being ported before any rendering exists, so the mechanic can be verified
-headlessly.
+Playable. The engine was ported and verified headlessly before any rendering existed.
 
 - [x] LCG — bit-exact with the original, verified against the compiled C++
 - [x] Piece tables and the exposed-edge encoding
@@ -94,10 +93,10 @@ in the project plan.
 ```sh
 cd web
 npm install
-npm test          # 82 engine tests, headless
+npm run dev       # play it
+npm test          # 95 tests, headless
 npm run typecheck
 npm run demo      # watch a cascade resolve, frame by frame
-npm run dev       # not useful yet — no renderer
 ```
 
 ### Fidelity
