@@ -1,0 +1,26 @@
+# Captured from the original C++ Quadra with QUADRA_DUMP=1.
+# Vertical I bars in columns 0 and 2 over a Z/S staircase, with each bottom row
+# missing a single covered cell. Dropping a vertical bar into column 3 completes
+# row 12 and sets off a 6-stage cascade.
+=== QUADRA_BOARD_DUMP ===
+  -- -- -- -- -- -- -- -- -- -- 
+  -- -- -- -- -- -- -- -- -- -- 
+  -- -- -- -- -- -- -- -- -- -- 
+  -- -- -- -- -- -- -- -- -- -- 
+  57 -- -- -- -- -- -- -- -- -- 
+  55 -- 57 -- -- -- -- -- -- -- 
+  55 -- 55 -- -- -- -- -- -- -- 
+  5d -- 55 -- -- -- -- -- -- -- 
+  57 -- 5d -- -- -- -- -- -- -- 
+  55 -- 57 -- -- -- -- 17 -- -- 
+  55 -- 55 -- -- -- 17 19 16 47 
+  5d -- 55 -- -- -- 19 16 1d 45 
+  2b 26 5d -- 13 1e 67 1d 4b 4c 
+  -- 29 2e 1b 1c 6b 64 03 06 47 
+  2b 26 -- 03 06 67 6d 09 0c 45 
+  -- 29 2e 09 0c 61 6e 47 4b 4c 
+  -- 13 1e 03 06 6d 47 49 4a 4e 
+  1b 1c -- 09 0c 67 49 4a 4e 37 
+  2b 26 -- 47 6b 68 6e 3b 3a 3c 
+  -- 29 2e 49 4a 4e 5b 5a 5a 5e 
+=== END QUADRA_BOARD_DUMP ===

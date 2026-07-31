@@ -88,13 +88,26 @@ function drop(
 
   let frames = 0;
   let maxChain = 0;
+  let lastChain = 0;
+  let previous = render(canvas);
   while (!executor.done && frames < 5000) {
     overmind.step();
     frames++;
     assertWeldInvariant(canvas);
     maxChain = Math.max(maxChain, canvas.complexity);
+    if (verbose) {
+      const now = render(canvas);
+      // Print on every clear, and on the frame the stack finishes falling.
+      if (canvas.complexity !== lastChain) {
+        console.log(`\n   frame ${String(frames).padStart(3)}  CLEAR -> chain ${canvas.complexity}, ${canvas.depth} lines so far`);
+        console.log(now);
+        lastChain = canvas.complexity;
+      }
+      previous = now;
+    }
   }
-  console.log(render(canvas));
+  if (!verbose) console.log(render(canvas));
+  else void previous;
   console.log(`   settled after ${frames} frames, chain reached ${maxChain}`);
 }
 
@@ -107,6 +120,7 @@ if (!file) {
   throw new Error('no dump file given');
 }
 
+const verbose = args.includes('-v') || args.includes('--verbose');
 const drops: string[] = [];
 for (let i = 0; i < args.length; i++) if (args[i] === '--drop') drops.push(args[i + 1] ?? '');
 
