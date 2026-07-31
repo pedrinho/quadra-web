@@ -1,0 +1,25 @@
+# Captured from the original C++ Quadra with QUADRA_DUMP=1.
+# Board immediately BEFORE the move. Eight rows (12-19) are each missing exactly
+# one covered cell, and row 12's gap at column 9 sits under an open well.
+=== QUADRA_BOARD_DUMP ===
+  -- -- -- -- -- -- -- -- -- -- 
+  -- -- -- -- -- -- -- -- -- -- 
+  -- -- -- -- -- -- -- -- -- -- 
+  -- -- -- -- -- -- -- -- -- -- 
+  -- -- -- -- -- -- -- -- -- -- 
+  -- 3b 36 -- -- -- -- -- -- -- 
+  -- 27 35 -- -- -- -- -- -- -- 
+  23 2c 3d -- -- -- -- -- -- -- 
+  2d -- 57 -- -- -- -- -- -- -- 
+  57 -- 55 57 -- -- -- -- -- -- 
+  55 -- 55 55 03 06 -- 47 -- -- 
+  55 -- 5d 55 09 0c -- 45 -- -- 
+  5d 13 1e 5d 3b 36 4b 4c 67 -- 
+  1b 1c -- 3b 36 35 43 4e 61 6e 
+  -- 13 1e 57 35 3d 45 47 6d 67 
+  1b 1c -- 55 3d 27 4d 45 6b 64 
+  2b 26 -- 55 23 2c 4b 4c 67 6d 
+  -- 29 2e 5d 2d 4b 4a 46 61 6e 
+  2b 26 -- 03 06 03 06 4d 6d 37 
+  -- 29 2e 09 0c 09 0c 3b 3a 3c 
+=== END QUADRA_BOARD_DUMP ===
