@@ -7,7 +7,7 @@
  */
 
 import { Executor, Overmind } from './modules.js';
-import { Canvas } from './canvas.js';
+import { Canvas, groupsFromBindings, type Action, type InputSink } from './canvas.js';
 import { PlayerNormal, type PlayerEnv } from './player.js';
 import { DEFAULT_SENSITIVITY } from './sensitivity.js';
 import type { SoundEvent } from './sound-events.js';
@@ -17,6 +17,16 @@ export const TICK_MS = 10;
 /** Accumulator ceiling. Beyond this the original skips frames outright rather than
  *  simulating them, to avoid a spiral of death (source/quadra.cc:497-500). */
 export const MAX_ACCUMULATOR_MS = 300;
+
+/**
+ * What one rendered frame did: how many 10 ms ticks it ran, and how far it bumped the clock
+ * past a backlog without simulating. Together with the input applied before it, this is
+ * everything needed to reproduce the frame.
+ */
+export interface FrameStep {
+  ticks: number;
+  jump: number;
+}
 
 export interface GameOptions {
   /** Shared seed. Every client derives the same piece stream from it. */
@@ -94,11 +104,50 @@ export class Game {
   }
 
   set paused(v: boolean) {
-    this.env.paused = v;
+    this.setPaused(v);
   }
 
   get paused(): boolean {
     return this.env.paused;
+  }
+
+  /* --- the input boundary -------------------------------------------------
+   *
+   * Everything the host can change about a running game goes through these four methods.
+   * Not just keys: pausing, retuning the repeat speed and rebinding all feed the simulation
+   * too (env.paused gates PlayerProcessKey, the sensitivities become hRepeatDelay/sideSpeed/
+   * downSpeed, and the key grouping decides which actions share a sticky slot). A recorder
+   * that watched only the keyboard would miss three of the four and produce a game that does
+   * not play back.
+   */
+
+  input(action: Action, down: boolean): void {
+    if (down) this.canvas.pressKey(action);
+    else this.canvas.releaseKey(action);
+  }
+
+  setPaused(v: boolean): void {
+    this.env.paused = v;
+  }
+
+  setSensitivity(hSensitivity: number, vSensitivity: number, continuous: boolean): void {
+    this.canvas.hSensitivity = hSensitivity;
+    this.canvas.vSensitivity = vSensitivity;
+    this.canvas.continuous = continuous;
+    this.canvas.reinit();
+  }
+
+  setKeyGroups(groups: readonly number[] | Uint8Array): void {
+    this.canvas.applyKeyGroups(groups);
+  }
+
+  /** An `InputSink` view of the above, for handing to `Keyboard`. */
+  get inputSink(): InputSink {
+    return {
+      pressKey: (i) => this.input(i, true),
+      releaseKey: (i) => this.input(i, false),
+      applyBindings: (codes) => this.setKeyGroups(groupsFromBindings(codes)),
+    };
   }
 
   /**
@@ -124,21 +173,39 @@ export class Game {
   }
 
   /**
-   * Advance by elapsed wall-clock time, running as many fixed ticks as fit.
-   * `source/quadra.cc:410-506`.
+   * Run one rendered frame on a schedule that has already been decided — by the wall clock
+   * in `advance`, or by a recording being played back. This is the only place a frame is
+   * executed, so a replayed frame cannot drift from a live one.
    */
-  advance(deltaMs: number): void {
+  stepFrame(ticks: number, framecountJump = 0): void {
     this.beginRenderFrame();
+    // Before the ticks, as in the original: the skipped time is already past.
+    if (framecountJump) this.overmind.framecount += framecountJump;
+    for (let i = 0; i < ticks; i++) this.step();
+  }
+
+  /**
+   * Advance by elapsed wall-clock time, running as many fixed ticks as fit.
+   * `source/quadra.cc:410-506`. Returns the schedule it decided on, which is exactly what a
+   * recording needs to store in order to reproduce this frame.
+   */
+  advance(deltaMs: number): FrameStep {
     this.acc += deltaMs;
+    let jump = 0;
     if (this.acc > MAX_ACCUMULATOR_MS) {
-      // Skip, don't simulate: bump the clock and drop the backlog.
-      this.overmind.framecount += this.acc - MAX_ACCUMULATOR_MS;
+      // Skip, don't simulate: bump the clock and drop the backlog. Floored, because
+      // framecount is an integer clock everywhere else — `framecount & 15` in the blind
+      // countdown and `framecount - lastOvermindFrame > 3` in the input gate both assume it.
+      jump = Math.floor(this.acc - MAX_ACCUMULATOR_MS);
       this.acc = MAX_ACCUMULATOR_MS;
     }
+    let ticks = 0;
     while (this.acc >= TICK_MS) {
       this.acc -= TICK_MS;
-      this.step();
+      ticks++;
     }
+    this.stepFrame(ticks, jump);
+    return { ticks, jump };
   }
 
   /**
@@ -146,18 +213,14 @@ export class Game {
    * For headless use and tests.
    */
   runFrames(n: number): void {
-    for (let i = 0; i < n; i++) {
-      this.beginRenderFrame();
-      this.step();
-    }
+    for (let i = 0; i < n; i++) this.stepFrame(1);
   }
 
   /** Run until the predicate holds or the frame budget is exhausted. Returns frames used. */
   runUntil(predicate: () => boolean, maxFrames = 100_000): number {
     let used = 0;
     while (used < maxFrames && !predicate()) {
-      this.beginRenderFrame();
-      this.step();
+      this.stepFrame(1);
       used++;
     }
     return used;

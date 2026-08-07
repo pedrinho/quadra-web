@@ -7,11 +7,17 @@
  * game clears it, a release replaces the state with RELEASED. Rotations fire on RELEASE,
  * which is unusual but is how the original reads (source/player.cc:305-410).
  *
- * Bindings are indexed by action, so one key may drive several actions. The canvas keeps
+ * Bindings are indexed by action, so one key may drive several actions. The sink keeps
  * those slots sharing one sticky entry (Canvas.applyBindings), matching the original.
+ *
+ * Everything here writes through the `InputSink` it was attached to, including the release
+ * of held keys on blur and on suspend. That matters: a host recording the session needs the
+ * filtered stream the simulation actually saw — after OS auto-repeat is dropped and after
+ * unmatched releases are swallowed — and any path that skipped the sink would be invisible
+ * to it.
  */
 
-import { Action, ACTION_COUNT, type Canvas } from '../engine/canvas.js';
+import { Action, ACTION_COUNT, type InputSink } from '../engine/canvas.js';
 import { DEFAULT_KEYS, RESERVED_KEYS } from '../settings.js';
 
 /** Minimal surface of `window` this needs — lets tests pass a bare EventTarget. */
@@ -21,7 +27,7 @@ export class Keyboard {
   private bindings: string[] = [...DEFAULT_KEYS];
   private byCode = new Map<string, Action[]>();
   private readonly held = new Set<string>();
-  private canvas: Canvas | null = null;
+  private sink: InputSink | null = null;
   private suspended = false;
   private detach: (() => void) | null = null;
 
@@ -41,7 +47,7 @@ export class Keyboard {
       if (actions) actions.push(action as Action);
       else this.byCode.set(code, [action as Action]);
     }
-    this.canvas?.applyBindings(this.bindings);
+    this.sink?.applyBindings(this.bindings);
   }
 
   /** True if the code drives any game action — lets the host yield hotkeys to bindings. */
@@ -49,10 +55,10 @@ export class Keyboard {
     return this.byCode.has(code);
   }
 
-  attach(target: KeyboardTarget, canvas: Canvas): void {
+  attach(target: KeyboardTarget, sink: InputSink): void {
     this.dispose();
-    this.canvas = canvas;
-    canvas.applyBindings(this.bindings);
+    this.sink = sink;
+    sink.applyBindings(this.bindings);
 
     const onDown = (e: KeyboardEvent) => {
       const actions = this.byCode.get(e.code);
@@ -66,7 +72,7 @@ export class Keyboard {
       // fight it.
       if (this.held.has(e.code)) return;
       this.held.add(e.code);
-      for (const action of actions) canvas.pressKey(action);
+      for (const action of actions) sink.pressKey(action);
     };
     const onUp = (e: KeyboardEvent) => {
       const actions = this.byCode.get(e.code);
@@ -74,7 +80,7 @@ export class Keyboard {
       // Not held means the press never reached the game — nothing to release.
       if (!this.held.delete(e.code)) return;
       e.preventDefault();
-      for (const action of actions) canvas.releaseKey(action);
+      for (const action of actions) sink.releaseKey(action);
     };
     // Dropping every held key on blur avoids a key sticking down when focus is lost.
     const onBlur = () => this.releaseAll();
@@ -103,9 +109,9 @@ export class Keyboard {
   }
 
   private releaseAll(): void {
-    if (this.canvas) {
+    if (this.sink) {
       for (const code of this.held) {
-        for (const action of this.byCode.get(code) ?? []) this.canvas.releaseKey(action);
+        for (const action of this.byCode.get(code) ?? []) this.sink.releaseKey(action);
       }
     }
     this.held.clear();
@@ -115,6 +121,6 @@ export class Keyboard {
     this.releaseAll();
     this.detach?.();
     this.detach = null;
-    this.canvas = null;
+    this.sink = null;
   }
 }

@@ -77,7 +77,9 @@ async function main(): Promise<void> {
       continuous: settings.continuous,
       keys: settings.keys,
     });
-    keyboard.attach(window, game.canvas);
+    // Through the sink, not straight at the canvas: everything that reaches the simulation
+    // has to pass one seam, so a recorder can sit on it.
+    keyboard.attach(window, game.inputSink);
     currentLevel = -1;
     game.drainSounds(); // discard anything queued during construction
     sounds.playStart();
@@ -87,10 +89,7 @@ async function main(): Promise<void> {
   const helpEl = el('keys');
   const applySettings = () => {
     saveSettings(settings);
-    game.canvas.hSensitivity = settings.hSensitivity;
-    game.canvas.vSensitivity = settings.vSensitivity;
-    game.canvas.continuous = settings.continuous;
-    game.canvas.reinit();
+    game.setSensitivity(settings.hSensitivity, settings.vSensitivity, settings.continuous);
     // Order matters: Keyboard pushes the bindings into the canvas, so its grouping wins.
     keyboard.setBindings(settings.keys);
     if (mixer instanceof WebAudioMixer) mixer.setVolume(settings.volume);
@@ -184,10 +183,7 @@ async function main(): Promise<void> {
       sounds,
       audioCtx,
       step(frames = 1) {
-        for (let i = 0; i < frames; i++) {
-          game.beginRenderFrame();
-          game.step();
-        }
+        for (let i = 0; i < frames; i++) game.stepFrame(1);
         // Same as the rAF loop does, so stepping by hand behaves like real play. Without
         // this the sound queue just grows, since rAF stops in a background tab.
         sounds.level = game.canvas.level;
@@ -219,10 +215,10 @@ async function main(): Promise<void> {
         return true;
       },
       press(action: number) {
-        game.canvas.pressKey(action);
+        game.input(action, true);
       },
       release(action: number) {
-        game.canvas.releaseKey(action);
+        game.input(action, false);
       },
     };
   }

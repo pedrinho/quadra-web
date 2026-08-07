@@ -31,6 +31,41 @@ export const enum Action {
 }
 export const ACTION_COUNT = 7;
 
+/**
+ * What a host needs in order to drive a game's input, and nothing else.
+ *
+ * `Canvas` satisfies it directly, which is all a test or a local game needs. A host that
+ * records or transmits its input hands the keyboard something else that satisfies it and
+ * forwards — see `Game.inputSink`. Keeping this narrow is what stops input reaching the
+ * simulation by a path nothing is watching.
+ */
+export interface InputSink {
+  pressKey(i: Action): void;
+  releaseKey(i: Action): void;
+  applyBindings(codes: readonly string[]): void;
+}
+
+/**
+ * Collapse per-action key codes into the canonical grouping: each action points at the
+ * lowest action bound to the same physical key, so actions sharing a key share one sticky
+ * slot. Canonical means `g[i] <= i` and `g[g[i]] === g[i]`, which is what lets a grouping
+ * be validated without trusting where it came from.
+ */
+export function groupsFromBindings(codes: readonly string[]): Uint8Array {
+  const groups = new Uint8Array(ACTION_COUNT);
+  for (let i = 0; i < ACTION_COUNT; i++) {
+    let group = i;
+    for (let j = 0; j < i; j++) {
+      if (codes[j] !== undefined && codes[j] === codes[i]) {
+        group = groups[j]!;
+        break;
+      }
+    }
+    groups[i] = group;
+  }
+  return groups;
+}
+
 /** One queued garbage line. */
 export interface BonusLine {
   color: number;
@@ -129,16 +164,20 @@ export class Canvas extends Board {
    * also share their sticky state. `codes` is indexed by Action; entries may repeat.
    */
   applyBindings(codes: readonly string[]): void {
-    for (let i = 0; i < ACTION_COUNT; i++) {
-      let group = i;
-      for (let j = 0; j < i; j++) {
-        if (codes[j] !== undefined && codes[j] === codes[i]) {
-          group = this.keyGroup[j]!;
-          break;
-        }
-      }
-      this.keyGroup[i] = group;
-    }
+    this.applyKeyGroups(groupsFromBindings(codes));
+  }
+
+  /**
+   * The grouping itself, which is the only part of the bindings the simulation can see —
+   * `checkKey` and friends index through it. A recording of a game therefore has to carry
+   * this, but never the key codes, which are purely the host's business.
+   */
+  keyGroups(): Uint8Array {
+    return Uint8Array.from(this.keyGroup);
+  }
+
+  applyKeyGroups(groups: readonly number[] | Uint8Array): void {
+    for (let i = 0; i < ACTION_COUNT; i++) this.keyGroup[i] = groups[i] ?? i;
     this.clearKeyAll();
   }
 
