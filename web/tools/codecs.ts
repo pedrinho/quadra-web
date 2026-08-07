@@ -109,6 +109,73 @@ export function encodeQimg(img: Indexed): Buffer {
   return Buffer.concat([header, Buffer.from(img.palette), Buffer.from(img.indices)]);
 }
 
+export interface Glyph {
+  width: number;
+  height: number;
+  /** Row stride in the source, which is not always the glyph width. */
+  stride: number;
+  /** One intensity per pixel, 0 transparent and 1-7 a ramp from shadow to full. */
+  pixels: Uint8Array;
+}
+
+/**
+ * Read one of the original's `.fnt` files (`Fontdata::Fontdata`, source/sprite.cc:58-80).
+ *
+ * A flat run of glyph records: int32 width, and if it is not zero, int32 height, int32 row
+ * stride and then the pixels. Slot n is the character n + 33, so the first is '!' and space
+ * has no glyph at all — it is drawn as a gap the width of an 'i'.
+ *
+ * The pixels are not palette indices. They are intensities 0-7, which the original resolves
+ * against the destination palette when the font is coloured (`Font::colorize`), and that is
+ * what lets one font file be drawn in any colour on any screen.
+ */
+export function decodeFnt(buf: Buffer): Glyph[] {
+  const glyphs: Glyph[] = [];
+  let pos = 0;
+  while (pos + 4 <= buf.length) {
+    const width = buf.readInt32LE(pos);
+    pos += 4;
+    if (width === 0) {
+      glyphs.push({ width: 0, height: 0, stride: 0, pixels: new Uint8Array(0) });
+      continue;
+    }
+    const height = buf.readInt32LE(pos);
+    const stride = buf.readInt32LE(pos + 4);
+    pos += 8;
+    const pixels = new Uint8Array(buf.subarray(pos, pos + stride * height));
+    pos += stride * height;
+    if (pixels.length !== stride * height) throw new Error('truncated glyph');
+    glyphs.push({ width, height, stride, pixels });
+  }
+  return glyphs;
+}
+
+/**
+ * "QFNT", uint16 glyph count, uint16 shrink, then per glyph uint16 width — zero for an absent
+ * one — followed by uint16 height, uint16 stride and stride*height intensities.
+ */
+export function encodeQfnt(glyphs: readonly Glyph[], shrink: number): Buffer {
+  const head = Buffer.alloc(8);
+  head.write('QFNT', 0, 'latin1');
+  head.writeUInt16LE(glyphs.length, 4);
+  head.writeUInt16LE(shrink, 6);
+
+  const parts: Buffer[] = [head];
+  for (const g of glyphs) {
+    if (g.width === 0) {
+      const empty = Buffer.alloc(2);
+      parts.push(empty);
+      continue;
+    }
+    const meta = Buffer.alloc(6);
+    meta.writeUInt16LE(g.width, 0);
+    meta.writeUInt16LE(g.height, 2);
+    meta.writeUInt16LE(g.stride, 4);
+    parts.push(meta, Buffer.from(g.pixels));
+  }
+  return Buffer.concat(parts);
+}
+
 export interface WavPcm {
   rate: number;
   /** Unsigned 8-bit mono samples, exactly as stored in the file. */

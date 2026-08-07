@@ -1,0 +1,649 @@
+/*
+ * Copyright (C) 2026 Quadra Web contributors
+ * Licensed under the GNU LGPL v2.1 or later. See LICENSE at the repo root.
+ *
+ * Every colour here was measured out of the game's own artwork rather than chosen: the ground
+ * and the two accents are palette entries from `debuto.qimg`, the section ground is from
+ * `fond5.qimg`. Sampling the source is why this does not look like a dark theme with a neon
+ * accent bolted on — the teal is a 1998 airbrushed halo, and the yellow is the exact ink of the
+ * hand-lettered menu.
+ */
+
+:root {
+  color-scheme: dark;
+
+  --void: #000810;
+  --void-lift: #0a1420;
+  --chrome: #eeeef6;
+  --chrome-dim: #cdd5d5;
+  --glow: #007ba4;
+  --glow-lit: #33b4d8;
+  --amber: #ffff00;
+  --blood: #431623;
+
+  --ink: #b6bfcb;
+  --ink-quiet: #6f7b8a;
+  --rule: #ffffff14;
+
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, "Cascadia Mono", monospace;
+
+  --gutter: clamp(20px, 5vw, 64px);
+  --measure: 1120px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--void);
+  color: var(--ink);
+  font: 400 16px/1.65 var(--sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+a {
+  color: var(--chrome);
+  text-decoration-color: var(--glow);
+  text-underline-offset: 3px;
+}
+a:hover {
+  color: var(--glow-lit);
+}
+
+:where(a, button, input, [tabindex]):focus-visible {
+  outline: 2px solid var(--glow-lit);
+  outline-offset: 3px;
+}
+
+.vh {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* The original's lettering, at 1:1 in the canvas and scaled by whole numbers here so it stays
+   as crisp as it was on a 1998 CRT. */
+canvas.lettering-art,
+canvas.sprite-art {
+  image-rendering: pixelated;
+  display: block;
+}
+
+/* --- masthead ------------------------------------------------------------- */
+
+.masthead {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  padding: 12px var(--gutter);
+  background: color-mix(in srgb, var(--void) 88%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--rule);
+}
+
+.wordmark {
+  display: block;
+  line-height: 0;
+}
+.wordmark canvas {
+  height: 34px;
+  width: auto;
+  image-rendering: pixelated;
+}
+
+.nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px clamp(12px, 2vw, 28px);
+  font-size: 14px;
+  letter-spacing: 0.02em;
+}
+.nav a {
+  color: var(--ink);
+  text-decoration: none;
+  padding: 4px 0;
+  border-bottom: 1px solid transparent;
+}
+.nav a:hover {
+  color: var(--chrome);
+  border-bottom-color: var(--glow);
+}
+
+/* --- the stage ------------------------------------------------------------ */
+
+.stage {
+  position: relative;
+  display: grid;
+  align-items: center;
+  min-height: calc(100vh - 120px);
+  padding: clamp(28px, 6vw, 72px) 0;
+  border-bottom: 1px solid var(--rule);
+  overflow: hidden;
+}
+
+/* A photograph from the game, dimmed to a texture. It is the only wallpaper on the page. */
+.stage-ground {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.28;
+  filter: saturate(0.8);
+  mask-image: radial-gradient(120% 90% at 30% 40%, #000 25%, transparent 78%);
+}
+
+/* The same box as every other section, so the board's left edge lines up with the headings
+   below it rather than floating in the middle of the stage. */
+.stage-inner {
+  position: relative;
+  display: flex;
+  gap: clamp(24px, 5vw, 64px);
+  align-items: center;
+  flex-wrap: wrap;
+  width: 100%;
+  max-width: var(--measure);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+.board {
+  position: relative;
+  flex: 0 0 auto;
+}
+.board canvas#screen {
+  display: block;
+  image-rendering: pixelated;
+  /* Whole multiples of the source, so every cell stays the same size as every other cell.
+     Only a short viewport breaks the integer scale, and then fitting matters more. */
+  height: 397px;
+  width: auto;
+  max-height: 76vh;
+  background: #000;
+}
+@media (min-height: 900px) {
+  .board canvas#screen {
+    height: 794px;
+    max-height: 82vh;
+  }
+}
+.is-watching .board canvas#screen {
+  height: 794px;
+  /* Room for the transport, which sits at the foot of the window while a replay is up. */
+  max-height: min(62vh, calc(100vh - 380px));
+}
+.is-watching .stage-side {
+  display: none;
+}
+.is-watching .stage-inner {
+  justify-content: center;
+}
+.is-watching .stage {
+  padding-bottom: 200px;
+}
+
+/* Pause and game over sit on the board, in the page's voice rather than the game's. */
+.board-state {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  gap: 10px;
+  text-align: center;
+  padding: 20px;
+  background: color-mix(in srgb, var(--void) 78%, transparent);
+  backdrop-filter: blur(2px);
+}
+.board-state[hidden] {
+  display: none;
+}
+.board-state strong {
+  display: block;
+  font: 600 20px/1.2 var(--sans);
+  color: var(--chrome);
+}
+.board-state span {
+  font: 400 13px/1.5 var(--mono);
+  color: var(--ink-quiet);
+}
+
+.stage-side {
+  flex: 1 1 320px;
+  min-width: 280px;
+}
+
+.eyebrow {
+  margin: 0 0 6px;
+  font: 500 12px/1 var(--mono);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--glow-lit);
+}
+
+.figure {
+  margin: 0;
+  font: 400 clamp(44px, 8vw, 76px) / 0.95 var(--mono);
+  letter-spacing: -0.02em;
+  color: var(--chrome);
+  font-variant-numeric: tabular-nums;
+}
+
+.facts {
+  margin: 10px 0 0;
+  font: 400 13px/1.7 var(--mono);
+  color: var(--ink-quiet);
+}
+
+.lede {
+  margin: 14px 0 0;
+  max-width: 46ch;
+  color: var(--ink);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin-top: 22px;
+}
+
+/* The play button *is* the original's menu label, cut out of the artwork. */
+button.play {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  line-height: 0;
+  filter: drop-shadow(0 2px 0 #0008);
+  transition: transform 120ms ease;
+}
+button.play canvas {
+  height: 30px;
+  width: auto;
+  image-rendering: pixelated;
+}
+button.play:hover {
+  transform: translateY(-1px) scale(1.02);
+}
+button.play:active {
+  transform: translateY(1px);
+}
+
+button.link {
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font: 400 14px/1 var(--sans);
+  color: var(--ink);
+  border-bottom: 1px solid var(--glow);
+  padding-bottom: 2px;
+}
+button.link:hover {
+  color: var(--glow-lit);
+}
+
+.readouts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(94px, 1fr));
+  gap: 14px 18px;
+  margin: 0;
+}
+.readouts dt {
+  font: 500 11px/1 var(--mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-quiet);
+}
+.readouts dd {
+  margin: 4px 0 0;
+  font: 400 30px/1 var(--mono);
+  color: var(--chrome);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- records -------------------------------------------------------------- */
+
+.records,
+.how {
+  max-width: var(--measure);
+  margin: 0 auto;
+  padding: clamp(40px, 7vw, 88px) var(--gutter);
+}
+
+.lettering {
+  margin: 0 0 14px;
+  line-height: 0;
+}
+.lettering canvas {
+  height: 36px;
+  width: auto;
+}
+
+.records-list {
+  list-style: none;
+  margin: 26px 0 0;
+  padding: 0;
+}
+
+/* Rows sit welded: no gap, one hairline between them, the way cells from the same piece share
+   an edge. The board's own rule.
+
+   Flex rather than fixed columns so a row folds on a narrow screen instead of overflowing it. */
+.record {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 18px;
+  padding: 14px 12px;
+  border-top: 1px solid var(--rule);
+  transition: background-color 120ms ease;
+}
+.record:last-child {
+  border-bottom: 1px solid var(--rule);
+}
+.record:hover {
+  background: var(--void-lift);
+}
+.record.is-fresh {
+  box-shadow: inset 3px 0 0 var(--amber);
+}
+
+.record .rank {
+  flex: 0 0 2.2rem;
+  font: 400 13px/1.6 var(--mono);
+  color: var(--ink-quiet);
+}
+.record .score {
+  flex: 0 0 auto;
+  min-width: 5ch;
+  font: 400 26px/1.1 var(--mono);
+  color: var(--chrome);
+  font-variant-numeric: tabular-nums;
+}
+.record .detail {
+  flex: 1 1 16ch;
+  font: 400 13px/1.6 var(--mono);
+  color: var(--ink-quiet);
+}
+.record .row-actions {
+  display: flex;
+  flex: 0 0 auto;
+  margin-left: auto;
+  gap: 14px;
+  align-items: center;
+}
+
+/* The verdict a row gives when it has re-simulated itself. */
+.record .verdict {
+  flex: 1 0 100%;
+  margin: 0;
+  padding-left: 2.2rem;
+  font: 400 12px/1.6 var(--mono);
+  color: var(--ink-quiet);
+}
+.record .verdict[data-state='ok'] {
+  color: var(--amber);
+}
+.record .verdict[data-state='bad'] {
+  color: #ff6b6b;
+}
+.record .verdict[hidden] {
+  display: none;
+}
+
+.empty {
+  margin: 24px 0 0;
+  padding: 22px;
+  border: 1px dashed var(--rule);
+  color: var(--ink-quiet);
+}
+.empty[hidden] {
+  display: none;
+}
+
+/* --- how it works --------------------------------------------------------- */
+
+.how {
+  background:
+    radial-gradient(80% 60% at 50% 120%, color-mix(in srgb, var(--blood) 90%, transparent), transparent),
+    linear-gradient(180deg, transparent, color-mix(in srgb, var(--blood) 45%, transparent));
+  max-width: none;
+  border-top: 1px solid var(--rule);
+}
+.how > * {
+  max-width: var(--measure);
+  margin-inline: auto;
+}
+.beats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: clamp(20px, 4vw, 44px);
+  margin: 26px auto 0;
+}
+.beats h3 {
+  margin: 0 0 8px;
+  font: 600 17px/1.3 var(--sans);
+  color: var(--chrome);
+}
+.beats p {
+  margin: 0;
+  color: var(--ink);
+}
+.how > .lede {
+  margin: 34px 0 0;
+  max-width: 62ch;
+  color: var(--ink-quiet);
+}
+
+/* --- colophon ------------------------------------------------------------- */
+
+.colophon {
+  max-width: var(--measure);
+  margin: 0 auto;
+  padding: clamp(32px, 6vw, 64px) var(--gutter) 72px;
+  border-top: 1px solid var(--rule);
+  color: var(--ink-quiet);
+  font-size: 14px;
+}
+.colophon p {
+  max-width: 62ch;
+}
+.colophon strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+.signature {
+  display: block;
+  line-height: 0;
+  margin-bottom: 18px;
+}
+.signature canvas {
+  height: 54px;
+  width: auto;
+  opacity: 0.85;
+}
+.signature:hover canvas {
+  opacity: 1;
+}
+
+/* --- overlays: the settings panel and the replay transport ----------------- */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--void) 82%, transparent);
+  backdrop-filter: blur(6px);
+  padding: 16px;
+  overflow: auto;
+  z-index: 30;
+}
+.overlay[hidden] {
+  display: none;
+}
+.overlay .panel {
+  width: min(460px, 100%);
+  max-height: 100%;
+  overflow: auto;
+  background: var(--void-lift);
+  border: 1px solid var(--rule);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.overlay header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.overlay h2 {
+  margin: 0;
+  font: 500 12px/1 var(--mono);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--glow-lit);
+}
+.overlay h3 {
+  margin: 0 0 6px;
+  font: 500 11px/1 var(--mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-quiet);
+}
+.overlay .group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.overlay .field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.overlay .row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.overlay .row label {
+  flex: 1;
+  font-size: 14px;
+}
+.overlay .readout {
+  color: var(--ink-quiet);
+  font: 400 11px/1.5 var(--mono);
+}
+.overlay input[type='range'] {
+  flex: 1 1 180px;
+  accent-color: var(--glow-lit);
+}
+.overlay button {
+  font: 400 13px/1.4 var(--sans);
+  color: var(--ink);
+  background: #ffffff0d;
+  border: 1px solid var(--rule);
+  padding: 5px 10px;
+  cursor: pointer;
+}
+.overlay button:hover {
+  background: #ffffff1a;
+  color: var(--chrome);
+}
+.overlay button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.overlay button.key {
+  min-width: 130px;
+  font-family: var(--mono);
+}
+.overlay button.arming {
+  border-color: var(--amber);
+  color: var(--amber);
+}
+.overlay button.duplicate {
+  border-color: #7a6033;
+}
+.overlay button.close {
+  padding: 2px 8px;
+}
+.overlay .actions {
+  display: flex;
+  gap: 8px;
+  margin: 0;
+}
+.overlay .hint {
+  color: var(--ink-quiet);
+  font-size: 12px;
+  min-height: 1.4em;
+}
+
+/* The replay transport sits at the bottom: what is behind it is the replay. */
+.replay {
+  background: none;
+  backdrop-filter: none;
+  align-items: flex-end;
+  padding-bottom: 28px;
+  pointer-events: none;
+  z-index: 31;
+}
+.replay .panel {
+  width: min(560px, 100%);
+  pointer-events: auto;
+  gap: 10px;
+  background: color-mix(in srgb, var(--void) 92%, transparent);
+  backdrop-filter: blur(8px);
+}
+.transport-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.transport-row input[type='range'] {
+  flex: 1;
+  accent-color: var(--glow-lit);
+}
+.replay button.transport {
+  min-width: 3em;
+}
+
+/* While a replay is up the page behind it should not compete. */
+body.is-watching .masthead {
+  opacity: 0.25;
+}

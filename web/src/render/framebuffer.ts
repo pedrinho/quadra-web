@@ -26,6 +26,7 @@ export class Framebuffer {
 
   /** Allocated on first present(). Drawing needs no browser; only showing the result does. */
   private rgba: ImageData | null = null;
+  private region: ImageData | null = null;
 
   /* Clip rectangle. The original gets this for free: every pane and board draws into its
    * own Video_bitmap, which is a sub-rectangle view of the screen, so a piece sliding in
@@ -167,6 +168,33 @@ export class Framebuffer {
         this.pixels[dstRow + x] = src[srcRow + x]!;
       }
     }
+  }
+
+  /**
+   * Present a sub-rectangle, for a host that shows the playfield rather than the whole 640x480
+   * frame. Everything still *draws* into the full frame — the background erase and the palette
+   * the blocks are shaded from both depend on the original coordinates — so this only decides
+   * how much of it reaches the page.
+   */
+  presentRegion(ctx: CanvasRenderingContext2D, sx: number, sy: number, w: number, h: number): void {
+    if (!this.region || this.region.width !== w || this.region.height !== h) {
+      this.region = new ImageData(w, h);
+      const d = this.region.data;
+      for (let i = 3; i < d.length; i += 4) d[i] = 255;
+    }
+    const { pixels, palette } = this;
+    const out = this.region.data;
+    for (let y = 0; y < h; y++) {
+      let src = (sy + y) * this.width + sx;
+      let o = y * w * 4;
+      for (let x = 0; x < w; x++, src++, o += 4) {
+        const p = pixels[src]! * 3;
+        out[o] = palette[p]!;
+        out[o + 1] = palette[p + 1]!;
+        out[o + 2] = palette[p + 2]!;
+      }
+    }
+    ctx.putImageData(this.region, 0, 0);
   }
 
   /** Expand the indexed buffer through the palette and present it. */

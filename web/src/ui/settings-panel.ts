@@ -268,7 +268,7 @@ export class SettingsPanel {
 export function bindingsHelp(settings: Settings): string {
   const k = (a: Action) => keyLabel(settings.keys[a] ?? '');
   const parts = ACTION_ORDER.map(({ action, label }) => `${k(action)} ${label.toLowerCase()}`);
-  return `${parts.join(' · ')} · P pause · R restart · L best runs · Esc settings`;
+  return `${parts.join(' · ')} · P pause · R restart · Esc settings`;
 }
 
 /* --- small DOM helpers --------------------------------------------------- */

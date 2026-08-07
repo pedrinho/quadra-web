@@ -1,23 +1,37 @@
 /*
- * Browser entry point.
+ * Browser entry point: the page, its assets, and the game when someone presses play.
  * Copyright (C) 2026 Quadra Web contributors
  * Licensed under the GNU LGPL v2.1 or later. See LICENSE at the repo root.
+ *
+ * The page is a page. It is not the 1998 application redrawn inside a canvas — the artwork,
+ * the lettering and the palette are the materials it is built from, and the only thing the
+ * framebuffer draws is the playfield itself, which is the one part that has to be pixel-exact.
  */
 
+import './styles.css';
+
 import { Game } from './engine/game.js';
-import { SCREEN_WIDTH, SCREEN_HEIGHT } from './render/framebuffer.js';
 import { loadQimg, type QImage } from './render/qimg.js';
-import { Screen } from './render/screen.js';
+import { loadQfnt, type Fontdata } from './render/font.js';
+import { Screen, PLAYFIELD_VIEW } from './render/screen.js';
+import {
+  cropPixels,
+  isMenuInk,
+  labelCanvas,
+  letteringCanvas,
+  toCanvas,
+} from './render/lettering.js';
 import { Keyboard } from './input/keyboard.js';
-import { Bloc } from './engine/bloc.js';
 import { loadSettings, saveSettings } from './settings.js';
 import { SettingsPanel, bindingsHelp } from './ui/settings-panel.js';
-import { LeaderboardPanel } from './ui/leaderboard-panel.js';
 import { ReplayViewer } from './ui/replay-viewer.js';
-import { saveRun, tapeOf, type StoredRun } from './leaderboard.js';
+import { Records } from './ui/records.js';
+import { Hero } from './ui/hero.js';
+import { GameView } from './ui/game-view.js';
+import { loadRuns, saveRun, tapeOf, type StoredRun } from './leaderboard.js';
 import { decodeTape } from './replay/tape.js';
 import { record, type TapeRecorder } from './replay/recorder.js';
-import { verify } from './replay/verify.js';
+import { APP_VERSION } from './version.js';
 import { createMixer, WebAudioMixer } from './audio/mixer.js';
 import { loadSoundBank, type SoundBuffer } from './audio/sound-bank.js';
 import { SoundPlayer } from './audio/sound-player.js';
@@ -28,99 +42,130 @@ const el = <T extends HTMLElement>(id: string): T => {
   return found as T;
 };
 
+const LEVELS = 10;
+/* Coordinates in the menu artwork. The logo crop is measured off `debuto.qimg`; the label
+ * positions are the ones the original blits them at (source/menu.cc:1481-1519), which is what
+ * makes it possible to subtract the background from behind the lettering. */
+const WORDMARK = { x: 36, y: 6, width: 568, height: 92 };
+const PLAY_LABEL = { x: 160, y: 99 };
+const SIGNATURE = { x: 0, y: 390 };
+
 async function main(): Promise<void> {
-  const canvasEl = el<HTMLCanvasElement>('screen');
-  canvasEl.width = SCREEN_WIDTH;
-  canvasEl.height = SCREEN_HEIGHT;
-  const ctx = canvasEl.getContext('2d', { alpha: false });
+  const boardEl = el<HTMLCanvasElement>('screen');
+  boardEl.width = PLAYFIELD_VIEW.width;
+  boardEl.height = PLAYFIELD_VIEW.height;
+  const ctx = boardEl.getContext('2d', { alpha: false });
   if (!ctx) throw new Error('could not get a 2d context');
   ctx.imageSmoothingEnabled = false;
 
-  const status = el<HTMLElement>('status');
-  status.textContent = 'loading…';
-
-  // Backgrounds carry the palette the blocks are shaded from, so this must load before
-  // anything is drawn.
-  const backgrounds: QImage[] = [];
-  for (let i = 0; i < 10; i++) backgrounds.push(await loadQimg(`assets/fond${i}.qimg`));
-
-  // Audio is optional: a browser without Web Audio, or a checkout where the asset bank has
-  // not been generated, must still leave the game fully playable.
-  const { mixer, ctx: audioCtx } = createMixer();
-  let bank: ReadonlyMap<string, SoundBuffer> = new Map();
-  if (audioCtx) {
-    try {
-      bank = await loadSoundBank('assets/sounds.qsnd', audioCtx);
-    } catch (err) {
-      console.warn('sound disabled:', err);
+  const images = new Map<string, Promise<QImage>>();
+  const image = (name: string): Promise<QImage> => {
+    let pending = images.get(name);
+    if (!pending) {
+      pending = loadQimg(`assets/${name}.qimg`);
+      images.set(name, pending);
     }
-  }
+    return pending;
+  };
+
+  el('version').textContent = `port ${APP_VERSION}`;
+
+  /* Type first. The page is already painted by the time this runs; what these add is the
+   * lettering, which is the one thing that cannot be done with a web font. */
+  const font = await loadQfnt('assets/font.qfnt');
+  dressHeadings(font);
+
+  void Promise.all([image('debuto'), image('debut0'), image('debut8')]).then(([menu, play, mark]) => {
+    const wordmark = toCanvas(
+      cropPixels(menu, WORDMARK.x, WORDMARK.y, WORDMARK.width, WORDMARK.height),
+    );
+    // Airbrushed, not pixel art: let the browser scale it smoothly.
+    wordmark.style.imageRendering = 'auto';
+    document.querySelector('[data-crop="wordmark"]')?.prepend(wordmark);
+
+    // One canvas each: cloning a canvas element copies its size and not a pixel of its bitmap.
+    for (const button of document.querySelectorAll('button.play')) {
+      const label = labelCanvas(play, menu, PLAY_LABEL.x, PLAY_LABEL.y, isMenuInk);
+      label.className = 'sprite-art';
+      button.prepend(label);
+    }
+
+    const signature = labelCanvas(mark, menu, SIGNATURE.x, SIGNATURE.y);
+    signature.className = 'sprite-art';
+    document.querySelector('[data-sprite="signature"]')?.prepend(signature);
+  });
+  void image('multi').then((art) => paintGround(el<HTMLCanvasElement>('ground'), art));
+
+  const backgrounds: (QImage | undefined)[] = new Array<QImage | undefined>(LEVELS);
+  const backgroundsReady = Promise.all(
+    Array.from({ length: LEVELS }, async (_, i) => {
+      backgrounds[i] = await image(`fond${i}`);
+    }),
+  );
+  let pauseBadge: QImage | null = null;
+  void image('gamepaus').then((img) => (pauseBadge = img));
+
+  // Audio is optional: a browser without Web Audio, or a checkout where the bank has not been
+  // generated, must still leave the game fully playable.
+  const { mixer, ctx: audioCtx } = createMixer();
+  let sounds: SoundPlayer | null = null;
+  const soundsReady = (async () => {
+    let bank: ReadonlyMap<string, SoundBuffer> = new Map();
+    if (audioCtx) {
+      try {
+        bank = await loadSoundBank('assets/sounds.qsnd', audioCtx);
+      } catch (err) {
+        console.warn('sound disabled:', err);
+      }
+    }
+    sounds = new SoundPlayer(bank, mixer);
+  })();
 
   const screen = new Screen(ctx, backgrounds);
   const settings = loadSettings();
   const keyboard = new Keyboard(settings.keys);
-  const sounds = new SoundPlayer(bank, mixer);
 
-  let game: Game;
-  let recorder: TapeRecorder;
-  /** Set once the run has been offered to the board, so it is offered exactly once. */
+  const view = new GameView({
+    attract: el('attract'),
+    hud: el('hud'),
+    state: el('board-state'),
+    score: el('score'),
+    lines: el('lines'),
+    level: el('level'),
+    chain: el('chain'),
+  });
+
+  const hero = new Hero(screen, {
+    section: el('stage'),
+    eyebrow: el('attract-eyebrow'),
+    score: el('attract-score'),
+    facts: el('attract-facts'),
+    lede: el('attract-lede'),
+  });
+
+  let playing = false;
+  let game: Game | null = null;
+  let recorder: TapeRecorder | null = null;
   let submitted = false;
+  let last = performance.now();
 
-  const startGame = () => {
-    game = new Game({
-      seed: Date.now() & 0x7fffffff,
-      level: 1,
-      levelUp: true,
-      shadow: true,
-      hSensitivity: settings.hSensitivity,
-      vSensitivity: settings.vSensitivity,
-      continuous: settings.continuous,
-      keys: settings.keys,
-    });
-    // Recording is on for every game and costs a few kilobytes a minute. A score is only worth
-    // anything if the run behind it can be re-simulated, so the tape is the run — there is no
-    // separate "start recording" to forget. The bypass guard is a development aid: in
-    // production a stray direct write should cost an unverifiable score, not a crash.
-    recorder = record(game, { guard: import.meta.env.DEV });
-    // Through the sink, not straight at the canvas: everything that reaches the simulation
-    // has to pass one seam, so the recorder sits on it.
-    keyboard.attach(window, game.inputSink);
-    submitted = false;
-    screen.invalidate();
-    game.drainSounds(); // discard anything queued during construction
-    sounds.playStart();
-  };
-  startGame();
+  /* --- overlays ------------------------------------------------------------ */
 
-  const helpEl = el('keys');
-  const applySettings = () => {
-    saveSettings(settings);
-    game.setSensitivity(settings.hSensitivity, settings.vSensitivity, settings.continuous);
-    // Order matters: Keyboard pushes the bindings into the canvas, so its grouping wins.
-    keyboard.setBindings(settings.keys);
-    if (mixer instanceof WebAudioMixer) mixer.setVolume(settings.volume);
-    helpEl.textContent = bindingsHelp(settings);
-  };
-
-  /* Any overlay pauses the game and takes the keyboard. They can be stacked — the board opens
-   * over the game and a replay opens over the board — so this counts rather than toggles, and
-   * restores the pause state rather than clearing it, so a game paused with P stays paused. */
   let overlays = 0;
   let pausedBeforeOverlay = false;
   const onOverlay = (open: boolean) => {
     if (open) {
       if (overlays === 0) {
-        pausedBeforeOverlay = game.paused;
-        game.paused = true;
+        pausedBeforeOverlay = game?.paused ?? false;
+        if (game) game.paused = true;
         keyboard.suspend();
       }
       overlays++;
     } else {
       overlays = Math.max(0, overlays - 1);
-      if (overlays === 0) {
+      if (overlays === 0 && game && playing) {
         game.paused = pausedBeforeOverlay;
         keyboard.resume();
-        screen.invalidate();
       }
     }
   };
@@ -132,114 +177,228 @@ async function main(): Promise<void> {
     onVisibility: onOverlay,
   });
 
-  // A replay is watched *on the canvas*, so the board has to get out of the way and come back
-  // afterwards rather than sit over the thing being watched.
-  let reopenBoard = false;
   const viewer = new ReplayViewer({
     host: document.body,
     screen,
     onVisibility: (open) => {
+      document.body.classList.toggle('is-watching', open);
       onOverlay(open);
-      if (!open && reopenBoard) {
-        reopenBoard = false;
-        board.show();
+      if (open) hero.stop();
+      else if (!playing) {
+        hero.paint();
+        hero.start();
+      } else {
+        screen.invalidate();
       }
     },
   });
 
-  const watch = (run: StoredRun) => {
-    const bytes = tapeOf(run);
+  const watch = (bytes: Uint8Array | null, label: string) => {
     if (!bytes) return;
     try {
-      const tape = decodeTape(bytes);
-      reopenBoard = board.isOpen;
-      board.hide();
-      viewer.show(tape, `${run.score.toLocaleString()} · ${run.lines} lines`);
+      viewer.show(decodeTape(bytes), label);
     } catch (err) {
-      // A stored tape that no longer decodes is a bug or a hand-edited blob, not something
-      // worth taking the page down for.
+      // A stored recording that no longer decodes is a bug or a hand-edited blob, not a reason
+      // to take the page down.
       console.warn('could not open that replay:', err);
     }
   };
 
-  const board = new LeaderboardPanel({
-    host: document.body,
-    onWatch: watch,
-    onVisibility: onOverlay,
+  const records = new Records({
+    list: el('records-list'),
+    empty: el('records-empty'),
+    onWatch: (run: StoredRun) =>
+      watch(tapeOf(run), `${run.score.toLocaleString()} · ${run.lines} lines`),
   });
+  records.refresh();
+
+  function applySettings(): void {
+    saveSettings(settings);
+    game?.setSensitivity(settings.hSensitivity, settings.vSensitivity, settings.continuous);
+    // Order matters: Keyboard pushes the bindings into the canvas, so its grouping wins.
+    keyboard.setBindings(settings.keys);
+    if (mixer instanceof WebAudioMixer) mixer.setVolume(settings.volume);
+    el('keys').textContent = bindingsHelp(settings);
+  }
   applySettings();
 
-  const scoreEl = el('score');
-  const linesEl = el('lines');
-  const levelEl = el('level');
-  const chainEl = el('chain');
+  /* --- the attract replay -------------------------------------------------- */
 
-  let bestChain = 0;
-  let last = performance.now();
+  const demoTape = (async () => {
+    const res = await fetch('assets/demo.qtape');
+    if (!res.ok) throw new Error(`no demo recording: ${res.status}`);
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    return { bytes, tape: decodeTape(bytes) };
+  })();
 
-  let outcome = '';
+  const showBestRun = async () => {
+    const best = loadRuns()[0];
+    if (best) {
+      const bytes = tapeOf(best);
+      if (bytes) {
+        try {
+          hero.show({ bytes, tape: decodeTape(bytes), bundled: false });
+          return;
+        } catch {
+          /* fall through to the shipped recording */
+        }
+      }
+    }
+    const demo = await demoTape;
+    hero.show({ ...demo, bundled: true });
+  };
 
-  const render = () => {
-    // The viewer owns the canvas while it is up, and draws its own game into it.
-    if (!viewer.isOpen) screen.draw(game.canvas);
+  const startAttract = async () => {
+    await backgroundsReady;
+    await showBestRun();
+    if (!playing && !matchMedia('(prefers-reduced-motion: reduce)').matches) hero.start();
+  };
+  void startAttract();
 
-    bestChain = Math.max(bestChain, game.canvas.complexity);
-    scoreEl.textContent = String(game.canvas.score);
-    linesEl.textContent = String(game.canvas.linesTot);
-    levelEl.textContent = String(game.canvas.level);
-    chainEl.textContent = String(bestChain);
-    status.textContent = game.isOver
-      ? `game over — ${outcome} · W watches it back · R restarts · L opens the board`
-      : game.paused
-        ? 'paused'
-        : '';
+  el('attract-watch').addEventListener('click', () => {
+    const source = hero.current;
+    if (source) watch(source.bytes, source.bundled ? 'the demonstration' : 'the record to beat');
+  });
+
+  /* --- playing ------------------------------------------------------------- */
+
+  const startGame = async () => {
+    await backgroundsReady;
+    await soundsReady;
+    hero.stop();
+    const fresh = new Game({
+      seed: Date.now() & 0x7fffffff,
+      level: 1,
+      levelUp: true,
+      shadow: true,
+      hSensitivity: settings.hSensitivity,
+      vSensitivity: settings.vSensitivity,
+      continuous: settings.continuous,
+      keys: settings.keys,
+    });
+    game = fresh;
+    // Recording is on for every game and costs a few kilobytes a minute. A score is only worth
+    // something if the run behind it can be re-simulated, so the recording *is* the run — there
+    // is no "start recording" to forget. The bypass guard is a development aid: in production a
+    // stray direct write should cost an unverifiable score, not a crash.
+    recorder = record(fresh, { guard: import.meta.env.DEV });
+    keyboard.dispose();
+    keyboard.attach(window, fresh.inputSink);
+    keyboard.resume();
+    submitted = false;
+    playing = true;
+    view.show(true);
+    screen.invalidate();
+    fresh.drainSounds(); // discard anything queued during construction
+    sounds?.playStart();
+    el('stage').scrollIntoView({ block: 'nearest' });
+  };
+
+  const leaveGame = () => {
+    playing = false;
+    game = null;
+    keyboard.dispose();
+    view.show(false);
+    screen.invalidate();
+    void startAttract();
   };
 
   /**
    * Offer the finished run to the board.
    *
-   * The score is not sent anywhere — the tape is, and the board verifies it and derives the
-   * score itself. That is deliberately the same shape as the eventual submission to a server,
-   * so the only thing that changes later is where the tape goes.
+   * The score is not submitted anywhere — the recording is, and the board verifies it and
+   * derives the score itself. That is deliberately the shape the eventual server call will
+   * have, so the only thing that changes later is where the bytes go.
    */
   const submitRun = () => {
     submitted = true;
+    if (!recorder) return;
     const result = saveRun(recorder.bytes());
     if (result.ok) {
-      outcome = `verified ${result.run.score.toLocaleString()} — #${result.rank} on this board`;
-      board.show(result.run.id);
+      view.setState(
+        `${result.run.score.toLocaleString()}`,
+        `verified · number ${result.rank} on the board · press R to play again`,
+      );
+      records.refresh(result.run.id);
       return;
     }
-    outcome =
+    const because =
       result.reason === 'not-a-record'
-        ? 'not a top ten run'
+        ? 'no lines cleared, so nothing to record'
         : result.reason === 'duplicate'
           ? 'already on the board'
-          : `not verifiable (${result.reason})`;
+          : `could not be verified (${result.reason})`;
+    view.setState('Game over', `${because} · press R to play again`);
     if (result.reason === 'unverifiable') console.warn('run did not verify:', result.message);
   };
 
-  /** Everything a rendered frame does once the simulation has been advanced. */
-  const afterFrame = () => {
-    if (game.isOver && !submitted) submitRun();
-    // The level picks the sample theme, as Canvas::change_level does in the original.
-    sounds.level = game.canvas.level;
-    sounds.play(game.drainSounds());
-    render();
-  };
-
   const frame = (now: number) => {
+    requestAnimationFrame(frame);
     const delta = Math.min(now - last, 250);
     last = now;
-    if (!game.isOver) game.advance(delta);
-    afterFrame();
-    requestAnimationFrame(frame);
-  };
+    if (!playing || !game || viewer.isOpen) return;
 
-  /* Dev hook. requestAnimationFrame is throttled to a stop in a background tab, so
-   * automated checks cannot drive the game through the normal loop. This exposes a way to
-   * advance a fixed number of simulation frames and redraw, which also makes the game
-   * reproducible when debugging by hand. */
+    if (!game.isOver) game.advance(delta);
+    else if (!submitted) submitRun();
+
+    if (sounds) {
+      // The level picks the sample theme, as Canvas::change_level does in the original.
+      sounds.level = game.canvas.level;
+      sounds.play(game.drainSounds());
+    }
+
+    screen.draw(game.canvas);
+    if (game.paused && pauseBadge) screen.drawPaused(pauseBadge);
+    view.update(game);
+  };
+  requestAnimationFrame(frame);
+
+  /* --- input --------------------------------------------------------------- */
+
+  for (const trigger of document.querySelectorAll('[data-play]')) {
+    trigger.addEventListener('click', (e) => {
+      e.preventDefault();
+      void startGame();
+    });
+  }
+  el('hud-restart').addEventListener('click', () => void startGame());
+  el('hud-settings').addEventListener('click', () => panel.show());
+  el('hud-leave').addEventListener('click', leaveGame);
+
+  window.addEventListener('keydown', (e) => {
+    if (mixer instanceof WebAudioMixer) void mixer.resume();
+    if (viewer.isOpen) return;
+    if (panel.isOpen) {
+      if (e.code === 'Escape') {
+        e.preventDefault();
+        panel.hide();
+      }
+      return;
+    }
+    if (e.code === 'Escape') {
+      e.preventDefault();
+      panel.show();
+      return;
+    }
+    if (!playing || !game) return;
+    // A key the player bound to a game action wins over these.
+    if (keyboard.isBound(e.code)) return;
+    if (e.code === 'KeyR') void startGame();
+    else if (e.code === 'KeyW' && game.isOver) watch(recorder?.bytes() ?? null, 'your last run');
+    else if (e.code === 'KeyP') {
+      game.paused = !game.paused;
+      if (game.paused) view.setState('Paused', 'press P to carry on');
+      else view.clearState();
+      sounds?.playPause();
+    }
+  });
+
+  window.addEventListener('pointerdown', () => {
+    if (mixer instanceof WebAudioMixer) void mixer.resume();
+  });
+
+  /* Dev hook: requestAnimationFrame is throttled to a stop in a background tab, so automated
+   * checks cannot drive the game through the normal loop. */
   if (import.meta.env.DEV) {
     (window as unknown as Record<string, unknown>).__quadra = {
       get game() {
@@ -248,110 +407,57 @@ async function main(): Promise<void> {
       get recorder() {
         return recorder;
       },
-      /**
-       * Put this game's own recording through the verifier — the same call a server will make
-       * on a submitted score. Comparing its answer against the live readout is the end-to-end
-       * check that a run is worth submitting: same seed, same inputs, same score.
-       */
-      verifyTape() {
-        const bytes = recorder.bytes();
-        const started = performance.now();
-        const result = verify(bytes);
-        return {
-          bytes: bytes.length,
-          ms: Math.round(performance.now() - started),
-          live: { score: game.canvas.score, lines: game.canvas.linesTot, frame: game.frame },
-          verified: result,
-        };
+      get playing() {
+        return playing;
       },
-      mixer,
-      sounds,
-      audioCtx,
+      hero,
+      records,
+      start: () => startGame(),
+      leave: leaveGame,
       step(frames = 1) {
+        if (!game) return null;
         for (let i = 0; i < frames; i++) game.stepFrame(1);
-        // The same tail the rAF loop runs, so stepping by hand behaves like real play — the
-        // sounds are drained, the run is submitted when it ends, and the screen is redrawn.
-        afterFrame();
+        if (game.isOver && !submitted) submitRun();
+        sounds?.play(game.drainSounds());
+        screen.draw(game.canvas);
+        view.update(game);
         return {
           score: game.canvas.score,
           lines: game.canvas.linesTot,
-          level: game.canvas.level,
           frame: game.frame,
           over: game.isOver,
         };
       },
-      /** Place a specific piece and hard-drop it — for reproducing captured positions. */
-      place(piece: number, rot: number, col: number) {
-        const probe = new Bloc(piece, -1, 0, 0);
-        probe.rot = rot;
-        let leftmost = 4;
-        for (let r = 0; r < 4; r++)
-          for (let c = 0; c < 4; c++) if (probe.grid()[r]![c]) leftmost = Math.min(leftmost, c);
-        const b = new Bloc(piece, -1, 4 + col - leftmost, 10);
-        b.rot = rot;
-        // Reject placements that do not fit. Without this the piece overlaps a wall,
-        // never descends, and gets stamped in mid-air — a state normal play cannot reach.
-        if (game.canvas.checkCollide(b.quel, b.bx, b.by, b.rot)) return false;
-        game.canvas.bloc = b;
-        while (!game.canvas.checkCollide(b.quel, b.bx, b.by + 1, b.rot)) b.by++;
-        b.calcXY();
-        return true;
-      },
-      press(action: number) {
-        game.input(action, true);
-      },
-      release(action: number) {
-        game.input(action, false);
-      },
+      press: (action: number) => game?.input(action, true),
+      release: (action: number) => game?.input(action, false),
     };
   }
+}
 
-  // Browsers hold an AudioContext suspended until the page sees a real user gesture, so
-  // the first keypress or click is what actually switches sound on.
-  const wakeAudio = () => {
-    if (mixer instanceof WebAudioMixer) void mixer.resume();
-  };
-  window.addEventListener('keydown', wakeAudio);
-  window.addEventListener('pointerdown', wakeAudio);
+/** Set every heading on the page in the game's own lettering. */
+function dressHeadings(font: Fontdata): void {
+  for (const heading of document.querySelectorAll<HTMLElement>('[data-lettering]')) {
+    const text = heading.dataset['lettering'] ?? heading.textContent ?? '';
+    const canvas = letteringCanvas(text, font, { color: [255, 255, 0], shadow: [0, 20, 40] });
+    canvas.className = 'lettering-art';
+    heading.prepend(canvas);
+  }
+}
 
-  window.addEventListener('keydown', (e) => {
-    // The overlays handle their own Escape in the capture phase, so by the time it arrives
-    // here none of them wanted it.
-    if (e.code === 'Escape') {
-      e.preventDefault();
-      panel.toggle();
-      return;
-    }
-    // A key the player bound to a game action wins over these hotkeys.
-    if (keyboard.isBound(e.code) || panel.isOpen || board.isOpen || viewer.isOpen) return;
-    if (e.code === 'KeyL') {
-      board.show();
-      return;
-    }
-    if (e.code === 'KeyW' && game.isOver) {
-      // Watch the run just played, straight from the recorder — no round trip through storage,
-      // so it works even for a run that did not make the board.
-      viewer.show(recorder.tape(), 'your last run');
-      return;
-    }
-    if (e.code === 'KeyR') {
-      keyboard.dispose();
-      bestChain = 0;
-      outcome = '';
-      startGame();
-      applySettings();
-    }
-    if (e.code === 'KeyP') {
-      game.paused = !game.paused;
-      sounds.playPause();
-    }
-  });
-
-  requestAnimationFrame(frame);
+/** A photograph from the game, laid in behind the stage as texture. */
+function paintGround(canvas: HTMLCanvasElement, art: QImage): void {
+  canvas.width = art.width;
+  canvas.height = art.height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  const pixels = cropPixels(art, 0, 0, art.width, art.height);
+  const image = ctx.createImageData(art.width, art.height);
+  image.data.set(pixels.rgba);
+  ctx.putImageData(image, 0, 0);
 }
 
 main().catch((err: unknown) => {
-  const status = document.getElementById('status');
-  if (status) status.textContent = `error: ${String(err)}`;
   console.error(err);
+  const lede = document.getElementById('attract-lede');
+  if (lede) lede.textContent = `Something failed to load: ${String(err)}`;
 });

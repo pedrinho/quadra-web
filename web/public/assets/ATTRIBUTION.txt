@@ -1,7 +1,7 @@
 The artwork and sound in this directory are NOT original work of the Quadra Web project.
 
-They are the backgrounds and sound samples from Quadra, created by Ludus Design and
-released as free software:
+They are the backgrounds, the menu artwork, the lettering and the sound samples from Quadra,
+created by Ludus Design and released as free software:
 
     Quadra                  (c) 1998-2000 Ludus Design
                             (c) 2006 Pierre Phaneuf and contributors
@@ -10,11 +10,20 @@ released as free software:
     License                 GNU LGPL, version 2.1 or later
 
 The only change made to them is one of container format. The images were paletted PNGs and
-are stored here as .qimg (raw indices plus their palette); the sounds were 8-bit mono WAVs
-and are packed here into a single .qsnd bank at their original sample rates. No pixel and no
-sample was altered. Both conversions exist because the browser's own decoders discard the
-palette indices and the source sample rate, which this port depends on. They are
-regenerable from an upstream checkout -- see docs/FIDELITY.md.
+are stored here as .qimg (raw indices plus their palette); the bitmap fonts were .fnt and are
+stored as .qfnt; the sounds were 8-bit mono WAVs and are packed here into a single .qsnd bank
+at their original sample rates. No pixel and no sample was altered. The conversions exist
+because the browser's own decoders discard the palette indices and the source sample rate,
+which this port depends on. They are regenerable from an upstream checkout -- see
+docs/FIDELITY.md.
+
+The page composes some of this artwork differently from the game: the QUADRA logo is cropped
+out of the menu screen, and the menu lettering is cut away from the photograph it was drawn
+over. Nothing is redrawn or restyled -- these are the original pixels, arranged for a web
+page rather than for a 640x480 application window.
+
+demo.qtape is not artwork. It is a recording of this port playing itself, produced by
+tools/record-demo.ts, and it is the property of this project.
 
 They are redistributed under the same LGPL-2.1-or-later licence as the original. The full
 licence text ships with this project as LICENSE.

@@ -24,6 +24,8 @@
  *
  * Output in public/assets/:
  *   <name>.qimg   "QIMG"  uint16 width  uint16 height  768 B RGB palette  w*h indices
+ *   <name>.qfnt   "QFNT"  uint16 glyphs  uint16 shrink  then per glyph:
+ *                 uint16 width (0 if absent)  uint16 height  uint16 stride  uint8 pixels[]
  *   sounds.qsnd   "QSND"  uint16 count  then per entry:
  *                 uint8 nameLen  name  uint32 rate  uint32 length  uint8 pcm[length]
  */
@@ -31,16 +33,41 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join, basename } from 'node:path';
 import { SOUND_FILES } from '../src/audio/sounds.js';
-import { decodeIndexedPng, encodeQimg, decodeWav, encodeQsnd, type WavPcm } from './codecs.js';
+import {
+  decodeIndexedPng,
+  encodeQimg,
+  decodeWav,
+  encodeQsnd,
+  decodeFnt,
+  encodeQfnt,
+  type WavPcm,
+} from './codecs.js';
 
 const OUT = new URL('../public/assets', import.meta.url).pathname;
 const SRC = process.env.QUADRA_SRC ?? process.argv[2];
 
-/* Backgrounds are all that is needed so far: fond0-9 are the per-level playfield
- * backdrops, and each carries the palette the blocks are shaded from. */
+/*
+ * fond0-9 are the per-level playfield backdrops, and each carries the palette the blocks are
+ * shaded from.
+ *
+ * The rest is what the page is built out of. `debuto` is the main menu screen exactly as it
+ * shipped, and the page takes two things from it: the chrome QUADRA logo across the top, and
+ * the background that `debut0` — the yellow "SINGLE-PLAYER GAME" lettering — was composed over,
+ * which is what makes it possible to cut that lettering out (see render/lettering.ts). `debut8`
+ * is the Ludus Design signature. `gamepaus` is the badge laid over a paused board, and `multi`
+ * is a photograph with nothing painted on it, used as texture behind the stage.
+ *
+ * Only what is used is converted. The rest of the menu labels and the highscore screen belong
+ * to the original's own menus, which this port does not reproduce.
+ */
 const WANTED = [
   ...Array.from({ length: 10 }, (_, i) => `images/fond${i}.png`),
   'images/black.png',
+  'images/debuto.png',
+  'images/debut0.png',
+  'images/debut8.png',
+  'images/gamepaus.png',
+  'images/multi.png',
 ];
 
 /* A missing upstream checkout has to be fatal. The per-file skips below are fine for one
@@ -73,6 +100,26 @@ for (const rel of WANTED) {
   writeFileSync(dest, bytes);
   total += bytes.length;
   console.log(`  ${name.padEnd(10)} ${img.width}x${img.height}  ${(bytes.length / 1024) | 0} KB`);
+}
+
+/* The two interface faces (source/fonts.cc:26-35). `shrink` is how much each glyph overlaps
+ * the next: 2 for the proportional face the interface writes in, 1 for the monospaced one the
+ * original reserves for numbers, so a column of scores lines up. */
+for (const [name, shrink] of [
+  ['font', 2],
+  ['courrier', 1],
+] as const) {
+  const fntSrc = join(SRC, 'fonts', `${name}.fnt`);
+  if (!existsSync(fntSrc)) {
+    console.warn(`  skip fonts/${name}.fnt (missing)`);
+    continue;
+  }
+  const glyphs = decodeFnt(readFileSync(fntSrc));
+  const bytes = encodeQfnt(glyphs, shrink);
+  writeFileSync(join(OUT, `${name}.qfnt`), bytes);
+  total += bytes.length;
+  const drawn = glyphs.filter((g) => g.width > 0).length;
+  console.log(`  ${name.padEnd(10)} ${drawn} glyphs  ${(bytes.length / 1024) | 0} KB`);
 }
 
 const sounds = new Map<string, WavPcm>();

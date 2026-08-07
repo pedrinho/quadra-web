@@ -3,97 +3,136 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Quadra Web</title>
-    <style>
-      :root { color-scheme: dark; }
-      * { box-sizing: border-box; }
-      body {
-        margin: 0; min-height: 100vh; display: flex; flex-direction: column;
-        align-items: center; justify-content: center; gap: 12px;
-        background: #14161a; color: #d6d9de;
-        font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
-      }
-      canvas {
-        image-rendering: pixelated;
-        border: 1px solid #2a2f37;
-        max-width: 100%;
-      }
-      .hud { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; }
-      .hud b { color: #fff; font-weight: 600; }
-      .keys { color: #767d89; font-size: 12px; text-align: center; max-width: 640px; }
-      #status { min-height: 1.5em; color: #e0a45e; }
-
-      /* Overlays: settings, the board of best runs, and the replay transport */
-      .overlay {
-        position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
-        background: #0b0d10cc; padding: 16px; overflow: auto; z-index: 10;
-      }
-      .overlay[hidden] { display: none; }
-      .overlay .panel {
-        width: min(460px, 100%); max-height: 100%; overflow: auto;
-        background: #1b1f25; border: 1px solid #333a44; border-radius: 6px; padding: 16px;
-        display: flex; flex-direction: column; gap: 14px;
-      }
-      .overlay header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
-      .overlay h2 { margin: 0; font-size: 14px; letter-spacing: 0.08em; text-transform: uppercase; }
-      .overlay h3 {
-        margin: 0 0 6px; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
-        color: #767d89;
-      }
-      .overlay .group { display: flex; flex-direction: column; gap: 10px; }
-      .overlay .field { display: flex; flex-direction: column; gap: 2px; }
-      .overlay .row { display: flex; align-items: center; gap: 12px; }
-      .overlay .row label { flex: 1; }
-      .overlay .readout { color: #767d89; font-size: 11px; }
-      .overlay input[type='range'] { flex: 1 1 180px; accent-color: #e0a45e; }
-      .overlay button {
-        font: inherit; color: #d6d9de; background: #262b33; border: 1px solid #3a424e;
-        border-radius: 4px; padding: 4px 10px; cursor: pointer;
-      }
-      .overlay button:hover { background: #313843; }
-      .overlay button:disabled { opacity: 0.4; cursor: default; }
-      .overlay button.key { min-width: 130px; }
-      .overlay button.arming { border-color: #e0a45e; color: #e0a45e; }
-      .overlay button.duplicate { border-color: #7a6033; }
-      .overlay button.close { padding: 2px 8px; }
-      .overlay .actions { display: flex; gap: 8px; }
-      .overlay .hint { color: #767d89; font-size: 11px; min-height: 1.4em; }
-
-      /* Best runs */
-      .leaderboard .panel { width: min(560px, 100%); }
-      .runs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
-      .run {
-        display: grid; grid-template-columns: 1.6em 5.5em 1fr auto; align-items: center; gap: 10px;
-        padding: 6px 8px; border: 1px solid transparent; border-radius: 4px; background: #20252c;
-      }
-      .run.current { border-color: #e0a45e; }
-      .run .rank { color: #767d89; text-align: right; }
-      .run .score { color: #fff; font-weight: 600; }
-      .run .detail { color: #767d89; font-size: 11px; }
-      .row-actions { display: flex; gap: 6px; }
-
-      /* The replay transport sits at the bottom: the canvas behind it is the replay. */
-      .replay {
-        background: none; align-items: flex-end; padding-bottom: 24px; pointer-events: none;
-        z-index: 11;
-      }
-      .replay .panel { width: min(560px, 100%); pointer-events: auto; gap: 8px; }
-      .transport-row { display: flex; align-items: center; gap: 10px; }
-      .transport-row input[type='range'] { flex: 1; }
-      .replay button.transport { min-width: 3em; }
-    </style>
+    <title>Quadra — the 1998 puzzle game, ported and provable</title>
+    <meta
+      name="description"
+      content="A browser port of Quadra (Ludus Design, 1998). Every score is a recording that re-simulates to the same board."
+    />
   </head>
   <body>
-    <canvas id="screen" width="640" height="480"></canvas>
-    <div class="hud">
-      <span>score <b id="score">0</b></span>
-      <span>lines <b id="lines">0</b></span>
-      <span>level <b id="level">1</b></span>
-      <span>best chain <b id="chain">0</b></span>
-    </div>
-    <div id="status"></div>
-    <!-- Filled from the live bindings by main.ts; press Esc to change them. -->
-    <div class="keys" id="keys"></div>
+    <header class="masthead">
+      <a class="wordmark" href="#top" data-crop="wordmark"><span class="vh">Quadra</span></a>
+      <nav class="nav">
+        <a href="#stage" data-play>Play</a>
+        <a href="#records">Records</a>
+        <a href="#how">How it works</a>
+        <a href="https://github.com/pedrinho/quadra-web" rel="noreferrer">Source</a>
+      </nav>
+    </header>
+
+    <main id="top">
+      <!-- The stage is the hero and the game: it shows a run replaying itself until you play. -->
+      <section class="stage" id="stage">
+        <canvas class="stage-ground" id="ground" aria-hidden="true"></canvas>
+
+        <div class="stage-inner">
+          <div class="board">
+            <canvas id="screen" width="216" height="400" aria-label="Quadra playfield"></canvas>
+            <div class="board-state" id="board-state" hidden></div>
+          </div>
+
+          <div class="stage-side">
+            <div id="attract">
+              <p class="eyebrow" id="attract-eyebrow">the record to beat</p>
+              <p class="figure" id="attract-score">—</p>
+              <p class="facts" id="attract-facts"></p>
+              <p class="lede" id="attract-lede"></p>
+              <div class="actions">
+                <button class="play" type="button" data-play>
+                  <span class="vh">Play a single-player game</span>
+                </button>
+                <button class="link" type="button" id="attract-watch">Watch it full size</button>
+              </div>
+            </div>
+
+            <div id="hud" hidden>
+              <dl class="readouts">
+                <div><dt>Score</dt><dd id="score">0</dd></div>
+                <div><dt>Lines</dt><dd id="lines">0</dd></div>
+                <div><dt>Level</dt><dd id="level">1</dd></div>
+                <div><dt>Best chain</dt><dd id="chain">0</dd></div>
+              </dl>
+              <p class="facts" id="keys"></p>
+              <div class="actions">
+                <button class="link" type="button" id="hud-restart">Restart</button>
+                <button class="link" type="button" id="hud-settings">Settings</button>
+                <button class="link" type="button" id="hud-leave">Leave the game</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="records" id="records">
+        <h2 class="lettering" data-lettering="Highscores"><span class="vh">Highscores</span></h2>
+        <p class="lede">
+          The five best runs in this browser. Each row is the recording of the run — the score is
+          whatever the engine reaches when it plays those inputs back, which is why you can check
+          it yourself.
+        </p>
+        <ol class="records-list" id="records-list"></ol>
+        <p class="empty" id="records-empty">
+          Nothing here yet. Every game is recorded whether you ask for it or not, so play one.
+        </p>
+      </section>
+
+      <section class="how" id="how">
+        <h2 class="lettering" data-lettering="How it works"><span class="vh">How it works</span></h2>
+        <div class="beats">
+          <article>
+            <h3>Cells remember</h3>
+            <p>
+              Every cell keeps four bits saying which of its edges are welded to the piece it
+              arrived in. The bevels you can see are that mask — they are information, not
+              decoration.
+            </p>
+          </article>
+          <article>
+            <h3>A clear severs</h3>
+            <p>
+              Clearing a line erases the row and opens the welds directly above and below it. A
+              piece that spanned the line is cut into fragments that no longer hold together.
+            </p>
+          </article>
+          <article>
+            <h3>What is left falls as a body</h3>
+            <p>
+              Anything unsupported drops as one rigid group, not row by row. It can complete more
+              lines on the way down, and that cascades. No other game in this family plays this
+              way.
+            </p>
+          </article>
+        </div>
+        <p class="lede">
+          Ported from the 1998 C++ with the original binary kept as the oracle: the 64-bit LCG,
+          the fixed-point piece maths and the input-sampling gate are all bit-exact, and the tests
+          fail if the simulation drifts.
+        </p>
+      </section>
+    </main>
+
+    <footer class="colophon">
+      <a
+        class="signature"
+        href="https://github.com/quadra-game/quadra"
+        rel="noreferrer"
+        data-sprite="signature"
+        ><span class="vh">Ludus Design</span></a
+      >
+      <p>
+        <strong>Quadra was made by Ludus Design</strong>, © 1998–2000, and released as free
+        software. The rules, the artwork, the lettering and the sound on this page are theirs.
+        This is a translation of their work, not an original game, and it is not affiliated with
+        or endorsed by them.
+      </p>
+      <p class="facts">
+        LGPL-2.1-or-later ·
+        <a href="https://github.com/quadra-game/quadra" rel="noreferrer">upstream source</a> ·
+        <a href="https://github.com/pedrinho/quadra-web" rel="noreferrer">this port</a> ·
+        <span id="version"></span>
+      </p>
+    </footer>
+
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

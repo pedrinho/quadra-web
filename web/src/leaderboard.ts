@@ -40,7 +40,9 @@ export interface StoredRun {
   stateHash: string;
 }
 
-export const MAX_RUNS = 10;
+/** Five, which is what the original kept and what its highscore screen has room for
+ *  (MAX_SCORE, source/highscores.h:28). */
+export const MAX_RUNS = 5;
 /** Roughly two hours of dense play. Anything larger is not a run, it is a payload. */
 export const MAX_TAPE_BYTES = 256 * 1024;
 
