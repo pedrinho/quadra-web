@@ -381,6 +381,32 @@ export function decodeFrame(r: ByteReader): { frame: TapeFrame; run: number } {
   return { frame: { events, ticks, jump }, run };
 }
 
+/**
+ * Frames one at a time, straight off the bytes.
+ *
+ * A megabyte of hostile tape decodes in constant memory this way, which is the difference
+ * between a verifier that can be handed anything and one that has to be trusted with it. The
+ * record yielded for the repeats of a run is **reused between iterations** — copy it if you
+ * intend to keep it, as `decodeTape` does.
+ */
+export function* streamFrames(r: ByteReader, declaredFrames: number): Generator<TapeFrame> {
+  const repeat: TapeFrame = { events: [], ticks: 0, jump: 0 };
+  let emitted = 0;
+  while (emitted < declaredFrames) {
+    const { frame, run } = decodeFrame(r);
+    if (emitted + run + 1 > declaredFrames) {
+      throw new TapeError('bad-frame', 'run overruns the declared frame count', r.pos);
+    }
+    yield frame;
+    emitted++;
+    repeat.ticks = frame.ticks;
+    for (let i = 0; i < run; i++) {
+      yield repeat;
+      emitted++;
+    }
+  }
+}
+
 /* --- the file container -------------------------------------------------- */
 
 function writeHeader(w: ByteWriter, h: TapeHeader, frames: number, ticks: number): void {
@@ -506,18 +532,10 @@ export function decodeTape(bytes: Uint8Array, maxFrames = DEFAULT_MAX_FRAMES): T
   }
   const frames: TapeFrame[] = [];
   let ticks = 0;
-  while (frames.length < declaredFrames) {
-    const { frame, run } = decodeFrame(r);
-    const total = run + 1;
-    if (frames.length + total > declaredFrames) {
-      throw new TapeError('bad-frame', 'run overruns the declared frame count', r.pos);
-    }
-    frames.push(frame);
+  for (const frame of streamFrames(r, declaredFrames)) {
+    // Copied, because the stream reuses its record across a run's repeats.
+    frames.push({ events: frame.events.length ? frame.events : [], ticks: frame.ticks, jump: frame.jump });
     ticks += frame.ticks;
-    for (let i = 0; i < run; i++) {
-      frames.push({ events: [], ticks: frame.ticks, jump: 0 });
-      ticks += frame.ticks;
-    }
   }
   if (ticks !== declaredTicks) {
     throw new TapeError('bad-header', `declared ${declaredTicks} ticks, body has ${ticks}`);

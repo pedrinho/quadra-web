@@ -21,7 +21,7 @@ import { Bloc } from './engine/bloc.js';
 import { loadSettings, saveSettings } from './settings.js';
 import { SettingsPanel, bindingsHelp } from './ui/settings-panel.js';
 import { record, type TapeRecorder } from './replay/recorder.js';
-import { replay } from './replay/playback.js';
+import { verify } from './replay/verify.js';
 import { createMixer, WebAudioMixer } from './audio/mixer.js';
 import { loadSoundBank, type SoundBuffer } from './audio/sound-bank.js';
 import { SoundPlayer } from './audio/sound-player.js';
@@ -191,21 +191,19 @@ async function main(): Promise<void> {
         return recorder;
       },
       /**
-       * Re-simulate this game's own recording and report where it ends up. Driving the browser
-       * and comparing this against the live readout is the end-to-end check that a tape is
-       * worth submitting: same seed, same inputs, same score.
+       * Put this game's own recording through the verifier — the same call a server will make
+       * on a submitted score. Comparing its answer against the live readout is the end-to-end
+       * check that a run is worth submitting: same seed, same inputs, same score.
        */
       verifyTape() {
-        const replayed = replay(recorder.tape());
+        const bytes = recorder.bytes();
+        const started = performance.now();
+        const result = verify(bytes);
         return {
-          bytes: recorder.bytes().length,
-          frames: recorder.frameCount,
+          bytes: bytes.length,
+          ms: Math.round(performance.now() - started),
           live: { score: game.canvas.score, lines: game.canvas.linesTot, frame: game.frame },
-          replayed: {
-            score: replayed.canvas.score,
-            lines: replayed.canvas.linesTot,
-            frame: replayed.frame,
-          },
+          verified: result,
         };
       },
       mixer,

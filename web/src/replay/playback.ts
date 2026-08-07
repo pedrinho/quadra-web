@@ -107,41 +107,57 @@ export class TapePlayer {
   }
 
   private apply(event: TapeEvent): void {
-    switch (event.op) {
-      case EventOp.Press:
-        this.game.input(event.action, true);
-        return;
-      case EventOp.Release:
-        this.game.input(event.action, false);
-        return;
-      case EventOp.ClearAll:
-        this.game.clearKeys();
-        return;
-      case EventOp.Pause:
-        this.game.setPaused(event.paused);
-        return;
-      case EventOp.Reconfig:
-        // `reconfigure`, not `setKeyGroups`: the clear that a live rebind performs was recorded
-        // as its own ClearAll, and doing it twice would wipe a key pressed in between.
-        this.game.reconfigure(
-          event.hSensitivity,
-          event.vSensitivity,
-          event.continuous,
-          event.keyGroups,
+    applyEvent(this.game, event, this.index, this.opts.checkpoints !== false);
+  }
+}
+
+/**
+ * Apply one recorded event to a game, through the same methods a live host calls.
+ *
+ * Shared with the verifier rather than reimplemented there: a second way of applying events
+ * would be a second engine, and then a tape could pass verification and still not be the game
+ * the player played.
+ */
+export function applyEvent(
+  game: Game,
+  event: TapeEvent,
+  frameIndex: number,
+  checkCheckpoints = true,
+): void {
+  switch (event.op) {
+    case EventOp.Press:
+      game.input(event.action, true);
+      return;
+    case EventOp.Release:
+      game.input(event.action, false);
+      return;
+    case EventOp.ClearAll:
+      game.clearKeys();
+      return;
+    case EventOp.Pause:
+      game.setPaused(event.paused);
+      return;
+    case EventOp.Reconfig:
+      // `reconfigure`, not `setKeyGroups`: the clear that a live rebind performs was recorded
+      // as its own ClearAll, and doing it twice would wipe a key pressed in between.
+      game.reconfigure(
+        event.hSensitivity,
+        event.vSensitivity,
+        event.continuous,
+        event.keyGroups,
+      );
+      return;
+    case EventOp.Checkpoint: {
+      if (!checkCheckpoints) return;
+      const lanes = stateLanes(game);
+      if (lanes[0] !== event.lanes[0] || lanes[1] !== event.lanes[1]) {
+        throw new TapeError(
+          'checkpoint-mismatch',
+          `frame ${frameIndex}: recorded state ${hex(event.lanes)} (score ${event.score}), ` +
+            `replay reached ${hex(lanes)} (score ${game.canvas.score})`,
         );
-        return;
-      case EventOp.Checkpoint: {
-        if (this.opts.checkpoints === false) return;
-        const lanes = stateLanes(this.game);
-        if (lanes[0] !== event.lanes[0] || lanes[1] !== event.lanes[1]) {
-          throw new TapeError(
-            'checkpoint-mismatch',
-            `frame ${this.index}: recorded state ${hex(event.lanes)} (score ${event.score}), ` +
-              `replay reached ${hex(lanes)} (score ${this.game.canvas.score})`,
-          );
-        }
-        return;
       }
+      return;
     }
   }
 }
