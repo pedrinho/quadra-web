@@ -17,3 +17,18 @@ export const SIM_VERSION = 1;
 
 /** The container format. Bumped when the byte layout changes, independently of the sim. */
 export const TAPE_FORMAT_VERSION = 1;
+
+/**
+ * A digest of every source file under `src/engine/`, checked by `test/engine-version.test.ts`.
+ *
+ * It exists because `SIM_VERSION` above is a promise a person has to remember to keep, and the
+ * cost of forgetting is silent: recordings keep verifying and quietly stop meaning what they
+ * said. Changing the engine at all breaks this test, which forces the question — *can this
+ * change the outcome of a game?* — to be answered out loud rather than skipped.
+ *
+ * When it fails: if the change can alter a game (piece tables, collision, the cascade, scoring,
+ * DAS, the input gate, the RNG), bump `SIM_VERSION` too and decide what happens to stored
+ * tapes. If it cannot (a comment, a rename, a type), leave `SIM_VERSION` alone. Either way,
+ * paste the digest the test prints in here.
+ */
+export const SIM_SOURCE_HASH = 'bcbf5eccaa24eb97';
