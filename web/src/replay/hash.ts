@@ -113,7 +113,7 @@ function hashBloc(h: Hasher, p: Bloc | null): void {
  * mid-move, and the sound queue, which test/game.test.ts already pins as unable to affect
  * the simulation.
  */
-export function stateHashOf(c: Canvas, framecount: number, videoFrame: number): string {
+export function stateHasher(c: Canvas, framecount: number, videoFrame: number): Hasher {
   const h = new Hasher();
   hashBoardInto(h, c);
   h.bigint64(c.rnd.getSeed());
@@ -129,9 +129,18 @@ export function stateHashOf(c: Canvas, framecount: number, videoFrame: number): 
   h.int(c.hRepeatDelay).int(c.vRepeatDelay).int(c.sideSpeed).int(c.downSpeed);
   h.bool(c.continuous);
   h.int(framecount).int(videoFrame);
-  return h.digest();
+  return h;
+}
+
+export function stateHashOf(c: Canvas, framecount: number, videoFrame: number): string {
+  return stateHasher(c, framecount, videoFrame).digest();
 }
 
 export function stateHash(g: Game): string {
   return stateHashOf(g.canvas, g.frame, g.env.videoFrame);
+}
+
+/** The same digest as `stateHash`, unformatted — what a checkpoint stores in a recording. */
+export function stateLanes(g: Game): [number, number] {
+  return stateHasher(g.canvas, g.frame, g.env.videoFrame).lanes();
 }

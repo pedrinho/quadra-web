@@ -36,7 +36,8 @@ export type TapeErrorCode =
   | 'bad-groups'
   | 'bad-header'
   | 'bad-frame'
-  | 'trailing-bytes';
+  | 'trailing-bytes'
+  | 'checkpoint-mismatch';
 
 export class TapeError extends Error {
   constructor(
@@ -400,6 +401,17 @@ function writeHeader(w: ByteWriter, h: TapeHeader, frames: number, ticks: number
   // single frame. They are claims: the decoder checks the body against them.
   w.varint(frames);
   w.varint(ticks);
+}
+
+/**
+ * The header on its own, for a recorder that encodes each frame as it happens and only knows
+ * the totals when the game ends. A tape is then literally `encodeHeader(...)` followed by the
+ * concatenated frame records — the same property the netcode milestone depends on.
+ */
+export function encodeHeader(header: TapeHeader, frames: number, ticks: number): Uint8Array {
+  const w = new ByteWriter();
+  writeHeader(w, header, frames, ticks);
+  return w.finish();
 }
 
 export interface DecodedHeader {

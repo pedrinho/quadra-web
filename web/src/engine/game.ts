@@ -28,6 +28,50 @@ export interface FrameStep {
   jump: number;
 }
 
+/**
+ * A game's starting configuration. Every field here is mutated while the game runs — the level
+ * climbs, the seed is consumed, sensitivities are retuned — so anything that wants to rebuild
+ * this game from scratch has to be told what it *began* as, not what it currently is.
+ */
+export interface GameStart {
+  seed: bigint;
+  level: number;
+  levelUp: boolean;
+  shadow: boolean;
+  hSensitivity: number;
+  vSensitivity: number;
+  continuous: boolean;
+  keyGroups: Uint8Array;
+}
+
+/**
+ * An observer of everything that reaches the simulation from outside it.
+ *
+ * Structural rather than a concrete type, and deliberately narrow: the engine has to stay
+ * importable by a server that knows nothing about recordings, so it describes the recorder it
+ * talks to instead of depending on one. `src/replay/recorder.ts` is the implementation.
+ *
+ * The methods are the input seam below, one for one. If a new way to perturb a running game is
+ * ever added to `Game`, it needs a method here too — otherwise recordings of it silently stop
+ * reproducing, which is the failure mode this whole design exists to prevent.
+ */
+export interface GameRecorder {
+  input(action: Action, down: boolean): void;
+  paused(on: boolean): void;
+  reconfigured(
+    hSensitivity: number,
+    vSensitivity: number,
+    continuous: boolean,
+    keyGroups: Uint8Array,
+  ): void;
+  keysCleared(): void;
+  /** The top of a rendered frame, on the schedule already decided for it. */
+  frame(step: FrameStep): void;
+  /** The frame's ticks are done — the point at which the simulation's own changes to key
+   *  state have all landed. */
+  settled(): void;
+}
+
 export interface GameOptions {
   /** Shared seed. Every client derives the same piece stream from it. */
   seed?: number | bigint;
@@ -45,6 +89,9 @@ export interface GameOptions {
   continuous?: boolean;
   /** `KeyboardEvent.code` per action slot, so actions sharing a key share sticky state. */
   keys?: readonly string[];
+  /** The grouping those bindings collapse to. What a recording carries, since the simulation
+   *  never sees a key code. Applied after `keys` when both are given. */
+  keyGroups?: readonly number[] | Uint8Array;
 }
 
 /**
@@ -59,7 +106,10 @@ export class Game {
   readonly canvas: Canvas;
   readonly env: PlayerEnv;
   private readonly executor = new Executor();
+  private recorder: GameRecorder | null = null;
   private acc = 0;
+  /** What this game was built with. See GameStart — none of it survives in readable form. */
+  readonly start: GameStart;
   /**
    * Ticks actually simulated. Diverges from `frame` after a stall: the original bumps the
    * clock past a backlog instead of simulating it, so time-based rules stay honest while
@@ -77,6 +127,7 @@ export class Game {
       vSensitivity = DEFAULT_SENSITIVITY,
       continuous = true,
       keys,
+      keyGroups,
     } = opts;
 
     this.canvas = new Canvas(seed);
@@ -87,9 +138,23 @@ export class Game {
     this.canvas.continuous = continuous;
     this.canvas.reinit();
     if (keys) this.canvas.applyBindings(keys);
+    if (keyGroups) this.canvas.applyKeyGroups(keyGroups);
     this.canvas.calcSpeed();
 
     this.env = { overmind: this.overmind, videoFrame: 0, levelUp, paused: false, sounds: [] };
+
+    // Read back rather than echo the arguments: the canvas has already normalised the seed to
+    // 64 bits and the bindings to a canonical grouping, and it is those that drive the game.
+    this.start = {
+      seed: this.canvas.rnd.getSeed(),
+      level,
+      levelUp,
+      shadow,
+      hSensitivity,
+      vSensitivity,
+      continuous,
+      keyGroups: this.canvas.keyGroups(),
+    };
 
     this.executor.add(new PlayerNormal(this.canvas, this.env));
     this.overmind.start(this.executor);
@@ -124,21 +189,55 @@ export class Game {
   input(action: Action, down: boolean): void {
     if (down) this.canvas.pressKey(action);
     else this.canvas.releaseKey(action);
+    this.recorder?.input(action, down);
   }
 
   setPaused(v: boolean): void {
     this.env.paused = v;
+    this.recorder?.paused(v);
   }
 
   setSensitivity(hSensitivity: number, vSensitivity: number, continuous: boolean): void {
+    this.reconfigure(hSensitivity, vSensitivity, continuous, this.canvas.keyGroups());
+  }
+
+  /** Rebind. The grouping changes underneath the sticky state, so the state goes. */
+  setKeyGroups(groups: readonly number[] | Uint8Array): void {
+    const c = this.canvas;
+    this.reconfigure(c.hSensitivity, c.vSensitivity, c.continuous, groups);
+    this.clearKeys();
+  }
+
+  /**
+   * Install a whole configuration without touching key state. The two methods above are both
+   * this one plus, at most, a clear — which is precisely how a recording stores them, so a
+   * replay driver reaches for these two primitives and reproduces either.
+   */
+  reconfigure(
+    hSensitivity: number,
+    vSensitivity: number,
+    continuous: boolean,
+    keyGroups: readonly number[] | Uint8Array,
+  ): void {
     this.canvas.hSensitivity = hSensitivity;
     this.canvas.vSensitivity = vSensitivity;
     this.canvas.continuous = continuous;
     this.canvas.reinit();
+    this.canvas.setKeyGroups(keyGroups);
+    this.recorder?.reconfigured(hSensitivity, vSensitivity, continuous, this.canvas.keyGroups());
   }
 
-  setKeyGroups(groups: readonly number[] | Uint8Array): void {
-    this.canvas.applyKeyGroups(groups);
+  clearKeys(): void {
+    this.canvas.clearKeyAll();
+    this.recorder?.keysCleared();
+  }
+
+  /**
+   * Watch everything above. At most one recorder: a second would mean two tapes claiming to be
+   * this game, and there is no honest way to choose between them.
+   */
+  attachRecorder(recorder: GameRecorder | null): void {
+    this.recorder = recorder;
   }
 
   /** An `InputSink` view of the above, for handing to `Keyboard`. */
@@ -178,10 +277,15 @@ export class Game {
    * executed, so a replayed frame cannot drift from a live one.
    */
   stepFrame(ticks: number, framecountJump = 0): void {
+    // Told before it runs, not after: everything the host did has landed by now, and the
+    // schedule is already decided, so this is the one moment where a recorder sees the frame
+    // exactly as a replay of it will begin.
+    this.recorder?.frame({ ticks, jump: framecountJump });
     this.beginRenderFrame();
     // Before the ticks, as in the original: the skipped time is already past.
     if (framecountJump) this.overmind.framecount += framecountJump;
     for (let i = 0; i < ticks; i++) this.step();
+    this.recorder?.settled();
   }
 
   /**

@@ -176,9 +176,23 @@ export class Canvas extends Board {
     return Uint8Array.from(this.keyGroup);
   }
 
+  /**
+   * Install a grouping and drop every sticky key, which is what rebinding mid-game does: the
+   * slots have been shuffled underneath the state, so keeping it would leave a phantom key
+   * held on an action nobody pressed.
+   */
   applyKeyGroups(groups: readonly number[] | Uint8Array): void {
-    for (let i = 0; i < ACTION_COUNT; i++) this.keyGroup[i] = groups[i] ?? i;
+    this.setKeyGroups(groups);
     this.clearKeyAll();
+  }
+
+  /**
+   * The grouping alone, leaving sticky state untouched. Separate from `applyKeyGroups` because
+   * a recording carries the clear as its own step: something replaying one has to be able to
+   * reproduce each half exactly where it happened.
+   */
+  setKeyGroups(groups: readonly number[] | Uint8Array): void {
+    for (let i = 0; i < ACTION_COUNT; i++) this.keyGroup[i] = groups[i] ?? i;
   }
 
   checkKey(i: Action): number {
