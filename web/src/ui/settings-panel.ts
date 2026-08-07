@@ -53,7 +53,7 @@ export class SettingsPanel {
     this.onVisibility = opts.onVisibility;
 
     this.root = document.createElement('div');
-    this.root.className = 'settings';
+    this.root.className = 'overlay settings';
     this.root.hidden = true;
 
     const presets = document.createElement('datalist');
@@ -268,7 +268,7 @@ export class SettingsPanel {
 export function bindingsHelp(settings: Settings): string {
   const k = (a: Action) => keyLabel(settings.keys[a] ?? '');
   const parts = ACTION_ORDER.map(({ action, label }) => `${k(action)} ${label.toLowerCase()}`);
-  return `${parts.join(' · ')} · P pause · R restart · Esc settings`;
+  return `${parts.join(' · ')} · P pause · R restart · L best runs · Esc settings`;
 }
 
 /* --- small DOM helpers --------------------------------------------------- */
