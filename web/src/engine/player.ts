@@ -15,6 +15,7 @@ import { COLS, PLAY_BOTTOM, ROWS, idx } from './board.js';
 import { clearFullLines, computeSupport, dropUnsupported } from './cascade.js';
 import { giveLine } from './rules.js';
 import type { SoundEvent } from './sound-events.js';
+import type { Notice } from './notices.js';
 
 /** Shared environment for the player modules. */
 export interface PlayerEnv {
@@ -24,6 +25,11 @@ export interface PlayerEnv {
    * never reads it back, so draining it cannot change the game. See sound-events.ts.
    */
   sounds: SoundEvent[];
+  /**
+   * Text the simulation wants shown over the board, oldest first. Write-only on the same
+   * terms as `sounds`, and for the same reason. See notices.ts.
+   */
+  notices: Notice[];
   /**
    * Rendered-frame counter. Input is sampled at most once per rendered frame
    * (source/player.cc:299-304), so DAS ticks at render rate, not simulation rate. The
@@ -413,7 +419,12 @@ export class PlayerCheckLine extends PlayerBase {
     if (cleared.count) {
       c.depth += cleared.count;
       c.complexity++;
-      if (c.isClean()) c.sendForClean = true;
+      if (c.isClean()) {
+        c.sendForClean = true;
+        // `check_clean` announces it here, at the erase — not with the score, which is still
+        // a flash and a whole cascade away (source/player.cc:585-595).
+        this.env.notices.push({ kind: 'clean' });
+      }
       // The original plays this from the Player_flash_lines constructor, after complexity
       // has been bumped — so the pitch drop reflects the chain step just entered.
       this.env.sounds.push({ kind: 'lineClear', chain: c.complexity });
@@ -424,7 +435,12 @@ export class PlayerCheckLine extends PlayerBase {
       // play this (source/player.cc:973-976); here the level bump is a plain field, so
       // watch it rather than teaching the scoring rules about sound.
       const levelBefore = c.level;
-      giveLine(c, this.env.levelUp);
+      // Read before the call: give_line zeroes `depth` on its way out, and the award it
+      // returns is the only place the full number for this move ever exists.
+      const depth = c.depth;
+      const scoreAdd = giveLine(c, this.env.levelUp);
+      // Two lines or more, as `i && enough` works out to in single player — see notices.ts.
+      if (depth >= 2) this.env.notices.push({ kind: 'clear', depth, score: scoreAdd });
       if (c.level !== levelBefore) this.env.sounds.push({ kind: 'levelUp' });
       this.ret();
     }

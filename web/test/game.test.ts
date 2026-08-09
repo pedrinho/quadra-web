@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { Game, TICK_MS, MAX_ACCUMULATOR_MS } from '../src/engine/game.js';
-import { Action } from '../src/engine/canvas.js';
+import { Action, Canvas } from '../src/engine/canvas.js';
 import { boardToAscii, PLAY_BOTTOM, PLAY_LEFT, PLAY_RIGHT } from '../src/engine/board.js';
+import { Executor, Overmind } from '../src/engine/modules.js';
+import { PlayerCheckLine, type PlayerEnv } from '../src/engine/player.js';
 import { assertWeldInvariant } from '../src/engine/cascade.js';
 import { Random } from '../src/engine/random.js';
 import { baseScore, levelThreshold } from '../src/engine/rules.js';
@@ -304,6 +306,94 @@ describe('sound events', () => {
         if (i % 71 === 0) g.canvas.pressKey(Action.Drop);
         g.runFrames(1);
         if (drain) g.drainSounds();
+      }
+      return { score: g.canvas.score, lines: g.canvas.linesTot, board: boardToAscii(g.canvas) };
+    };
+    expect(play(true)).toEqual(play(false));
+  });
+});
+
+describe('on-screen notices', () => {
+  /*
+   * `Canvas::give_line` announces what a move was worth and `Player_check_line::check_clean`
+   * announces an emptied board, and both do it from inside the gameplay code. These check the
+   * two places the port raises them from, since the numbers only exist for one tick.
+   */
+
+  /** A stack with `full` complete rows on the floor, plus an optional cell left over above. */
+  function stacked(full: number, leftover: boolean): Canvas {
+    const c = new Canvas(0);
+    for (let r = PLAY_BOTTOM - full; r < PLAY_BOTTOM; r++)
+      for (let i = PLAY_LEFT; i < PLAY_RIGHT; i++) c.setCell(r, i, 15, 1);
+    // Something that survives the clear, so the board is not empty when check_clean looks.
+    if (leftover) c.setCell(PLAY_BOTTOM - full - 2, PLAY_LEFT, 15, 2);
+    return c;
+  }
+
+  /** Clear that stack the way a stamped piece would, and report what it said about it. */
+  function clearIt(full: number, leftover = true) {
+    const canvas = stacked(full, leftover);
+    const overmind = new Overmind();
+    const env: PlayerEnv = {
+      overmind,
+      videoFrame: 0,
+      levelUp: true,
+      paused: false,
+      sounds: [],
+      notices: [],
+    };
+    const executor = new Executor();
+    executor.add(new PlayerCheckLine(canvas, env));
+    overmind.start(executor);
+
+    let frames = 0;
+    while (!executor.done && frames < 5000) {
+      overmind.step();
+      frames++;
+    }
+    return { notices: env.notices, score: canvas.score, level: canvas.level };
+  }
+
+  it('says nothing about a single line', () => {
+    // `i && enough` in give_line is `depth-1` and `depth >= combo_min`, and combo_min is 2 in
+    // single player — so one line scores 250 points and shows no text at all.
+    const { notices, score } = clearIt(1);
+    expect(score).toBe(250 + 25);
+    expect(notices.filter((n) => n.kind === 'clear')).toEqual([]);
+  });
+
+  it('reports a clear with the whole award, not the base score', () => {
+    const { notices, score } = clearIt(4);
+    expect(notices).toEqual([{ kind: 'clear', depth: 4, score }]);
+    // Base 2000 plus the level-1 tenth: what the popup has to read.
+    expect(score).toBe(2200);
+  });
+
+  it('names a clear deeper than a quad by its depth', () => {
+    const { notices } = clearIt(5);
+    expect(notices).toEqual([{ kind: 'clear', depth: 5, score: 5500 }]);
+  });
+
+  it('announces a clean board at the erase, well before the score', () => {
+    // check_clean runs the instant the rows go, and give_line only after the flash and the
+    // fall — so the order here is the order the player sees them rise.
+    const { notices, score } = clearIt(4, false);
+    expect(notices).toEqual([{ kind: 'clean' }, { kind: 'clear', depth: 4, score }]);
+    // 2000 base + 4 x 1250 clean, and a tenth on top of the lot.
+    expect(score).toBe(7700);
+  });
+
+  it('cannot affect the simulation', () => {
+    // The same property the sound queue has, and for the same reason: a host that draws the
+    // text and one that ignores it must be playing the identical game.
+    const play = (drain: boolean) => {
+      const g = new Game({ seed: 555 });
+      for (let i = 0; i < 4000; i++) {
+        if (i % 37 === 0) g.canvas.pressKey(Action.Left);
+        if (i % 53 === 0) g.canvas.releaseKey(Action.Left);
+        if (i % 71 === 0) g.canvas.pressKey(Action.Drop);
+        g.runFrames(1);
+        if (drain) g.drainNotices();
       }
       return { score: g.canvas.score, lines: g.canvas.linesTot, board: boardToAscii(g.canvas) };
     };

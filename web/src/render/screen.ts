@@ -13,6 +13,8 @@
 
 import { Framebuffer } from './framebuffer.js';
 import type { QImage } from './qimg.js';
+import type { Fontdata } from './font.js';
+import { TextScrollers } from './scrollers.js';
 import {
   drawBoard,
   drawFallingPiece,
@@ -60,12 +62,22 @@ export const PLAYFIELD_VIEW = {
 export class Screen {
   /** Public because other things draw into it too; only the playfield needs the rest of this. */
   readonly fb = new Framebuffer();
+  /**
+   * The text that rises when a move scores. It hangs off the screen rather than off any one
+   * host because there is only ever one screen: the live game, the attract loop and the replay
+   * viewer take turns with it, and each one only has to say which game to follow.
+   *
+   * Null without a face to set it in, which keeps a `Screen` cheap to build in a test.
+   */
+  readonly scrollers: TextScrollers | null;
   private level = -1;
 
   constructor(
     private readonly ctx: CanvasRenderingContext2D,
     /** Per level, and filled in as they load — level 1 is the only one needed to start. */
     private readonly backgrounds: readonly (QImage | undefined)[],
+    /** The face the scrolling text is set in. Without one, there is no scrolling text. */
+    font?: Fontdata,
     /**
      * What reaches the page. The original's frame is three 214px panes and single player only
      * ever fills the middle one, so showing all of it means showing two empty thirds and the
@@ -75,7 +87,9 @@ export class Screen {
      * coordinates.
      */
     private readonly view: { x: number; y: number; width: number; height: number } = PLAYFIELD_VIEW,
-  ) {}
+  ) {
+    this.scrollers = font ? new TextScrollers(font) : null;
+  }
 
   /** Redraw the background next time, after switching which game is being shown. */
   invalidate(): void {
@@ -85,6 +99,7 @@ export class Screen {
   /** Hand the framebuffer to a screen with a palette of its own, such as a menu. */
   usePalette(palette: Uint8Array): void {
     this.fb.setPalette(palette);
+    this.scrollers?.invalidateFont();
     this.invalidate();
   }
 
@@ -100,6 +115,8 @@ export class Screen {
       const bg = this.background();
       this.fb.setPalette(bg.palette);
       this.fb.putImage(bg.indices, bg.width, bg.height, 0, 0);
+      // Every level has its own palette, and a font is built against one.
+      this.scrollers?.invalidateFont();
     }
 
     const bg = this.background();
@@ -112,6 +129,9 @@ export class Screen {
     drawPreview(this.fb, bg, canvas.next2, NEXT2.x, NEXT2.y, true);
     drawPreview(this.fb, bg, canvas.next, NEXT1.x, NEXT1.y, true);
     drawBonusColumn(this.fb, bg, canvas);
+    // Over the board, and last: `drawBoard` restores the whole well from the backdrop every
+    // frame, which is the erase the original does with `Zone_combo::dirt_rect`.
+    this.scrollers?.draw(this.fb);
 
     this.present();
   }

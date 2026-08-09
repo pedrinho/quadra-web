@@ -167,7 +167,9 @@ export class Hero {
   };
 
   private draw(): void {
-    if (this.player) this.screen.draw(this.player.game.canvas);
+    if (!this.player) return;
+    this.screen.scrollers?.follow(this.player.game);
+    this.screen.draw(this.player.game.canvas);
   }
 
   /** Draw one frame without running: for a first paint, or when motion is not wanted. */

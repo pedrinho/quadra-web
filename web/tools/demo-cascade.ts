@@ -44,7 +44,7 @@ const canvas = canvasFromAscii(FIXTURE);
 console.log(render(canvas));
 
 const overmind = new Overmind();
-const env: PlayerEnv = { overmind, videoFrame: 0, levelUp: true, paused: false, sounds: [] };
+const env: PlayerEnv = { overmind, videoFrame: 0, levelUp: true, paused: false, sounds: [], notices: [] };
 const executor = new Executor();
 executor.add(new PlayerCheckLine(canvas, env));
 overmind.start(executor);

@@ -39,7 +39,7 @@ function dropAndSettle(canvas: Canvas, piece: number, rot: number, col: number) 
   bloc.calcXY();
 
   const overmind = new Overmind();
-  const env: PlayerEnv = { overmind, videoFrame: 0, levelUp: true, paused: false, sounds: [] };
+  const env: PlayerEnv = { overmind, videoFrame: 0, levelUp: true, paused: false, sounds: [], notices: [] };
   const executor = new Executor();
   executor.add(new PlayerStamp(canvas, env));
   overmind.start(executor);

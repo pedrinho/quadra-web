@@ -57,6 +57,7 @@ for (let frame = 0; frame < 100_000 && !game.isOver; frame++) {
   }
   game.stepFrame(1);
   game.drainSounds();
+  game.drainNotices();
 }
 
 const bytes = recorder.bytes();

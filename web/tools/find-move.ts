@@ -46,7 +46,7 @@ function attempt(before: Canvas, piece: number, rot: number, col: number) {
   bloc.calcXY();
 
   const overmind = new Overmind();
-  const env: PlayerEnv = { overmind, videoFrame: 0, levelUp: true, paused: false, sounds: [] };
+  const env: PlayerEnv = { overmind, videoFrame: 0, levelUp: true, paused: false, sounds: [], notices: [] };
   const ex = new Executor();
   ex.add(new PlayerStamp(c, env));
   overmind.start(ex);

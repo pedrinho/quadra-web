@@ -144,9 +144,10 @@ export function verify(bytes: Uint8Array, opts: VerifyOptions = {}): VerifyResul
       }
       for (const event of record.events) applyEvent(game, event, frame);
       game.stepFrame(record.ticks, record.jump);
-      // The sound queue is an output nobody is listening to here, and it would otherwise grow
+      // Both queues are outputs nobody is listening to here, and they would otherwise grow
       // for every tick of the run.
       game.drainSounds();
+      game.drainNotices();
       frame++;
     }
 

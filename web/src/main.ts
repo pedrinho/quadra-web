@@ -141,7 +141,7 @@ async function main(): Promise<void> {
     sounds = new SoundPlayer(bank, mixer);
   })();
 
-  const screen = new Screen(ctx, backgrounds);
+  const screen = new Screen(ctx, backgrounds, font);
   const settings = loadSettings();
   const keyboard = new Keyboard(settings.keys);
 
@@ -312,7 +312,9 @@ async function main(): Promise<void> {
     playing = true;
     view.show(true);
     screen.invalidate();
-    fresh.drainSounds(); // discard anything queued during construction
+    // Discard anything queued during construction.
+    fresh.drainSounds();
+    fresh.drainNotices();
     sounds?.playStart();
     el('stage').scrollIntoView({ block: 'nearest' });
   };
@@ -370,6 +372,7 @@ async function main(): Promise<void> {
       sounds.play(game.drainSounds());
     }
 
+    screen.scrollers?.follow(game);
     screen.draw(game.canvas);
     if (game.paused && pauseBadge) screen.drawPaused(pauseBadge);
     view.update(game);
@@ -442,6 +445,7 @@ async function main(): Promise<void> {
         for (let i = 0; i < frames; i++) game.stepFrame(1);
         if (game.isOver && !submitted) submitRun();
         sounds?.play(game.drainSounds());
+        screen.scrollers?.follow(game);
         screen.draw(game.canvas);
         view.update(game);
         return {

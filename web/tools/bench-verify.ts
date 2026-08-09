@@ -54,6 +54,7 @@ function stack(game: Game, frames: number): void {
     }
     game.stepFrame(1);
     game.drainSounds();
+    game.drainNotices();
   }
 }
 
@@ -64,6 +65,7 @@ function idle(game: Game, frames: number): void {
     if (rng.rnd(0xff) < 6) game.input(Action.Left, i % 2 === 0);
     game.stepFrame(1);
     game.drainSounds();
+    game.drainNotices();
   }
 }
 

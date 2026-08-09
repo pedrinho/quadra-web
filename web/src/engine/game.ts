@@ -11,6 +11,7 @@ import { Canvas, groupsFromBindings, type Action, type InputSink } from './canva
 import { PlayerNormal, type PlayerEnv } from './player.js';
 import { DEFAULT_SENSITIVITY } from './sensitivity.js';
 import type { SoundEvent } from './sound-events.js';
+import type { Notice } from './notices.js';
 
 /** Milliseconds per simulation tick. The simulation is a fixed 100 Hz. */
 export const TICK_MS = 10;
@@ -141,7 +142,14 @@ export class Game {
     if (keyGroups) this.canvas.applyKeyGroups(keyGroups);
     this.canvas.calcSpeed();
 
-    this.env = { overmind: this.overmind, videoFrame: 0, levelUp, paused: false, sounds: [] };
+    this.env = {
+      overmind: this.overmind,
+      videoFrame: 0,
+      levelUp,
+      paused: false,
+      sounds: [],
+      notices: [],
+    };
 
     // Read back rather than echo the arguments: the canvas has already normalised the seed to
     // 64 bits and the bindings to a canonical grouping, and it is those that drive the game.
@@ -255,6 +263,15 @@ export class Game {
    */
   drainSounds(): SoundEvent[] {
     return this.env.sounds.splice(0, this.env.sounds.length);
+  }
+
+  /**
+   * Take the on-screen notices queued since the last call. An output on the same terms as
+   * `drainSounds` — a host that never calls this plays an identical game, it just says
+   * nothing about what the moves were worth.
+   */
+  drainNotices(): Notice[] {
+    return this.env.notices.splice(0, this.env.notices.length);
   }
 
   /** Advance exactly one 10 ms simulation tick. */

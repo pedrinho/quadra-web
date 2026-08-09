@@ -190,6 +190,7 @@ export class ReplayViewer {
 
   private draw(): void {
     if (!this.player) return;
+    this.screen.scrollers?.follow(this.player.game);
     this.screen.draw(this.player.game.canvas);
     this.render();
   }
