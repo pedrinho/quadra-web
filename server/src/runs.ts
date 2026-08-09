@@ -51,7 +51,10 @@ export async function startRun(env: Env, request: Request, now: number): Promise
   if (player.verifiedAt === null) return fail('unverified', 403);
   if (!(await allow(env, LIMITS.grantPerPlayer, player.id, now))) return fail('rate-limited', 429);
 
-  const seed = crypto.getRandomValues(new BigUint64Array(1))[0]!;
+  // Signed, because that is what the engine canonicalises a seed to (`Random.setSeed` runs it
+  // through `BigInt.asIntN(64, …)`) and what the tape header reads back. Issuing it in the same
+  // spelling keeps `grants.seed` and `runs.seed` comparable by eye as well as by `seedsMatch`.
+  const seed = BigInt.asIntN(64, crypto.getRandomValues(new BigUint64Array(1))[0]!);
   const id = newId();
   const expiresAt = now + GRANT_TTL_MS;
 
@@ -116,7 +119,7 @@ export async function submitRun(env: Env, request: Request, now: number): Promis
     return fail('bad-tape', 400, err instanceof TapeError ? err.code : undefined);
   }
 
-  if (header.seed.toString() !== grant.seed) return fail('wrong-seed', 403);
+  if (!seedsMatch(header.seed, grant.seed)) return fail('wrong-seed', 403);
   const wrongRules = unranked(header);
   if (wrongRules) return fail(wrongRules, 400);
 
@@ -193,6 +196,22 @@ export async function submitRun(env: Env, request: Request, now: number): Promis
     },
     201,
   );
+}
+
+/**
+ * Whether a tape was played on the seed that was granted.
+ *
+ * Compared as 64 bits rather than as text. A seed is an unsigned 64-bit quantity that JavaScript
+ * has no unsigned 64-bit type for, so it gets spelled either way depending on who last touched
+ * it — and `"-5395797692038532484"` and `"13050946381671019132"` are the same seed. Comparing
+ * the strings rejected every honest run.
+ */
+export function seedsMatch(fromTape: bigint, granted: string): boolean {
+  try {
+    return BigInt.asIntN(64, fromTape) === BigInt.asIntN(64, BigInt(granted));
+  } catch {
+    return false;
+  }
 }
 
 /** Where a score sits on the board: one more than the number of runs that beat it. */

@@ -7,8 +7,8 @@ collapse row by row. Cells stay welded to the tetromino they arrived in, a line 
 those welds, and whatever is left unsupported falls as a **rigid body** — which can complete more
 lines, cascading. No other Tetris-like plays quite the same.
 
-**Version 0.5.0** — the solo game is complete and playable. `1.0.0` is reserved for online
-multiplayer. See [ROADMAP.md](ROADMAP.md).
+**Version 0.6.0** — the solo game is complete, hosted, and has a leaderboard that cannot be lied
+to. `1.0.0` is reserved for online multiplayer. See [ROADMAP.md](ROADMAP.md).
 
 ---
 
@@ -76,8 +76,10 @@ Playable. The engine was ported and verified headlessly before any rendering exi
 - [x] Validated against the original on a real captured position
 - [x] Configurable keys and repeat sensitivity, persisted in the browser
 - [x] Sound — the original samples, per-level themes, and the 8-voice mixer policy
-- [ ] Garbage and attacks — 0.6.0
-- [ ] Multiplayer — 0.8.0 through 1.0.0
+- [x] Recordings: the tape format, the recorder, playback, and a verifier for hostile input
+- [x] Hosted, with accounts, server-issued seeds and a leaderboard of watchable replays
+- [ ] Garbage and attacks — 0.7.0
+- [ ] Multiplayer — 0.9.0 through 1.0.0
 
 ### Verified against the original
 
@@ -87,31 +89,83 @@ exactly — chain 7, 8 lines, 22000 points, and the resulting board matching cel
 including which cells stay welded. `web/test/oracle.test.ts` asserts it, and that the
 matching placement is the only one that produces that board.
 
+## The board
+
+A score submitted by a client is worthless — anyone can POST a number. So nothing here submits a
+score. What a finished game sends is the **recording**: the keys that were pressed and the frames
+they were pressed on. The server re-simulates it with the *same engine module the browser ran*,
+imported rather than reimplemented, and the number that comes out of that is the only one the
+leaderboard ever stores.
+
+Which means every row on the board is a replay, because it is literally the same artifact — and
+the *Verify* control beside each row will fetch it and re-run it in your browser, in front of you,
+and tell you what it got. If your machine and the server ever disagree, it says so.
+
+Two things this deliberately does **not** claim. Verification proves that *these inputs, on this
+seed, produce this score* — not that a human produced the inputs. And the seed is issued by the
+server for one game and one player, which stops a run being restarted until the pieces fall kindly
+and stops a good tape being submitted twice, but a determined bot playing honestly will still get
+through. That is an accepted limit of the design rather than an oversight.
+
+You can play without an account. Nothing is recorded when you do — there is no local board, and
+the run is gone when it ends.
+
 ## Running it
 
 ```sh
-cd web
 npm install
-npm run dev       # play it
-npm test          # 151 tests, headless
+npm run dev       # play it, at localhost:5173
+npm test          # both workspaces, headless
 npm run typecheck
-npm run demo      # watch a cascade resolve, frame by frame
+npm run demo -w quadra-web    # watch a cascade resolve, frame by frame
 ```
 
 Press `Esc` in the browser for key bindings, repeat speed and volume.
+
+The game runs on its own. For the board, the accounts and the replays, run the Worker beside it —
+the dev server proxies `/v1` to it, so the session cookie stays first-party the way it is in
+production:
+
+```sh
+cd server
+npx wrangler d1 migrations apply quadra --local
+npm run dev       # the API, at localhost:8787
+```
+
+With no mail provider configured the confirmation and reset links are **printed to the Worker's
+console** instead of being sent, so registering end to end needs no mailbox and no account
+anywhere. Without the Worker running at all, every request fails as unreachable and the game
+still starts, plays and finishes — unranked, and it says so.
+
+### Deploying it
+
+One Worker serves the built site and the API from the same origin. You will need a Cloudflare
+account, a D1 database and an R2 bucket named as in `server/wrangler.toml` (put the real database
+id there), and — for mail to leave the building — `RESEND_API_KEY` and `MAIL_FROM` set with
+`wrangler secret put`. Then `npm run deploy`, or push to `main` and let
+`.github/workflows/deploy.yml` do it.
 
 ## Layout
 
 ```
 web/src/engine/     the simulation — a port, kept faithful line by line
 web/src/render/     indexed-palette framebuffer and board drawing
+web/src/replay/     the tape format, the recorder, playback, and the verifier
 web/src/audio/      mixer, sample bank, event-to-sound mapping
 web/src/input/      keyboard and DAS
+web/src/ui/         the page's own controls: the board, the panels, the stage
 web/public/assets/  the original art and sound, converted (see Licensing)
-web/test/           151 tests, including fixtures captured from the real game
+web/test/           tests, including fixtures captured from the real game
+server/src/         the Worker: accounts, seed grants, submission, the board
+server/migrations/  the D1 schema
 patches/            the one modification made to the upstream C++
 docs/FIDELITY.md    hazards, deliberate divergences, regenerating from upstream
 ```
+
+`server/` imports `verify` from `web/` through an exports map rather than vendoring a copy. That
+is the whole guarantee: there is no second engine that could quietly disagree with the first. Both
+suites pin the same score for the same committed recording, from opposite sides, so an engine that
+is only nearly the same fails a test instead of certifying scores.
 
 ## Fidelity
 

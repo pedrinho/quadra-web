@@ -1,0 +1,14 @@
+# Cache policy for the converted assets, read by the Worker's static-asset router.
+#
+# These paths are unhashed — `assets/fond0.qimg` is the same URL in every build — so they cannot
+# be immutable. A day is long enough that a session never refetches them and short enough that
+# re-converting the art from upstream reaches people without a cache-busting scheme. ETags do the
+# rest: a revalidation that finds nothing changed costs a 304.
+#
+# They are not compressed. Cloudflare compresses a known list of content types and raw palette
+# indices are not on it, so a backdrop is 307 KB on the wire. Only the first level's is on the
+# critical path (see main.ts), which is what made that acceptable rather than urgent; shipping
+# them pre-gzipped and inflating with DecompressionStream is the fix when it stops being.
+/assets/*
+  Cache-Control: public, max-age=86400
+  X-Content-Type-Options: nosniff

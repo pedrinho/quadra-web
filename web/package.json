@@ -1,6 +1,6 @@
 {
   "name": "quadra-web",
-  "version": "0.5.0",
+  "version": "0.6.0-dev",
   "private": true,
   "description": "Browser port of Quadra (Ludus Design, 1998) — faithful connectivity-gravity engine",
   "license": "LGPL-2.1-or-later",

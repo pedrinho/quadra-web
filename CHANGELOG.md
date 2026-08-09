@@ -5,6 +5,53 @@ All notable changes to this project are documented here. The format follows
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html) — with `1.0.0` reserved for online
 multiplayer, per [ROADMAP.md](ROADMAP.md).
 
+## [Unreleased] — 0.6.0
+
+Quadra is online. The solo game is unchanged; what is new is everywhere it now goes.
+
+### Added
+
+- **The tape.** A recording of a run — the keys pressed and the frames they were pressed on, one
+  record per rendered frame. `web/src/replay/`: the byte format, the recorder, playback, a state
+  hasher and a verifier written for input that is assumed hostile. It never throws, it bounds its
+  own work before doing any, and it decodes as it streams.
+- **A guard on the simulation.** `web/test/engine-version.test.ts` fails whenever `src/engine/`
+  changes, printing the digest to paste in, so the question — *can this alter the outcome of a
+  game?* — is answered out loud rather than skipped. It also refuses any reference to the DOM
+  there, which is what lets the server run the same code.
+- **The service.** One Cloudflare Worker serving both the site and the API from the same origin,
+  on D1 and R2. `server/`.
+- **Accounts**, by e-mail and password: registration with a confirmation link, sign in, password
+  reset, and closing an account. Passwords are PBKDF2-HMAC-SHA256 at OWASP's iteration count, and
+  the count is stored in the hash so it can be raised later. Sessions are opaque tokens in an
+  HttpOnly cookie, stored only as their digest, so signing out takes effect at once.
+- **A leaderboard that cannot be lied to.** Nothing submits a score: a finished game submits its
+  recording, and the server derives the score by re-simulating it with the client's own engine —
+  imported, not reimplemented. Every row is therefore watchable, and the *Verify* control beside
+  it re-runs the recording in your browser and reports what it got.
+- **Server-issued seeds.** A ranked run asks for its seed first, bound to one player and one
+  game. Restarting until the pieces fall kindly, submitting a run twice, and submitting somebody
+  else's all stop working.
+- **Floating score and "Clean Canvas!!" text**, as the original raises them: `Double!/Triple!/
+  Quad!/N-lines! N pts` at the erase's end and the clean-board announcement at the erase itself,
+  rising two pixels per tick up the well.
+- **A dev-server proxy** so `/v1` is same-origin in development too, and a deploy workflow gated
+  behind CI.
+
+### Changed
+
+- The repository is an npm workspace: `web/` and `server/`, installed and checked together.
+- `verify` reports `pausedTicks`. Pausing gates input but not the clock, so it was unlimited free
+  time to think; a ranked run may now be paused for a minute plus a quarter of the time played.
+- The backdrops load lazily. Only the first level's is on the critical path, instead of 3 MB of
+  them in front of the first piece.
+- Both test suites pin the same score for the same committed recording, from opposite sides.
+
+### Removed
+
+- **The local leaderboard.** Scores lived in `localStorage` under `quadra.runs.v1`; there is one
+  board now and it is the online one. A guest can still play, and nothing is kept when they do.
+
 ## [0.5.0] — 2026-07-31
 
 First tagged release. The solo game is complete and playable in a browser.

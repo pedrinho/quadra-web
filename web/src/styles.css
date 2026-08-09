@@ -208,6 +208,31 @@ canvas.sprite-art {
   border-bottom-color: var(--glow);
 }
 
+/* Sits in the nav and reads as one of its items, because that is what it is. The lit underline
+   is the signed-in tell: a name with nothing under it has not confirmed its address yet, and
+   its runs will not count. */
+.nav .account {
+  font: inherit;
+  color: var(--ink);
+  background: none;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  padding: var(--s-1) 0;
+  cursor: pointer;
+  letter-spacing: inherit;
+}
+.nav .account:hover {
+  color: var(--chrome);
+  border-bottom-color: var(--glow);
+}
+.nav .account[data-state='verified'] {
+  color: var(--chrome);
+  border-bottom-color: var(--glow-lit);
+}
+.nav .account[data-state='unverified'] {
+  color: var(--amber);
+}
+
 /* --- the stage ------------------------------------------------------------ */
 
 .stage {
@@ -530,10 +555,23 @@ button.link:hover {
   color: var(--chrome);
   font-variant-numeric: tabular-nums;
 }
+.record .player {
+  flex: 0 1 auto;
+  min-width: 8ch;
+  font: 400 var(--t-detail) / 1.6 var(--sans);
+  color: var(--ink);
+}
 .record .detail {
   flex: 1 1 16ch;
   font: 400 var(--t-detail) / 1.6 var(--mono);
   color: var(--ink-quiet);
+}
+/* Your own runs, on a board that is everybody's. */
+.record.is-mine {
+  background: var(--void-lift);
+}
+.record.is-mine .player {
+  color: var(--chrome);
 }
 .record .row-actions {
   display: flex;
@@ -796,4 +834,79 @@ button.link:hover {
 /* While a replay is up the page behind it should not compete. */
 body.is-watching .masthead {
   opacity: 0.25;
+}
+
+/* --- the account panel ----------------------------------------------------
+
+   The overlay rules above already carry the panel, the header and the fields. What is left is
+   the parts a form needs and a settings panel does not: an input that looks like the rest of
+   the page, and a submit that reads as the primary action. */
+
+.overlay.account .panel {
+  max-width: 30rem;
+}
+.overlay.account form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+.overlay.account .field span {
+  font-size: var(--t-micro);
+  color: var(--ink-quiet);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.overlay.account input[type='text'],
+.overlay.account input[type='email'],
+.overlay.account input[type='password'] {
+  font: 400 var(--t-ui) / 1.5 var(--mono);
+  color: var(--ink);
+  background: #00000040;
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  padding: var(--s-2) var(--s-3);
+}
+.overlay.account input:focus-visible {
+  outline: none;
+  border-color: var(--glow-lit);
+}
+.overlay.account button.play {
+  align-self: flex-start;
+  margin-top: var(--s-2);
+}
+.overlay.account .verdict {
+  font: 400 var(--t-detail) / 1.5 var(--mono);
+  color: var(--ink-quiet);
+}
+.overlay.account .verdict[data-state='ok'] {
+  color: var(--glow-lit);
+}
+.overlay.account .verdict[data-state='bad'] {
+  color: var(--amber);
+}
+
+/* The switcher between sign in / register / reset is prose with links in it, not a row of
+   buttons — the overlay's default button styling makes those read as three equal choices when
+   one of them is the whole point of the panel. */
+.overlay.account .hint button.link,
+.overlay.account .group > button.link {
+  font: inherit;
+  color: var(--ink);
+  background: none;
+  border: 0;
+  padding: 0;
+  border-radius: 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--rule);
+  cursor: pointer;
+}
+.overlay.account .hint button.link:hover,
+.overlay.account .group > button.link:hover {
+  color: var(--chrome);
+  background: none;
+  text-decoration-color: var(--glow-lit);
+}
+.overlay.account .group > button.link {
+  align-self: flex-start;
 }

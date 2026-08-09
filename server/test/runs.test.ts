@@ -1,9 +1,16 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { env } from 'cloudflare:test';
 import { fromBase64 } from 'quadra-web/replay/codec';
-import { ByteReader, decodeHeader, encodeTape, decodeTape } from 'quadra-web/replay/tape';
+import {
+  ByteReader,
+  decodeHeader,
+  encodeHeader,
+  encodeTape,
+  decodeTape,
+} from 'quadra-web/replay/tape';
 import { call, captureMail, registerVerified, reset } from './helpers.js';
 import { newId } from '../src/ids.js';
+import { seedsMatch } from '../src/runs.js';
 
 /**
  * The recording the front page plays, submitted as if somebody had just played it.
@@ -65,6 +72,50 @@ const submit = (cookie: string, grant: string, bytes: Uint8Array) =>
     headers: { 'content-type': 'application/octet-stream', 'x-quadra-grant': grant },
   });
 
+describe('the two spellings of a seed', () => {
+  /*
+   * A seed is an unsigned 64-bit quantity, and JavaScript has no unsigned 64-bit type. The
+   * engine canonicalises to signed (`Random.setSeed` runs it through `BigInt.asIntN`) and the
+   * tape header reads back signed; the obvious way to mint one produces unsigned. Comparing the
+   * two as text rejected every honest run whose seed happened to have the high bit set — which
+   * is half of them, so this went unnoticed only because every fixture used seed 1058.
+   */
+  it('treats the same 64 bits as the same seed either way round', () => {
+    expect(seedsMatch(-5395797692038532484n, '13050946381671019132')).toBe(true);
+    expect(seedsMatch(13050946381671019132n, '-5395797692038532484')).toBe(true);
+    expect(seedsMatch(1058n, '1058')).toBe(true);
+    expect(seedsMatch(-1n, '18446744073709551615')).toBe(true);
+  });
+
+  it('is still a mismatch when the bits differ', () => {
+    expect(seedsMatch(1058n, '1059')).toBe(false);
+    expect(seedsMatch(-5395797692038532484n, '13050946381671019133')).toBe(false);
+    expect(seedsMatch(1058n, 'not-a-number')).toBe(false);
+    expect(seedsMatch(1058n, '')).toBe(false);
+  });
+
+  it('issues seeds that survive the round trip through a tape header', async () => {
+    // The failure was between minting a seed and reading it back out of a recording, so this
+    // does exactly that, through the real codec, for as many seeds as it takes to see a
+    // negative one.
+    const cookie = await registerVerified('ada@example.com', 'Ada');
+    for (let i = 0; i < 16; i++) {
+      const issued = await call('POST', '/v1/runs/start', { cookie });
+      const seed = issued.body['seed'] as string;
+      const header = decodeHeader(
+        new ByteReader(
+          encodeHeader(
+            { ...decodeTape(tape()).header, seed: BigInt(seed) },
+            0,
+            0,
+          ),
+        ),
+      ).header;
+      expect(seedsMatch(header.seed, seed), `seed ${seed}`).toBe(true);
+    }
+  });
+});
+
 describe('asking for a seed', () => {
   it('issues one, bound to the player, and remembers it', async () => {
     const cookie = await registerVerified('ada@example.com', 'Ada');
@@ -74,9 +125,11 @@ describe('asking for a seed', () => {
     const grant = res.body['grant'] as string;
     const seed = res.body['seed'] as string;
     expect(grant).toBeTruthy();
-    // Decimal text, because a seed is 64 bits and a JSON number is not.
-    expect(seed).toMatch(/^\d+$/);
-    expect(BigInt(seed)).toBeLessThan(1n << 64n);
+    // Decimal text, because a seed is 64 bits and a JSON number is not. Signed, because that is
+    // what the engine canonicalises to and what comes back out of a tape header — so about half
+    // of them carry a minus sign, and asserting otherwise is asserting the old bug back.
+    expect(seed).toMatch(/^-?\d+$/);
+    expect(BigInt(seed)).toBe(BigInt.asIntN(64, BigInt(seed)));
 
     const row = await env.DB.prepare('SELECT seed, used_at FROM grants WHERE id = ?')
       .bind(grant)

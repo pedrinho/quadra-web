@@ -11,7 +11,7 @@
 
 import { readFileSync } from 'node:fs';
 import { TICK_MS } from '../src/engine/game.js';
-import { fromBase64 } from '../src/leaderboard.js';
+import { fromBase64 } from '../src/replay/codec.js';
 import { verify } from '../src/replay/verify.js';
 import { TapePlayer } from '../src/replay/playback.js';
 import { decodeTape, EventOp } from '../src/replay/tape.js';

@@ -30,8 +30,10 @@ export interface HeroElements {
 export interface HeroSource {
   tape: Tape;
   bytes: Uint8Array;
-  /** True when this is the recording shipped with the build rather than one of yours. */
+  /** True when this is the recording shipped with the build rather than one off the board. */
   bundled: boolean;
+  /** Who played it, when it came off the board. */
+  by?: string;
 }
 
 /** A beat of stillness at the end before it starts over, so the last board can be read. */
@@ -92,12 +94,16 @@ export class Hero {
       this.els.facts.textContent = `this recording does not verify: ${result.code}`;
     }
 
-    this.els.eyebrow.textContent = source.bundled ? 'the demonstration' : 'the record to beat';
+    this.els.eyebrow.textContent = source.bundled
+      ? 'the demonstration'
+      : source.by
+        ? `the record to beat · ${source.by}`
+        : 'the record to beat';
     this.els.lede.textContent = source.bundled
-      ? 'Nobody has scored in this browser yet, so this is the one that ships with the port — ' +
+      ? 'Nobody has taken the board yet, so this is the one that ships with the port — ' +
         'played back from its recording, at the speed it was played.'
       : 'Playing back from the recording that set it. The score above is what the engine ' +
-        'reaches when it runs those inputs again.';
+        'reaches when it runs those inputs again — which is how it got on the board.';
 
     this.restart();
   }

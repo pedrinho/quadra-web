@@ -22,7 +22,8 @@ import { ReplayViewer } from './ui/replay-viewer.js';
 import { Records } from './ui/records.js';
 import { Hero } from './ui/hero.js';
 import { GameView } from './ui/game-view.js';
-import { loadRuns, saveRun, tapeOf, type StoredRun } from './leaderboard.js';
+import { AccountPanel } from './ui/account-panel.js';
+import { Api, apiMessage, isUnreachable, type Account, type BoardRun } from './api.js';
 import { decodeTape } from './replay/tape.js';
 import { record, type TapeRecorder } from './replay/recorder.js';
 import { APP_VERSION } from './version.js';
@@ -116,12 +117,26 @@ async function main(): Promise<void> {
     }),
   );
 
+  /*
+   * The ten level backdrops are 307 KB each — raw palette indices, one byte a pixel — and waiting
+   * for all of them put 3 MB in front of the first piece. Only the first level's is needed to
+   * start, so that is the only one anything waits for; the rest arrive while the game is being
+   * played, and `Screen.background` already falls back to the first while one is still in flight.
+   *
+   * The fallback is silent, though, and `Screen` caches the level it last drew — so a backdrop
+   * that lands after its level has begun needs someone to ask for a repaint, or the player
+   * finishes level 4 looking at level 1.
+   */
   const backgrounds: (QImage | undefined)[] = new Array<QImage | undefined>(LEVELS);
-  const backgroundsReady = Promise.all(
-    Array.from({ length: LEVELS }, async (_, i) => {
-      backgrounds[i] = await image(`fond${i}`);
-    }),
-  );
+  const backgroundsReady = image('fond0').then((img) => {
+    backgrounds[0] = img;
+  });
+  for (let i = 1; i < LEVELS; i++) {
+    void image(`fond${i}`).then((img) => {
+      backgrounds[i] = img;
+      if (game && game.canvas.level - 1 === i) screen.invalidate();
+    });
+  }
   let pauseBadge: QImage | null = null;
   void image('gamepaus').then((img) => (pauseBadge = img));
 
@@ -144,6 +159,7 @@ async function main(): Promise<void> {
   const screen = new Screen(ctx, backgrounds, font);
   const settings = loadSettings();
   const keyboard = new Keyboard(settings.keys);
+  const api = new Api();
 
   const view = new GameView(
     {
@@ -171,6 +187,15 @@ async function main(): Promise<void> {
   let recorder: TapeRecorder | null = null;
   let submitted = false;
   let last = performance.now();
+  /*
+   * The grant the current run is being played under, or null for a run that will not count.
+   *
+   * A ranked run is played on a seed the server issued and bound to one game, because a player
+   * who picks their own seed can restart until the pieces fall kindly and submit only the game
+   * that went well. Everything else — signed out, unconfirmed, or the service simply not
+   * answering — still plays. It just does not count, and the page says so rather than refusing.
+   */
+  let grant: string | null = null;
 
   /* --- overlays ------------------------------------------------------------ */
 
@@ -199,6 +224,27 @@ async function main(): Promise<void> {
     onChange: applySettings,
     onVisibility: onOverlay,
   });
+
+  const account = new AccountPanel({
+    host: document.body,
+    api,
+    onAccount: (who) => {
+      paintAccount(who);
+      void records.refresh();
+      // "The record to beat" is somebody's now, so who is looking changes what is highlighted.
+      if (!playing) void startAttract();
+    },
+    onVisibility: onOverlay,
+  });
+
+  const accountButton = el<HTMLButtonElement>('account');
+  accountButton.addEventListener('click', () => account.show());
+
+  function paintAccount(who: Account | null): void {
+    accountButton.textContent = who ? who.displayName : 'Sign in';
+    accountButton.dataset['state'] = who ? (who.verified ? 'verified' : 'unverified') : 'out';
+    document.body.classList.toggle('is-signed-in', who !== null);
+  }
 
   const viewer = new ReplayViewer({
     host: document.body,
@@ -230,10 +276,14 @@ async function main(): Promise<void> {
   const records = new Records({
     list: el('records-list'),
     empty: el('records-empty'),
-    onWatch: (run: StoredRun) =>
-      watch(tapeOf(run), `${run.score.toLocaleString()} · ${run.lines} lines`),
+    api,
+    onWatch: (run: BoardRun) => {
+      void api.tape(run.id).then((res) => {
+        if (res.ok) watch(res.bytes, `${run.player} · ${run.score.toLocaleString()}`);
+      });
+    },
   });
-  records.refresh();
+  void records.refresh();
 
   function applySettings(): void {
     saveSettings(settings);
@@ -254,22 +304,57 @@ async function main(): Promise<void> {
     return { bytes, tape: decodeTape(bytes) };
   })();
 
+  /*
+   * The stage plays the best run on the board, or the recording shipped with the build when the
+   * board is empty or out of reach. Either way it is the engine replaying a tape, which is the
+   * page's argument as much as its decoration.
+   */
   const showBestRun = async () => {
-    const best = loadRuns()[0];
+    const board = await api.leaderboard('all', 1);
+    const best = board.ok ? board.runs[0] : undefined;
     if (best) {
-      const bytes = tapeOf(best);
-      if (bytes) {
+      const tape = await api.tape(best.id);
+      if (tape.ok) {
         try {
-          hero.show({ bytes, tape: decodeTape(bytes), bundled: false });
+          hero.show({
+            bytes: tape.bytes,
+            tape: decodeTape(tape.bytes),
+            bundled: false,
+            by: best.player,
+          });
           return;
         } catch {
-          /* fall through to the shipped recording */
+          /* a row whose recording will not decode is not worth taking the page down for */
         }
       }
     }
     const demo = await demoTape;
     hero.show({ ...demo, bundled: true });
   };
+
+  /*
+   * Both mailed links land on the page as a query parameter rather than on a route of their own,
+   * so there is still exactly one document and the game is already loading behind the panel. The
+   * parameter is stripped once read: a confirmation link is single-use, and leaving it in the
+   * address bar would put it in history and in whatever gets shared from there.
+   */
+  const readMailLink = () => {
+    const params = new URLSearchParams(location.search);
+    for (const kind of ['verify', 'reset'] as const) {
+      const token = params.get(kind);
+      if (!token) continue;
+      params.delete(kind);
+      const rest = params.toString();
+      history.replaceState(null, '', location.pathname + (rest ? `?${rest}` : ''));
+      account.openFromLink(kind, token);
+      return;
+    }
+  };
+
+  void api.refresh().then((who) => {
+    paintAccount(who);
+    readMailLink();
+  });
 
   const startAttract = async () => {
     await backgroundsReady;
@@ -289,8 +374,24 @@ async function main(): Promise<void> {
     await backgroundsReady;
     await soundsReady;
     hero.stop();
+
+    // Ask for a seed if this run can count. If it cannot — signed out, unconfirmed, or the
+    // service is not answering — fall back to a local seed and play anyway. A game that will
+    // not start because a leaderboard is down is a worse game.
+    grant = null;
+    let seed: number | bigint = Date.now() & 0x7fffffff;
+    if (api.account?.verified) {
+      const issued = await api.startRun();
+      if (issued.ok) {
+        grant = issued.grant;
+        seed = BigInt(issued.seed);
+      } else if (!isUnreachable(issued)) {
+        console.warn('playing unranked:', apiMessage(issued));
+      }
+    }
+
     const fresh = new Game({
-      seed: Date.now() & 0x7fffffff,
+      seed,
       level: 1,
       levelUp: true,
       shadow: true,
@@ -331,30 +432,51 @@ async function main(): Promise<void> {
   /**
    * Offer the finished run to the board.
    *
-   * The score is not submitted anywhere — the recording is, and the board verifies it and
-   * derives the score itself. That is deliberately the shape the eventual server call will
-   * have, so the only thing that changes later is where the bytes go.
+   * The score is not submitted — the recording is, and the server verifies it and derives the
+   * score itself. What comes back is the only number worth showing, because it is the only one
+   * nobody here could have chosen.
    */
-  const submitRun = () => {
+  const submitRun = async () => {
     submitted = true;
     if (!recorder) return;
-    const result = saveRun(recorder.bytes());
-    if (result.ok) {
-      view.setState(
-        `${result.run.score.toLocaleString()}`,
-        `verified · number ${result.rank} on the board · press R to play again`,
-      );
-      records.refresh(result.run.id);
+    const score = game?.canvas.score ?? 0;
+
+    if (!grant) {
+      // A guest played a real game and it is over. Nothing was sent, and nothing was kept —
+      // there is no local board any more, so this is the only place the score is ever shown.
+      let why = 'sign in to rank your runs';
+      if (api.account) {
+        why = api.account.verified
+          ? 'the board was out of reach when this run started'
+          : 'confirm your e-mail address and your runs will count';
+      }
+      view.setState(score.toLocaleString(), `not recorded — ${why} · press R to play again`);
       return;
     }
+
+    view.setState(score.toLocaleString(), 'verifying…');
+    const result = await api.submitRun(grant, recorder.bytes());
+    grant = null;
+
+    if (result.ok) {
+      view.setState(
+        result.run.score.toLocaleString(),
+        `verified · number ${result.rank} on the board · press R to play again`,
+      );
+      void records.refresh(result.run.id);
+      return;
+    }
+
     const because =
-      result.reason === 'not-a-record'
+      result.code === 'no-score'
         ? 'no lines cleared, so nothing to record'
-        : result.reason === 'duplicate'
+        : result.code === 'duplicate'
           ? 'already on the board'
-          : `could not be verified (${result.reason})`;
-    view.setState('Game over', `${because} · press R to play again`);
-    if (result.reason === 'unverifiable') console.warn('run did not verify:', result.message);
+          : isUnreachable(result)
+            ? 'the board could not be reached'
+            : `the board would not take it (${result.code})`;
+    view.setState(score.toLocaleString(), `${because} · press R to play again`);
+    if (result.code === 'unverifiable') console.warn('run did not verify:', result.message);
   };
 
   const frame = (now: number) => {
@@ -364,7 +486,7 @@ async function main(): Promise<void> {
     if (!playing || !game || viewer.isOpen) return;
 
     if (!game.isOver) game.advance(delta);
-    else if (!submitted) submitRun();
+    else if (!submitted) void submitRun();
 
     if (sounds) {
       // The level picks the sample theme, as Canvas::change_level does in the original.
@@ -393,7 +515,7 @@ async function main(): Promise<void> {
 
   window.addEventListener('keydown', (e) => {
     if (mixer instanceof WebAudioMixer) void mixer.resume();
-    if (viewer.isOpen) return;
+    if (viewer.isOpen || account.isOpen) return;
     if (panel.isOpen) {
       if (e.code === 'Escape') {
         e.preventDefault();

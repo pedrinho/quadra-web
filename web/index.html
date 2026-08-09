@@ -34,6 +34,7 @@
         <a href="#records">Records</a>
         <a href="#how">How it works</a>
         <a href="https://github.com/pedrinho/quadra-web" rel="noreferrer">Source</a>
+        <button type="button" class="account" id="account" data-state="out">Sign in</button>
       </nav>
     </header>
 
@@ -88,14 +89,12 @@
         <div class="section-inner">
           <h2 class="label" data-sprite="highscores"><span class="vh">Highscores</span></h2>
           <p class="lede">
-          The five best runs in this browser. Each row is the recording of the run — the score is
-          whatever the engine reaches when it plays those inputs back, which is why you can check
-          it yourself.
+          Every row here is the recording of a run, and the score beside it is what the server
+          reached when it played those inputs back — the game you played never got to say. Which
+          is why you can check any of them yourself, on your own machine, right now.
           </p>
           <ol class="records-list" id="records-list"></ol>
-          <p class="empty" id="records-empty">
-            Nothing here yet. Every game is recorded whether you ask for it or not, so play one.
-          </p>
+          <p class="empty" id="records-empty">Loading the board…</p>
         </div>
       </section>
 

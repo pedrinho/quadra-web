@@ -3,43 +3,67 @@
  * Copyright (C) 2026 Quadra Web contributors
  * Licensed under the GNU LGPL v2.1 or later. See LICENSE at the repo root.
  *
- * A row is not a score. It is the recording of a run, and the number shown is what the engine
- * reached when it last played those inputs back. So every row carries a *verify* control: it
- * re-simulates the tape then and there and reports the frames, the milliseconds and the state
- * hash it arrived at. That is the whole claim of this port, made checkable in one press rather
- * than asserted in a paragraph.
+ * A row is not a score. It is the recording of a run, and the number shown is what the *server*
+ * reached when it played those inputs back — the client never got to say. So every row carries a
+ * *verify* control: it fetches the recording, re-simulates it here, and reports the frames, the
+ * milliseconds and the state hash it arrived at. That is the whole claim of this port, made
+ * checkable in one press rather than asserted in a paragraph, and now it is checkable against
+ * somebody else's run rather than only your own.
  */
 
 import { TICK_MS } from '../engine/game.js';
-import { isStale, loadRuns, tapeOf, type StoredRun } from '../leaderboard.js';
 import { verify } from '../replay/verify.js';
+import { apiMessage, isUnreachable, type Api, type BoardRun } from '../api.js';
 
 export interface RecordsOptions {
   list: HTMLElement;
   empty: HTMLElement;
-  onWatch: (run: StoredRun) => void;
+  api: Api;
+  onWatch: (run: BoardRun) => void;
 }
 
 export class Records {
   private justPlayed: string | null = null;
+  /** Bumped per refresh, so a slow response for an old request cannot overwrite a newer board. */
+  private generation = 0;
 
   constructor(private readonly opts: RecordsOptions) {}
 
-  refresh(justPlayed: string | null = this.justPlayed): void {
+  async refresh(justPlayed: string | null = this.justPlayed): Promise<void> {
     this.justPlayed = justPlayed;
-    const runs = loadRuns();
-    this.opts.list.replaceChildren(...runs.map((run, i) => this.row(run, i + 1)));
-    this.opts.empty.hidden = runs.length > 0;
+    const mine = ++this.generation;
+
+    this.opts.empty.hidden = false;
+    this.opts.empty.textContent = 'Loading the board…';
+
+    const result = await this.opts.api.leaderboard('all', 20);
+    if (mine !== this.generation) return;
+
+    if (!result.ok) {
+      this.opts.list.replaceChildren();
+      this.opts.empty.textContent = isUnreachable(result)
+        ? 'The board is not reachable from here. The game still plays.'
+        : `The board could not be loaded: ${apiMessage(result)}`;
+      return;
+    }
+
+    this.opts.list.replaceChildren(...result.runs.map((run) => this.row(run)));
+    this.opts.empty.hidden = result.runs.length > 0;
+    this.opts.empty.textContent = 'Nobody has scored yet. Be the first.';
   }
 
-  private row(run: StoredRun, rank: number): HTMLElement {
+  private row(run: BoardRun): HTMLElement {
     const li = document.createElement('li');
     li.className = 'record';
     if (run.id === this.justPlayed) li.classList.add('is-fresh');
+    if (this.opts.api.account && run.player === this.opts.api.account.displayName) {
+      li.classList.add('is-mine');
+    }
 
     li.append(
-      span('rank', String(rank).padStart(2, '0')),
+      span('rank', String(run.rank).padStart(2, '0')),
       span('score', run.score.toLocaleString()),
+      span('player', run.player),
       span('detail', detail(run)),
     );
 
@@ -49,37 +73,36 @@ export class Records {
 
     const actions = document.createElement('span');
     actions.className = 'row-actions';
-
-    if (isStale(run)) {
-      // Kept on the board, but this build's engine is not the one that recorded it, so replaying
-      // it would produce a different game and calling that "the run" would be a lie.
-      verdict.hidden = false;
-      verdict.textContent = 'Recorded by an older engine — it can no longer be replayed.';
-    } else {
-      actions.append(
-        button('Watch', () => this.opts.onWatch(run)),
-        button('Verify', (el) => this.check(run, el, verdict)),
-        button('Copy', (el) => this.copy(run, el)),
-      );
-    }
+    actions.append(
+      button('Watch', () => this.opts.onWatch(run)),
+      button('Verify', (el) => void this.check(run, el, verdict)),
+    );
 
     li.append(actions, verdict);
     return li;
   }
 
-  /** Re-simulate the row in front of whoever pressed it. */
-  private check(run: StoredRun, trigger: HTMLButtonElement, verdict: HTMLElement): void {
-    const bytes = tapeOf(run);
+  /** Fetch the row's recording and re-simulate it in front of whoever pressed it. */
+  private async check(
+    run: BoardRun,
+    trigger: HTMLButtonElement,
+    verdict: HTMLElement,
+  ): Promise<void> {
     verdict.hidden = false;
-    if (!bytes) {
+    verdict.dataset['state'] = '';
+    verdict.textContent = 'Fetching the recording…';
+    trigger.disabled = true;
+
+    const tape = await this.opts.api.tape(run.id);
+    if (!tape.ok) {
+      trigger.disabled = false;
       verdict.dataset['state'] = 'bad';
-      verdict.textContent = 'The recording behind this row is unreadable.';
+      verdict.textContent = `Could not fetch the recording: ${apiMessage(tape)}`;
       return;
     }
 
-    trigger.disabled = true;
     const started = performance.now();
-    const result = verify(bytes);
+    const result = verify(tape.bytes);
     const took = performance.now() - started;
     trigger.disabled = false;
 
@@ -89,12 +112,13 @@ export class Records {
       return;
     }
     if (result.score !== run.score) {
-      // The tape is valid but no longer reaches the score on the board — which is exactly the
-      // failure this design exists to catch, so it is reported rather than smoothed over.
+      // The tape is valid but this engine no longer reaches the score the board is showing —
+      // exactly the failure this design exists to catch, so it is reported rather than smoothed
+      // over. In practice it means the browser and the server are not running the same build.
       verdict.dataset['state'] = 'bad';
       verdict.textContent =
         `Replays to ${result.score.toLocaleString()}, not ${run.score.toLocaleString()}. ` +
-        'The engine has changed under this recording.';
+        'This browser and the board do not agree on the engine.';
       return;
     }
 
@@ -103,22 +127,11 @@ export class Records {
       `Re-simulated ${result.frames.toLocaleString()} frames in ${took.toFixed(1)} ms · ` +
       `${result.score.toLocaleString()} points · ${result.stateHash}`;
   }
-
-  private copy(run: StoredRun, trigger: HTMLButtonElement): void {
-    const done = (text: string) => {
-      trigger.textContent = text;
-      setTimeout(() => (trigger.textContent = 'Copy'), 1400);
-    };
-    void navigator.clipboard?.writeText(run.tape).then(
-      () => done('Copied'),
-      () => done('Blocked'),
-    );
-  }
 }
 
-function detail(run: StoredRun): string {
+function detail(run: BoardRun): string {
   const seconds = (run.ticks * TICK_MS) / 1000;
-  const when = run.startedAt || run.savedAt;
+  const when = run.startedAt || run.verifiedAt;
   const parts = [
     `${run.lines} ${run.lines === 1 ? 'line' : 'lines'}`,
     `level ${run.level}`,
