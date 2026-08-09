@@ -10,6 +10,8 @@
  */
 
 import type { Game } from '../engine/game.js';
+import type { Fontdata } from '../render/font.js';
+import { letteringCanvas } from '../render/lettering.js';
 
 export interface GameViewElements {
   attract: HTMLElement;
@@ -24,7 +26,15 @@ export interface GameViewElements {
 export class GameView {
   private bestChain = 0;
 
-  constructor(private readonly els: GameViewElements) {}
+  /**
+   * `font` is the game's own bitmap face. The words that go over the board — paused, game over —
+   * are the original speaking in-game, so they are set in it. Everything the port says in its
+   * own voice stays in the page's web font.
+   */
+  constructor(
+    private readonly els: GameViewElements,
+    private readonly font?: Fontdata,
+  ) {}
 
   /** Swap the stage between the attract replay and a game in progress. */
   show(playing: boolean): void {
@@ -55,7 +65,21 @@ export class GameView {
   setState(headline: string, detail = ''): void {
     this.els.state.replaceChildren();
     const strong = document.createElement('strong');
-    strong.textContent = headline;
+    if (this.font) {
+      // The canvas carries the look; the text stays in the document for screen readers, which
+      // get nothing out of a bitmap.
+      const canvas = letteringCanvas(headline, this.font, {
+        color: [255, 255, 255],
+        shadow: [0, 20, 40],
+      });
+      canvas.className = 'lettering-art';
+      const label = document.createElement('span');
+      label.className = 'vh';
+      label.textContent = headline;
+      strong.append(canvas, label);
+    } else {
+      strong.textContent = headline;
+    }
     this.els.state.append(strong);
     if (detail) {
       const span = document.createElement('span');

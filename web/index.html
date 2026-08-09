@@ -8,6 +8,23 @@
       name="description"
       content="A browser port of Quadra (Ludus Design, 1998). Every score is a recording that re-simulates to the same board."
     />
+
+    <!-- The two faces above the fold. The other weights can wait for the stylesheet.
+         crossorigin is required on font preloads even same-origin, or the fetch is made twice. -->
+    <link
+      rel="preload"
+      href="/assets/fonts/IBMPlexSans-Regular.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      href="/assets/fonts/IBMPlexMono-Regular.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
   </head>
   <body>
     <header class="masthead">
@@ -27,7 +44,9 @@
 
         <div class="stage-inner">
           <div class="board">
-            <canvas id="screen" width="216" height="400" aria-label="Quadra playfield"></canvas>
+            <!-- PLAYFIELD_VIEW, which main.ts sets again at load. Stated here so the board
+                 reserves the right box before the module runs and the page does not reflow. -->
+            <canvas id="screen" width="209" height="405" aria-label="Quadra playfield"></canvas>
             <div class="board-state" id="board-state" hidden></div>
           </div>
 
@@ -64,20 +83,26 @@
       </section>
 
       <section class="records" id="records">
-        <h2 class="lettering" data-lettering="Highscores"><span class="vh">Highscores</span></h2>
-        <p class="lede">
+        <canvas class="section-ground" id="records-ground" aria-hidden="true"></canvas>
+
+        <div class="section-inner">
+          <h2 class="label" data-sprite="highscores"><span class="vh">Highscores</span></h2>
+          <p class="lede">
           The five best runs in this browser. Each row is the recording of the run — the score is
           whatever the engine reaches when it plays those inputs back, which is why you can check
           it yourself.
-        </p>
-        <ol class="records-list" id="records-list"></ol>
-        <p class="empty" id="records-empty">
-          Nothing here yet. Every game is recorded whether you ask for it or not, so play one.
-        </p>
+          </p>
+          <ol class="records-list" id="records-list"></ol>
+          <p class="empty" id="records-empty">
+            Nothing here yet. Every game is recorded whether you ask for it or not, so play one.
+          </p>
+        </div>
       </section>
 
       <section class="how" id="how">
-        <h2 class="lettering" data-lettering="How it works"><span class="vh">How it works</span></h2>
+        <!-- Set in Plex, not in the artwork: the original never printed this phrase, so it does
+             not get to borrow the lettering. -->
+        <h2>How it works</h2>
         <div class="beats">
           <article>
             <h3>Cells remember</h3>

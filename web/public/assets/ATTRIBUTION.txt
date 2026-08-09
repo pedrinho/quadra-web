@@ -19,8 +19,12 @@ docs/FIDELITY.md.
 
 The page composes some of this artwork differently from the game: the QUADRA logo is cropped
 out of the menu screen, and the menu lettering is cut away from the photograph it was drawn
-over. Nothing is redrawn or restyled -- these are the original pixels, arranged for a web
-page rather than for a 640x480 application window.
+over. Two of those cut-outs are menu items -- debut0 ("Single-player game") is the page's play
+button, and debut3 ("Highscores") is the heading over its highscore table, both cut from the
+positions menu.cc blits them at. hscore is the highscore screen's photograph, used as ground
+behind that section; the page takes the fireworks below y=270 so the screen's own two headings
+are not left ghosting behind the page's. Nothing is redrawn or restyled -- these are the
+original pixels, arranged for a web page rather than for a 640x480 application window.
 
 demo.qtape is not artwork. It is a recording of this port playing itself, produced by
 tools/record-demo.ts, and it is the property of this project.
@@ -28,4 +32,17 @@ tools/record-demo.ts, and it is the property of this project.
 They are redistributed under the same LGPL-2.1-or-later licence as the original. The full
 licence text ships with this project as LICENSE.
 
-The Quadra Web project is not affiliated with or endorsed by Ludus Design.
+fonts/ is a separate matter and has nothing to do with Ludus Design. It holds IBM Plex, used
+for the page's body copy and its numbers -- not for any lettering, which is set in the game's
+own bitmap face from font.qfnt:
+
+    IBM Plex               (c) 2017 IBM Corp., reserved font name "Plex"
+    Upstream source        https://github.com/IBM/plex
+    Taken from             npm @ibm/plex-sans 1.1.0 and @ibm/plex-mono 2.5.0
+    License                SIL Open Font License 1.1 -- see fonts/OFL.txt
+
+The four .woff2 files are the unmodified `fonts/complete/woff2` builds from those packages.
+The complete faces are shipped rather than the smaller Latin subsets because the page's copy
+uses em dashes and middots that the subsets split across several files.
+
+The Quadra Web project is not affiliated with or endorsed by Ludus Design, or by IBM.

@@ -21,23 +21,41 @@ import {
   NEXT1,
   NEXT2,
   NEXT3,
-  BOARD_X,
-  BOARD_Y,
-  BOARD_W,
-  BOARD_H,
 } from './board-view.js';
 import type { Canvas } from '../engine/canvas.js';
 
-/**
- * The part of the 640x480 frame worth putting on a page: the playfield and the preview strip
- * directly above it, and nothing else.
- *
- * The original's frame is three 214px panes with a drawn border around each, and single player
- * fills only the middle one. Cropping to the board drops two empty thirds, the borders and the
- * garbage column that stays empty until there is an opponent to send it — none of which is the
- * game, all of which is the application.
+/*
+ * The middle pane's frame, measured off the backdrops. Every `fond` paints the border straight
+ * into the artwork rather than drawing it as chrome, so these are pixel columns and rows of the
+ * image, not constants the game computes: verticals at x 218-220 and x 422, rules at y 31-33 and
+ * y 400-402, plus an inner divider at x 404 bracketing the bonus column.
  */
-export const PLAYFIELD_VIEW = { x: BOARD_X, y: 0, width: BOARD_W, height: BOARD_Y + BOARD_H } as const;
+const FRAME_LEFT = 218;
+const FRAME_RIGHT = 422;
+const FRAME_BOTTOM = 402;
+/** Air outside the border, so it reads as an edge rather than as the crop running out. */
+const FRAME_MARGIN = 2;
+
+/**
+ * The part of the 640x480 frame worth putting on a page: the middle pane, its own border
+ * included, and the preview strip above it.
+ *
+ * The original's frame is three of these panes and single player fills only the middle one, so
+ * the two empty thirds and the application chrome around them stay cropped away. The pane's own
+ * border does not — it is the edge of the board rather than decoration around it, and cropping
+ * to `BOARD_X` landed three pixels inside it, which is why the board used to arrive on the page
+ * as a bare rectangle. The top stays at 0: the next-piece previews sit above the border, where
+ * the original puts them.
+ *
+ * It stops below the bottom rule. Further down is the original's SCORE/LINES/LEVEL plate, and
+ * the page keeps its own readouts in HTML rather than blitting that.
+ */
+export const PLAYFIELD_VIEW = {
+  x: FRAME_LEFT - FRAME_MARGIN,
+  y: 0,
+  width: FRAME_RIGHT - FRAME_LEFT + 1 + FRAME_MARGIN * 2,
+  height: FRAME_BOTTOM + 1 + FRAME_MARGIN,
+} as const;
 
 export class Screen {
   /** Public because other things draw into it too; only the playfield needs the rest of this. */
@@ -51,7 +69,10 @@ export class Screen {
     /**
      * What reaches the page. The original's frame is three 214px panes and single player only
      * ever fills the middle one, so showing all of it means showing two empty thirds and the
-     * application chrome around them. Everything still draws at the original coordinates.
+     * application chrome around them — that stays cropped away. The middle pane's own border
+     * does not: it is the edge of the board rather than chrome around it, and the board looks
+     * like an unfinished rectangle without it. Everything still draws at the original
+     * coordinates.
      */
     private readonly view: { x: number; y: number; width: number; height: number } = PLAYFIELD_VIEW,
   ) {}

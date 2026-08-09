@@ -12,15 +12,9 @@ import './styles.css';
 
 import { Game } from './engine/game.js';
 import { loadQimg, type QImage } from './render/qimg.js';
-import { loadQfnt, type Fontdata } from './render/font.js';
+import { loadQfnt } from './render/font.js';
 import { Screen, PLAYFIELD_VIEW } from './render/screen.js';
-import {
-  cropPixels,
-  isMenuInk,
-  labelCanvas,
-  letteringCanvas,
-  toCanvas,
-} from './render/lettering.js';
+import { cropPixels, isMenuInk, labelCanvas, toCanvas } from './render/lettering.js';
 import { Keyboard } from './input/keyboard.js';
 import { loadSettings, saveSettings } from './settings.js';
 import { SettingsPanel, bindingsHelp } from './ui/settings-panel.js';
@@ -48,6 +42,9 @@ const LEVELS = 10;
  * makes it possible to subtract the background from behind the lettering. */
 const WORDMARK = { x: 36, y: 6, width: 568, height: 92 };
 const PLAY_LABEL = { x: 160, y: 99 };
+/* The fourth item down the menu. The page has a section by the same name, so it uses the
+ * original's own word for it (source/menu.cc:1484). */
+const HIGHSCORES_LABEL = { x: 235, y: 225 };
 const SIGNATURE = { x: 0, y: 390 };
 
 async function main(): Promise<void> {
@@ -73,9 +70,13 @@ async function main(): Promise<void> {
   /* Type first. The page is already painted by the time this runs; what these add is the
    * lettering, which is the one thing that cannot be done with a web font. */
   const font = await loadQfnt('assets/font.qfnt');
-  dressHeadings(font);
 
-  void Promise.all([image('debuto'), image('debut0'), image('debut8')]).then(([menu, play, mark]) => {
+  void Promise.all([
+    image('debuto'),
+    image('debut0'),
+    image('debut3'),
+    image('debut8'),
+  ]).then(([menu, play, highscores, mark]) => {
     const wordmark = toCanvas(
       cropPixels(menu, WORDMARK.x, WORDMARK.y, WORDMARK.width, WORDMARK.height),
     );
@@ -90,11 +91,30 @@ async function main(): Promise<void> {
       button.prepend(label);
     }
 
+    const heading = labelCanvas(
+      highscores,
+      menu,
+      HIGHSCORES_LABEL.x,
+      HIGHSCORES_LABEL.y,
+      isMenuInk,
+    );
+    heading.className = 'sprite-art';
+    document.querySelector('[data-sprite="highscores"]')?.prepend(heading);
+
     const signature = labelCanvas(mark, menu, SIGNATURE.x, SIGNATURE.y);
     signature.className = 'sprite-art';
     document.querySelector('[data-sprite="signature"]')?.prepend(signature);
   });
   void image('multi').then((art) => paintGround(el<HTMLCanvasElement>('ground'), art));
+  /* Its two headings are painted in at y 15-30 and y 225-240; everything below is fireworks. */
+  void image('hscore').then((art) =>
+    paintGround(el<HTMLCanvasElement>('records-ground'), art, {
+      x: 0,
+      y: 270,
+      width: 640,
+      height: 210,
+    }),
+  );
 
   const backgrounds: (QImage | undefined)[] = new Array<QImage | undefined>(LEVELS);
   const backgroundsReady = Promise.all(
@@ -125,15 +145,18 @@ async function main(): Promise<void> {
   const settings = loadSettings();
   const keyboard = new Keyboard(settings.keys);
 
-  const view = new GameView({
-    attract: el('attract'),
-    hud: el('hud'),
-    state: el('board-state'),
-    score: el('score'),
-    lines: el('lines'),
-    level: el('level'),
-    chain: el('chain'),
-  });
+  const view = new GameView(
+    {
+      attract: el('attract'),
+      hud: el('hud'),
+      state: el('board-state'),
+      score: el('score'),
+      lines: el('lines'),
+      level: el('level'),
+      chain: el('chain'),
+    },
+    font,
+  );
 
   const hero = new Hero(screen, {
     section: el('stage'),
@@ -434,24 +457,24 @@ async function main(): Promise<void> {
   }
 }
 
-/** Set every heading on the page in the game's own lettering. */
-function dressHeadings(font: Fontdata): void {
-  for (const heading of document.querySelectorAll<HTMLElement>('[data-lettering]')) {
-    const text = heading.dataset['lettering'] ?? heading.textContent ?? '';
-    const canvas = letteringCanvas(text, font, { color: [255, 255, 0], shadow: [0, 20, 40] });
-    canvas.className = 'lettering-art';
-    heading.prepend(canvas);
-  }
-}
-
-/** A photograph from the game, laid in behind the stage as texture. */
-function paintGround(canvas: HTMLCanvasElement, art: QImage): void {
-  canvas.width = art.width;
-  canvas.height = art.height;
+/**
+ * A photograph from the game, laid in behind a section as texture.
+ *
+ * `rect` takes a part of it. The highscore screen has its own headings painted into the
+ * photograph, and a ground that says "Local highscores" behind a heading that already says
+ * Highscores reads as a mistake — so that section takes the fireworks below the lettering.
+ */
+function paintGround(
+  canvas: HTMLCanvasElement,
+  art: QImage,
+  rect = { x: 0, y: 0, width: art.width, height: art.height },
+): void {
+  canvas.width = rect.width;
+  canvas.height = rect.height;
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
-  const pixels = cropPixels(art, 0, 0, art.width, art.height);
-  const image = ctx.createImageData(art.width, art.height);
+  const pixels = cropPixels(art, rect.x, rect.y, rect.width, rect.height);
+  const image = ctx.createImageData(rect.width, rect.height);
   image.data.set(pixels.rgba);
   ctx.putImageData(image, 0, 0);
 }

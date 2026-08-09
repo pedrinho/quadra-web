@@ -7,7 +7,44 @@
  * `fond5.qimg`. Sampling the source is why this does not look like a dark theme with a neon
  * accent bolted on — the teal is a 1998 airbrushed halo, and the yellow is the exact ink of the
  * hand-lettered menu.
+ *
+ * Three faces, three jobs. The headings are the game's own bitmap lettering, drawn to a canvas
+ * by `dressHeadings` — no web font can do that, which is the whole point of it. Everything else
+ * is IBM Plex: Mono carries the numbers, and there are a lot of them, because a score here is a
+ * measurement rather than a flourish; Sans carries the prose. Plex is the right neighbour for
+ * 1998 lettering because it is drawn like an instrument panel and not like a brand.
  */
+
+/* Absolute paths: the stylesheet is served from /src in dev and /assets in the build, so a
+   relative URL cannot resolve in both. This is why the page assumes it is deployed at a root. */
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/assets/fonts/IBMPlexSans-Regular.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/assets/fonts/IBMPlexSans-SemiBold.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/assets/fonts/IBMPlexMono-Regular.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/assets/fonts/IBMPlexMono-Medium.woff2') format('woff2');
+}
 
 :root {
   color-scheme: dark;
@@ -24,12 +61,44 @@
   --ink: #b6bfcb;
   --ink-quiet: #6f7b8a;
   --rule: #ffffff14;
+  --alarm: #ff6b6b;
 
-  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --mono: ui-monospace, SFMono-Regular, Menlo, "Cascadia Mono", monospace;
+  --sans: 'IBM Plex Sans', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, "Cascadia Mono", monospace;
+
+  /* One 4px step, so the vertical rhythm is countable rather than eyeballed. */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+  --s-8: 64px;
+  --section: clamp(48px, 7vw, 96px);
+
+  --t-micro: 11px;
+  --t-small: 12px;
+  --t-detail: 13px;
+  --t-ui: 14px;
+  --t-body: 16px;
+  --t-lead: 18px;
+  --t-h3: clamp(17px, 1.6vw, 20px);
+  /* Sized against the 40px "Highscores" cut-out, so the two section headings carry the same
+     weight even though only one of them is artwork. */
+  --t-display: clamp(30px, 3.4vw, 40px);
+  --t-figure: clamp(44px, 8vw, 76px);
 
   --gutter: clamp(20px, 5vw, 64px);
-  --measure: 1120px;
+  /* The board at 2x is 418px. 418 + the stage gap + a comfortable text column lands here, which
+     is what lets the hero end on the same right edge as the record rows and the beats grid.
+     Three different right edges was most of why the page read as ungridded. */
+  --measure: 1040px;
+  /* For containers that carry the gutter as their own padding rather than sitting inside a
+     parent's. Capping those at `--measure` looks right and is not: the padding then eats into
+     the measure and their contents land a full gutter inboard of every other section. */
+  --frame: calc(var(--measure) + var(--gutter) * 2);
 }
 
 * {
@@ -44,7 +113,7 @@ body {
   margin: 0;
   background: var(--void);
   color: var(--ink);
-  font: 400 16px/1.65 var(--sans);
+  font: 400 var(--t-body)/1.65 var(--sans);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -103,8 +172,8 @@ canvas.sprite-art {
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 8px 24px;
-  padding: 12px var(--gutter);
+  gap: var(--s-2) var(--s-5);
+  padding: var(--s-3) var(--gutter);
   background: color-mix(in srgb, var(--void) 88%, transparent);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--rule);
@@ -114,23 +183,24 @@ canvas.sprite-art {
   display: block;
   line-height: 0;
 }
+/* Airbrushed rather than pixel art, so this one is free to take a fractional scale — `main.ts`
+   opts it out of `pixelated` for exactly that reason. */
 .wordmark canvas {
-  height: 34px;
+  height: 40px;
   width: auto;
-  image-rendering: pixelated;
 }
 
 .nav {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px clamp(12px, 2vw, 28px);
-  font-size: 14px;
+  gap: var(--s-1) clamp(12px, 2vw, 28px);
+  font-size: var(--t-ui);
   letter-spacing: 0.02em;
 }
 .nav a {
   color: var(--ink);
   text-decoration: none;
-  padding: 4px 0;
+  padding: var(--s-1) 0;
   border-bottom: 1px solid transparent;
 }
 .nav a:hover {
@@ -171,7 +241,7 @@ canvas.sprite-art {
   align-items: center;
   flex-wrap: wrap;
   width: 100%;
-  max-width: var(--measure);
+  max-width: var(--frame);
   margin-inline: auto;
   padding-inline: var(--gutter);
 }
@@ -180,26 +250,41 @@ canvas.sprite-art {
   position: relative;
   flex: 0 0 auto;
 }
+/*
+ * Whole multiples of the source (209x405) and nothing in between, so every cell stays the same
+ * size as every other cell. A `max-height` that merely clamps 810 down to whatever fits looks
+ * reasonable and is not: it lands on ratios like 1.42, and nearest-neighbour at 1.42 makes some
+ * cells 25px and their neighbours 26px. The board has to be seen whole while it is being played,
+ * so the rule is the largest whole multiple that fits the viewport.
+ */
 .board canvas#screen {
   display: block;
   image-rendering: pixelated;
-  /* Whole multiples of the source, so every cell stays the same size as every other cell.
-     Only a short viewport breaks the integer scale, and then fitting matters more. */
-  height: 397px;
+  height: 405px;
   width: auto;
-  max-height: 76vh;
   background: #000;
 }
-@media (min-height: 900px) {
+@media (min-height: 960px) {
   .board canvas#screen {
-    height: 794px;
-    max-height: 82vh;
+    height: 810px;
+  }
+}
+/* Below this even 1:1 does not fit, and then fitting wins — the same trade the play label makes
+   on a phone. This is the one place a fractional scale is allowed. */
+@media (max-height: 540px) {
+  .board canvas#screen {
+    height: auto;
+    max-height: calc(100vh - 110px);
   }
 }
 .is-watching .board canvas#screen {
-  height: 794px;
   /* Room for the transport, which sits at the foot of the window while a replay is up. */
-  max-height: min(62vh, calc(100vh - 380px));
+  height: 405px;
+}
+@media (min-height: 1200px) {
+  .is-watching .board canvas#screen {
+    height: 810px;
+  }
 }
 .is-watching .stage-side {
   display: none;
@@ -228,11 +313,17 @@ canvas.sprite-art {
 }
 .board-state strong {
   display: block;
-  font: 600 20px/1.2 var(--sans);
+  font: 600 var(--t-h3) / 1.2 var(--sans);
   color: var(--chrome);
 }
+/* The game's own face, at 2x of its 18px body — the only sizes it may take are multiples. */
+.board-state strong canvas {
+  height: 36px;
+  width: auto;
+  margin-inline: auto;
+}
 .board-state span {
-  font: 400 13px/1.5 var(--mono);
+  font: 400 var(--t-detail) / 1.5 var(--mono);
   color: var(--ink-quiet);
 }
 
@@ -242,8 +333,8 @@ canvas.sprite-art {
 }
 
 .eyebrow {
-  margin: 0 0 6px;
-  font: 500 12px/1 var(--mono);
+  margin: 0 0 var(--s-2);
+  font: 500 var(--t-small) / 1 var(--mono);
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--glow-lit);
@@ -251,30 +342,32 @@ canvas.sprite-art {
 
 .figure {
   margin: 0;
-  font: 400 clamp(44px, 8vw, 76px) / 0.95 var(--mono);
+  font: 400 var(--t-figure) / 0.95 var(--mono);
   letter-spacing: -0.02em;
   color: var(--chrome);
   font-variant-numeric: tabular-nums;
 }
 
 .facts {
-  margin: 10px 0 0;
-  font: 400 13px/1.7 var(--mono);
+  margin: var(--s-3) 0 0;
+  max-width: 62ch;
+  font: 400 var(--t-detail) / 1.7 var(--mono);
   color: var(--ink-quiet);
 }
 
 .lede {
-  margin: 14px 0 0;
+  margin: var(--s-4) 0 0;
   max-width: 46ch;
+  font-size: var(--t-lead);
   color: var(--ink);
 }
 
 .actions {
   display: flex;
   align-items: center;
-  gap: 18px;
+  gap: var(--s-5);
   flex-wrap: wrap;
-  margin-top: 22px;
+  margin-top: var(--s-6);
 }
 
 /* The play button *is* the original's menu label, cut out of the artwork. */
@@ -288,10 +381,25 @@ button.play {
   filter: drop-shadow(0 2px 0 #0008);
   transition: transform 120ms ease;
 }
+/* 354x39 in the artwork, so 39px is 1:1. Anything else is a fractional nearest-neighbour
+   resample that drops pixel rows unevenly and frays the hand-lettering. 78px is the only other
+   size this may take. */
 button.play canvas {
-  height: 30px;
+  height: 39px;
   width: auto;
   image-rendering: pixelated;
+}
+/* Below roughly 394px the label is wider than the page, and `.stage` clips rather than scrolls,
+   so the last letters would just be gone. The board makes the same trade at a short viewport:
+   when the integer scale and fitting on screen disagree, fitting wins. */
+@media (max-width: 440px) {
+  button.play {
+    max-width: 100%;
+  }
+  button.play canvas {
+    height: auto;
+    width: 100%;
+  }
 }
 button.play:hover {
   transform: translateY(-1px) scale(1.02);
@@ -305,7 +413,7 @@ button.link {
   border: 0;
   background: none;
   cursor: pointer;
-  font: 400 14px/1 var(--sans);
+  font: 400 var(--t-ui) / 1 var(--sans);
   color: var(--ink);
   border-bottom: 1px solid var(--glow);
   padding-bottom: 2px;
@@ -314,20 +422,23 @@ button.link:hover {
   color: var(--glow-lit);
 }
 
+/* Capped, because `1fr` across the whole side panel pushes Score and Best chain 600px apart and
+   they stop reading as one instrument cluster. */
 .readouts {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(94px, 1fr));
-  gap: 14px 18px;
+  gap: var(--s-4) var(--s-5);
+  max-width: 480px;
   margin: 0;
 }
 .readouts dt {
-  font: 500 11px/1 var(--mono);
+  font: 500 var(--t-micro) / 1 var(--mono);
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--ink-quiet);
 }
 .readouts dd {
-  margin: 4px 0 0;
+  margin: var(--s-1) 0 0;
   font: 400 30px/1 var(--mono);
   color: var(--chrome);
   font-variant-numeric: tabular-nums;
@@ -339,21 +450,48 @@ button.link:hover {
 .how {
   max-width: var(--measure);
   margin: 0 auto;
-  padding: clamp(40px, 7vw, 88px) var(--gutter);
+  padding: var(--section) var(--gutter);
 }
 
-.lettering {
-  margin: 0 0 14px;
+/* The stage has a photograph behind it and everything below it had nothing, which is where the
+   page used to fall apart. This is the highscore screen's own ground, treated exactly like
+   `.stage-ground` so the two read as the same device. */
+.records {
+  position: relative;
+  max-width: none;
+  overflow: hidden;
+}
+.section-ground {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.18;
+  filter: saturate(0.75);
+  mask-image: radial-gradient(100% 80% at 70% 30%, #000 20%, transparent 75%);
+}
+.section-inner {
+  position: relative;
+  max-width: var(--measure);
+  margin-inline: auto;
+}
+
+/* "Highscores" is the original's own menu label, cut out of the artwork — 209x40, so 40px is 1:1
+   and 80px is the only other size it may take. The port's own headings do not get to borrow the
+   lettering; see `.how h2`. */
+.label {
+  margin: 0 0 var(--s-5);
   line-height: 0;
 }
-.lettering canvas {
-  height: 36px;
+.label canvas {
+  height: 40px;
   width: auto;
 }
 
 .records-list {
   list-style: none;
-  margin: 26px 0 0;
+  margin: var(--s-6) 0 0;
   padding: 0;
 }
 
@@ -365,8 +503,8 @@ button.link:hover {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 6px 18px;
-  padding: 14px 12px;
+  gap: var(--s-2) var(--s-5);
+  padding: var(--s-4) var(--s-3);
   border-top: 1px solid var(--rule);
   transition: background-color 120ms ease;
 }
@@ -382,7 +520,7 @@ button.link:hover {
 
 .record .rank {
   flex: 0 0 2.2rem;
-  font: 400 13px/1.6 var(--mono);
+  font: 400 var(--t-detail) / 1.6 var(--mono);
   color: var(--ink-quiet);
 }
 .record .score {
@@ -394,14 +532,14 @@ button.link:hover {
 }
 .record .detail {
   flex: 1 1 16ch;
-  font: 400 13px/1.6 var(--mono);
+  font: 400 var(--t-detail) / 1.6 var(--mono);
   color: var(--ink-quiet);
 }
 .record .row-actions {
   display: flex;
   flex: 0 0 auto;
   margin-left: auto;
-  gap: 14px;
+  gap: var(--s-4);
   align-items: center;
 }
 
@@ -410,22 +548,22 @@ button.link:hover {
   flex: 1 0 100%;
   margin: 0;
   padding-left: 2.2rem;
-  font: 400 12px/1.6 var(--mono);
+  font: 400 var(--t-small) / 1.6 var(--mono);
   color: var(--ink-quiet);
 }
 .record .verdict[data-state='ok'] {
   color: var(--amber);
 }
 .record .verdict[data-state='bad'] {
-  color: #ff6b6b;
+  color: var(--alarm);
 }
 .record .verdict[hidden] {
   display: none;
 }
 
 .empty {
-  margin: 24px 0 0;
-  padding: 22px;
+  margin: var(--s-5) 0 0;
+  padding: var(--s-5);
   border: 1px dashed var(--rule);
   color: var(--ink-quiet);
 }
@@ -446,15 +584,25 @@ button.link:hover {
   max-width: var(--measure);
   margin-inline: auto;
 }
+/* The port's own voice, so it is set in the page's face rather than the game's.
+   `auto` on the inline sides, not 0: `.how > *` centres its children on the measure, and a
+   shorthand `margin: 0 0 ...` here silently cancels that and knocks the heading out of line
+   with its own beats grid. */
+.how h2 {
+  margin: 0 auto var(--s-5);
+  font: 600 var(--t-display) / 1.05 var(--sans);
+  letter-spacing: -0.02em;
+  color: var(--chrome);
+}
 .beats {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: clamp(20px, 4vw, 44px);
-  margin: 26px auto 0;
+  margin: var(--s-6) auto 0;
 }
 .beats h3 {
-  margin: 0 0 8px;
-  font: 600 17px/1.3 var(--sans);
+  margin: 0 0 var(--s-2);
+  font: 600 var(--t-h3) / 1.3 var(--sans);
   color: var(--chrome);
 }
 .beats p {
@@ -462,7 +610,7 @@ button.link:hover {
   color: var(--ink);
 }
 .how > .lede {
-  margin: 34px 0 0;
+  margin: var(--s-7) 0 0;
   max-width: 62ch;
   color: var(--ink-quiet);
 }
@@ -470,12 +618,12 @@ button.link:hover {
 /* --- colophon ------------------------------------------------------------- */
 
 .colophon {
-  max-width: var(--measure);
+  max-width: var(--frame);
   margin: 0 auto;
-  padding: clamp(32px, 6vw, 64px) var(--gutter) 72px;
+  padding: var(--section) var(--gutter) var(--s-8);
   border-top: 1px solid var(--rule);
   color: var(--ink-quiet);
-  font-size: 14px;
+  font-size: var(--t-ui);
 }
 .colophon p {
   max-width: 62ch;
@@ -487,10 +635,12 @@ button.link:hover {
 .signature {
   display: block;
   line-height: 0;
-  margin-bottom: 18px;
+  margin-bottom: var(--s-5);
 }
+/* 221x90 in the artwork. 45px is exactly half, which nearest-neighbour can do cleanly; 90px is
+   1:1. The 54px this used to be was a 0.6 resample, and it showed on the thin strokes. */
 .signature canvas {
-  height: 54px;
+  height: 45px;
   width: auto;
   opacity: 0.85;
 }
@@ -508,7 +658,7 @@ button.link:hover {
   justify-content: center;
   background: color-mix(in srgb, var(--void) 82%, transparent);
   backdrop-filter: blur(6px);
-  padding: 16px;
+  padding: var(--s-4);
   overflow: auto;
   z-index: 30;
 }
@@ -521,27 +671,27 @@ button.link:hover {
   overflow: auto;
   background: var(--void-lift);
   border: 1px solid var(--rule);
-  padding: 20px;
+  padding: var(--s-5);
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: var(--s-4);
 }
 .overlay header {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--s-3);
 }
 .overlay h2 {
   margin: 0;
-  font: 500 12px/1 var(--mono);
+  font: 500 var(--t-small) / 1 var(--mono);
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--glow-lit);
 }
 .overlay h3 {
-  margin: 0 0 6px;
-  font: 500 11px/1 var(--mono);
+  margin: 0 0 var(--s-2);
+  font: 500 var(--t-micro) / 1 var(--mono);
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--ink-quiet);
@@ -549,7 +699,7 @@ button.link:hover {
 .overlay .group {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--s-3);
 }
 .overlay .field {
   display: flex;
@@ -559,22 +709,22 @@ button.link:hover {
 .overlay .row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--s-3);
 }
 .overlay .row label {
   flex: 1;
-  font-size: 14px;
+  font-size: var(--t-ui);
 }
 .overlay .readout {
   color: var(--ink-quiet);
-  font: 400 11px/1.5 var(--mono);
+  font: 400 var(--t-micro) / 1.5 var(--mono);
 }
 .overlay input[type='range'] {
   flex: 1 1 180px;
   accent-color: var(--glow-lit);
 }
 .overlay button {
-  font: 400 13px/1.4 var(--sans);
+  font: 400 var(--t-detail) / 1.4 var(--sans);
   color: var(--ink);
   background: #ffffff0d;
   border: 1px solid var(--rule);
@@ -605,12 +755,12 @@ button.link:hover {
 }
 .overlay .actions {
   display: flex;
-  gap: 8px;
+  gap: var(--s-2);
   margin: 0;
 }
 .overlay .hint {
   color: var(--ink-quiet);
-  font-size: 12px;
+  font-size: var(--t-small);
   min-height: 1.4em;
 }
 
@@ -619,21 +769,21 @@ button.link:hover {
   background: none;
   backdrop-filter: none;
   align-items: flex-end;
-  padding-bottom: 28px;
+  padding-bottom: var(--s-6);
   pointer-events: none;
   z-index: 31;
 }
 .replay .panel {
   width: min(560px, 100%);
   pointer-events: auto;
-  gap: 10px;
+  gap: var(--s-3);
   background: color-mix(in srgb, var(--void) 92%, transparent);
   backdrop-filter: blur(8px);
 }
 .transport-row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--s-3);
 }
 .transport-row input[type='range'] {
   flex: 1;

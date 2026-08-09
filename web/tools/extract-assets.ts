@@ -57,16 +57,23 @@ const SRC = process.env.QUADRA_SRC ?? process.argv[2];
  * is the Ludus Design signature. `gamepaus` is the badge laid over a paused board, and `multi`
  * is a photograph with nothing painted on it, used as texture behind the stage.
  *
- * Only what is used is converted. The rest of the menu labels and the highscore screen belong
- * to the original's own menus, which this port does not reproduce.
+ * `debut3` is the menu's "Highscores" label, blitted at (235, 225) — the page has a section by
+ * that name, so it gets to use the original's own word for it rather than setting the heading
+ * in a face the original never printed it in. `hscore` is the highscore screen's photograph,
+ * used as ground behind that section the way `multi` is used behind the stage.
+ *
+ * Only what is used is converted. The remaining menu labels and screens belong to menus this
+ * port does not reproduce, and are left where they are.
  */
 const WANTED = [
   ...Array.from({ length: 10 }, (_, i) => `images/fond${i}.png`),
   'images/black.png',
   'images/debuto.png',
   'images/debut0.png',
+  'images/debut3.png',
   'images/debut8.png',
   'images/gamepaus.png',
+  'images/hscore.png',
   'images/multi.png',
 ];
 
