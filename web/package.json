@@ -5,6 +5,13 @@
   "description": "Browser port of Quadra (Ludus Design, 1998) — faithful connectivity-gravity engine",
   "license": "LGPL-2.1-or-later",
   "type": "module",
+  "//": "The server imports these to verify a submitted run. It has to be the same code the browser played, or verification means nothing — so they are exported from here rather than copied.",
+  "exports": {
+    "./replay/verify": "./src/replay/verify.ts",
+    "./replay/tape": "./src/replay/tape.ts",
+    "./replay/version": "./src/replay/version.ts",
+    "./replay/codec": "./src/replay/codec.ts"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
@@ -19,6 +26,6 @@
     "@types/node": "^26.1.2",
     "typescript": "^5.6.3",
     "vite": "^5.4.10",
-    "vitest": "^2.1.4"
+    "vitest": "^3.2.4"
   }
 }

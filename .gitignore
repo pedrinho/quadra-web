@@ -7,6 +7,11 @@ dist/
 *.tsbuildinfo
 .vite/
 
+# Wrangler's bundle output and its local D1/R2 state. The local database is scratch —
+# `npm run migrate:local` in server/ rebuilds it from migrations/.
+.wrangler/
+.dev.vars
+
 # --- OS / editor ---
 .DS_Store
 Thumbs.db

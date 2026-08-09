@@ -8,9 +8,6 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: web
 
     steps:
       - uses: actions/checkout@v4
@@ -19,8 +16,10 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: web/package-lock.json
+          cache-dependency-path: package-lock.json
 
+      # One install for the workspace. The Worker verifies runs by importing the client's own
+      # engine, so the two are installed and checked together or the guarantee is not tested.
       - run: npm ci
 
       - run: npm run typecheck
@@ -28,4 +27,12 @@ jobs:
       # The sound tests read web/public/assets/sounds.qsnd. That works here only because the
       # converted assets are committed rather than generated at build time -- the upstream
       # tree they come from is not vendored. See docs/FIDELITY.md.
+      #
+      # The server's tests run inside workerd against a local D1 and R2, so this also exercises
+      # the migrations.
       - run: npm test
+
+      # The site has to build for the Worker to have anything to serve, and the bundle step is
+      # what proves the Worker can still link against the engine.
+      - run: npm run build
+      - run: npm run bundle --workspace quadra-server

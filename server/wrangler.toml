@@ -1,0 +1,34 @@
+name = "quadra"
+main = "src/index.ts"
+compatibility_date = "2026-03-10"
+
+# One Worker serves both the site and the API, so the session cookie is first-party and there is
+# no CORS layer to get wrong. It is also where the netcode milestone's Durable Objects will have
+# to live: Pages Functions can bind one but cannot define one.
+[assets]
+directory = "../web/dist"
+binding = "ASSETS"
+# The page is a single document that routes itself, so anything that is not a file is the page.
+not_found_handling = "single-page-application"
+# ...except the API, which must reach the Worker rather than being answered with index.html.
+run_worker_first = ["/v1/*"]
+
+[vars]
+# Overridden per environment. The origin the mailed links point at.
+PUBLIC_ORIGIN = "http://localhost:8787"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "quadra"
+database_id = "REPLACE_WITH_YOUR_D1_ID"
+migrations_dir = "migrations"
+
+# Tapes are blobs and the leaderboard never selects one, so they live out of the database. It also
+# means a replay is served straight from the bucket with an immutable cache header.
+[[r2_buckets]]
+binding = "TAPES"
+bucket_name = "quadra-tapes"
+
+# Secrets, set with `wrangler secret put`:
+#   RESEND_API_KEY   absent in development, and then the mailer prints the link instead
+#   MAIL_FROM        e.g. "Quadra <no-reply@example.com>"

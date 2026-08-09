@@ -77,6 +77,15 @@ export interface VerifyOk {
   ticks: number;
   /** Simulated time, milliseconds. Not wall-clock: a stall skips the clock without ticks. */
   simulatedMs: number;
+  /**
+   * Ticks the game spent paused.
+   *
+   * Pausing does not stop the frame counter (`env.paused` gates input, not the clock), so paused
+   * time is real time the player had to think in — free, and unlimited, unless something counts
+   * it. Nothing in the simulation reads this; it exists so that whoever ranks a run can decide
+   * how much of it to allow.
+   */
+  pausedTicks: number;
   score: number;
   lines: number;
   level: number;
@@ -129,6 +138,7 @@ export function verify(bytes: Uint8Array, opts: VerifyOptions = {}): VerifyResul
     const game = gameFromHeader(header, { shadow: opts.shadow ?? false });
     let ticks = 0;
     let jumpTotal = 0;
+    let pausedTicks = 0;
 
     for (const record of streamFrames(reader, declaredFrames)) {
       if (record.ticks > limits.maxTicksPerFrame) {
@@ -143,6 +153,8 @@ export function verify(bytes: Uint8Array, opts: VerifyOptions = {}): VerifyResul
         return fail('limit-jump', `${jumpTotal} ms of skipped clock`, reader.pos, frame);
       }
       for (const event of record.events) applyEvent(game, event, frame);
+      // After the events and before the ticks, which is exactly the state those ticks run in.
+      if (game.paused) pausedTicks += record.ticks;
       game.stepFrame(record.ticks, record.jump);
       // Both queues are outputs nobody is listening to here, and they would otherwise grow
       // for every tick of the run.
@@ -164,6 +176,7 @@ export function verify(bytes: Uint8Array, opts: VerifyOptions = {}): VerifyResul
       frames: frame,
       ticks,
       simulatedMs: ticks * TICK_MS,
+      pausedTicks,
       score: game.canvas.score,
       lines: game.canvas.linesTot,
       level: game.canvas.level,

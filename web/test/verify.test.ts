@@ -63,6 +63,34 @@ describe('verifying a real run', () => {
     expect(result.score).toBeGreaterThan(0);
   });
 
+  it('counts the time the player spent paused', () => {
+    // Pausing gates input, not the clock, so paused time is real time to think in — free, and
+    // unlimited, unless something counts it. Whoever ranks a run needs this number to decide.
+    const play = (pause: [number, number] | null) => {
+      const game = new Game({ seed: SCORING_SEED, shadow: true });
+      const recorder = record(game, { startedAt: 1_770_000_000_000 });
+      const player = new Autoplayer(game);
+      for (let i = 0; i < 1500 && !game.isOver; i++) {
+        if (pause && i === pause[0]) game.setPaused(true);
+        if (pause && i === pause[1]) game.setPaused(false);
+        if (!game.paused) player.frame();
+        game.stepFrame(1);
+      }
+      return verify(recorder.bytes());
+    };
+
+    const straight = play(null);
+    const thinking = play([300, 800]);
+    expect(straight.ok && thinking.ok).toBe(true);
+    if (!straight.ok || !thinking.ok) return;
+
+    expect(straight.pausedTicks).toBe(0);
+    // Five hundred frames of one tick each, and the frame the pause was lifted on is not one
+    // of them: the events land before the ticks they precede.
+    expect(thinking.pausedTicks).toBe(500);
+    expect(thinking.pausedTicks).toBeLessThanOrEqual(thinking.ticks);
+  });
+
   it('refuses a tape recorded by a different simulation', () => {
     const { bytes } = recorded(500);
     // The sim version sits at bytes 5-6, right after the magic and the format byte.

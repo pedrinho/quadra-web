@@ -1,0 +1,20 @@
+{
+  "name": "quadra",
+  "version": "0.6.0-dev",
+  "private": true,
+  "description": "Quadra Web — the browser port and the service it is played on",
+  "license": "LGPL-2.1-or-later",
+  "type": "module",
+  "workspaces": [
+    "web",
+    "server"
+  ],
+  "scripts": {
+    "build": "npm run build --workspace quadra-web",
+    "test": "npm run test --workspaces",
+    "typecheck": "npm run typecheck --workspaces",
+    "dev": "npm run dev --workspace quadra-web",
+    "serve": "npm run build && npm run dev --workspace quadra-server",
+    "deploy": "npm run build && npm run deploy --workspace quadra-server"
+  }
+}

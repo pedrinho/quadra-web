@@ -22,6 +22,17 @@ describe('the bundled demonstration', () => {
     expect(result.over).toBe(true);
   });
 
+  it('replays to the score the server expects of it', () => {
+    // The server pins these same three numbers (`server/test/runs.test.ts`) and submits this
+    // same tape. Neither side derives them from the other, so the pair is the check that the
+    // Worker is running the client's engine rather than something that merely resembles it.
+    const result = verify(bytes);
+    if (!result.ok) throw new Error(result.message);
+    expect(result.score).toBe(1045);
+    expect(result.lines).toBe(3);
+    expect(result.frames).toBe(4548);
+  });
+
   it('is still worth watching', () => {
     const result = verify(bytes);
     if (!result.ok) throw new Error(result.message);
