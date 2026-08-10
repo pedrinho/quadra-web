@@ -6,7 +6,8 @@
   "license": "LGPL-2.1-or-later",
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev",
+    "//dev": "Migrations first: the local database is scratch, it is empty on a fresh checkout, and a Worker running against no schema answers every request with an opaque 500. They are additive and applying them twice does nothing.",
+    "dev": "wrangler d1 migrations apply quadra --local && wrangler dev",
     "deploy": "wrangler deploy",
     "bundle": "wrangler deploy --dry-run --outdir .wrangler/dry-run",
     "migrate:local": "wrangler d1 migrations apply quadra --local",

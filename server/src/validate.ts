@@ -11,11 +11,24 @@
 const EMAIL = /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/;
 const MAX_EMAIL = 254;
 
-/**
- * Letters, digits, and a few separators between them. No leading or trailing punctuation, no runs
- * of it, and no whitespace at all: a name on a leaderboard row has to be one word-shaped thing.
+/*
+ * What a name may be made of.
+ *
+ * The first version of this required a name to be alphanumeric with single separators *between*
+ * the parts, which reads sensibly and rejects `sub[DdP]`, `[TAG]Ana` and `O'Brien` — a clan tag
+ * and an apostrophe being about as ordinary as handles get. So the rule is inverted: say what is
+ * actually dangerous and allow the rest.
+ *
+ * Dangerous is text that does not render as what it is. Control characters, zero-width spaces,
+ * line and paragraph separators, and the bidi overrides that let a name reorder the row it sits
+ * in. The two zero-width joiners are the exception — several scripts need them to spell ordinary
+ * words, and excluding those scripts to tidy up a character class is not a trade worth making.
  */
-const NAME = /^[\p{L}\p{N}]+([ _.-][\p{L}\p{N}]+)*$/u;
+const HOSTILE = /[\p{Cc}\p{Cs}\p{Co}\p{Cn}\p{Zl}\p{Zp}​‎‏‪-‮⁠-⁯﻿]/u;
+/** Letters, marks and digits from any script, plus the punctuation people put in a handle. */
+const NAME_CHARS = /^[\p{L}\p{M}\p{N} ‌‍[\]()_.\-|^~!?'+*#]+$/u;
+/** Punctuation alone is not a name, and it folds away to nothing. */
+const HAS_ALNUM = /[\p{L}\p{N}]/u;
 export const MIN_NAME = 3;
 export const MAX_NAME = 20;
 
@@ -56,18 +69,27 @@ export function emailKey(email: string): string {
 
 export function normalizeName(name: string): string | null {
   const trimmed = name.trim();
-  if (trimmed.length < MIN_NAME || trimmed.length > MAX_NAME) return null;
-  if (!NAME.test(trimmed)) return null;
-  if (RESERVED.has(trimmed.toLowerCase())) return null;
+  // Counted in code points: `[...s].length`, not `s.length`, or an emoji costs two of twenty
+  // and an astral-plane script costs double throughout.
+  const length = [...trimmed].length;
+  if (length < MIN_NAME || length > MAX_NAME) return null;
+  if (HOSTILE.test(trimmed)) return null;
+  if (!NAME_CHARS.test(trimmed)) return null;
+  if (!HAS_ALNUM.test(trimmed)) return null;
+  // One space between things, never two: a run of them is a way to make a name look like two.
+  if (/  /.test(trimmed)) return null;
+  // Against the folded form, so `a.d.m.i.n` is as reserved as `admin`.
+  if (RESERVED.has(nameKey(trimmed))) return null;
   return trimmed;
 }
 
 /**
- * The key uniqueness is on. Case-folded, and with the separators removed, so that `great_player`
- * cannot sit next to `greatplayer` on the same board and be read as the same person.
+ * The key uniqueness is on. Case-folded and stripped of everything that is not a letter or a
+ * digit, so `[TAG]Ana`, `TAG_Ana` and `tagana` cannot all sit on the board being read as the
+ * same person. Decoration is yours; the name underneath it is not yours twice.
  */
 export function nameKey(name: string): string {
-  return name.trim().toLowerCase().replace(/[ _.-]/g, '');
+  return name.trim().toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
 }
 
 export type PasswordProblem = 'too-short' | 'too-long' | 'too-obvious';

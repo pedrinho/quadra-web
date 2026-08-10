@@ -127,10 +127,11 @@ the dev server proxies `/v1` to it, so the session cookie stays first-party the 
 production:
 
 ```sh
-cd server
-npx wrangler d1 migrations apply quadra --local
-npm run dev       # the API, at localhost:8787
+npm run dev -w quadra-server    # the API, at localhost:8787
 ```
+
+That applies the migrations to the local database before starting, so a fresh checkout works
+without a setup step.
 
 With no mail provider configured the confirmation and reset links are **printed to the Worker's
 console** instead of being sent, so registering end to end needs no mailbox and no account

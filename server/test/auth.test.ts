@@ -89,9 +89,9 @@ describe('registering', () => {
       [{ email: 'not-an-address', displayName: 'Ada' }, 'bad-email'],
       [{ email: 'a@example.com', displayName: 'no' }, 'bad-name'],
       [{ email: 'a@example.com', displayName: '  ' }, 'bad-request'],
-      [{ email: 'a@example.com', displayName: 'has spaces and-punctuation!' }, 'bad-name'],
+      [{ email: 'a@example.com', displayName: 'x'.repeat(21) }, 'bad-name'],
       [{ email: 'a@example.com', displayName: 'admin' }, 'bad-name'],
-      [{ email: 'a@example.com', displayName: '-leading' }, 'bad-name'],
+      [{ email: 'a@example.com', displayName: '....' }, 'bad-name'],
     ];
     for (const [body, code] of cases) {
       const res = await call('POST', '/v1/auth/register', {

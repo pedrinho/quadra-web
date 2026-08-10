@@ -238,7 +238,7 @@ export function apiMessage(failure: ApiFailure): string {
     case 'bad-email':
       return 'That does not look like an e-mail address.';
     case 'bad-name':
-      return 'Letters and digits, 3 to 20 of them, separated by spaces if you like.';
+      return '3 to 20 characters, and at least one of them a letter or a digit.';
     case 'name-taken':
       return 'Somebody already plays under that name.';
     case 'bad-password-too-short':
