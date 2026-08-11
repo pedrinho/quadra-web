@@ -9,7 +9,7 @@
  */
 
 import { Module, Overmind } from './modules.js';
-import { Canvas, Action, PRESSED, RELEASED } from './canvas.js';
+import { Canvas, Action, PRESSED, RELEASED, FLASH_BRIGHT, FLASH_DIM } from './canvas.js';
 import { Bloc } from './bloc.js';
 import { COLS, PLAY_BOTTOM, ROWS, idx } from './board.js';
 import { clearFullLines, computeSupport, dropUnsupported } from './cascade.js';
@@ -417,6 +417,12 @@ export class PlayerCheckLine extends PlayerBase {
     const cleared = clearFullLines(c);
 
     if (cleared.count) {
+      // The original records the rows as it erases them, inside check_nb_line, capped at 20
+      // (source/player.cc:561-562). They are what the flash paints over; PlayerFlashLines
+      // zeroes them again on its way out, so this always writes into a cleared array.
+      for (let i = 0; i < cleared.rows.length && i < c.flash.length; i++)
+        c.flash[i] = cleared.rows[i]!;
+
       c.depth += cleared.count;
       c.complexity++;
       if (c.isClean()) {
@@ -450,17 +456,33 @@ export class PlayerCheckLine extends PlayerBase {
 /**
  * `Player_flash_lines` — source/player.cc:727-755. Sixteen frames of flashing the cleared
  * rows, then hand over to the fall.
+ *
+ * The rows are already empty by the time this runs — `clearFullLines` erased them a moment
+ * earlier, in the same frame — so the flash paints solid bars over the gaps rather than
+ * doing anything to the blocks. `canvas.flash` says which rows; this says what colour.
  */
 export class PlayerFlashLines extends PlayerBase {
   static readonly FRAMES = 16;
   private anim = 0;
 
+  constructor(canvas: Canvas, env: PlayerEnv) {
+    super(canvas, env);
+    // In the constructor, not init(): the original sets it here, and a Module's init() costs a
+    // frame, which would leave the first frame after the erase blank.
+    canvas.colorFlash = FLASH_BRIGHT;
+  }
+
   override step(): void {
     super.step();
     if (this.anim < PlayerFlashLines.FRAMES) {
+      // `(anim>>1)&1` — the colour holds for two frames at a time, so sixteen frames are four
+      // white/red cycles. Read before the increment, as the original does.
+      this.canvas.colorFlash = (this.anim >> 1) & 1 ? FLASH_DIM : FLASH_BRIGHT;
       this.anim++;
       return;
     }
+    this.canvas.colorFlash = 0;
+    this.canvas.flash.fill(0);
     this.canvas.clearTmp();
     this.exec(new PlayerCheckLink(this.canvas, this.env));
   }

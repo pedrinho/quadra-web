@@ -18,6 +18,7 @@ import { TextScrollers } from './scrollers.js';
 import {
   drawBoard,
   drawFallingPiece,
+  drawFlash,
   drawPreview,
   drawBonusColumn,
   NEXT1,
@@ -72,6 +73,16 @@ export class Screen {
   readonly scrollers: TextScrollers | null;
   private level = -1;
 
+  /**
+   * Held rather than re-queried so the browser parses the query once, but read at draw time
+   * rather than cached as a boolean, so changing the setting takes effect without a reload.
+   *
+   * Null off the browser — a `Screen` is built in tests, and those get the faithful strobe,
+   * which is what the assertions are about.
+   */
+  private readonly reduceMotion: MediaQueryList | null =
+    typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null;
+
   constructor(
     private readonly ctx: CanvasRenderingContext2D,
     /** Per level, and filled in as they load — level 1 is the only one needed to start. */
@@ -123,6 +134,8 @@ export class Screen {
     drawBoard(this.fb, bg, canvas);
     if (canvas.blocShadow) drawFallingPiece(this.fb, canvas.blocShadow, true);
     if (canvas.bloc) drawFallingPiece(this.fb, canvas.bloc);
+    // After the piece and over it, as Zone_canvas_bloc::draw has it (source/zone.cc:63-73).
+    if (canvas.colorFlash) drawFlash(this.fb, canvas, this.reduceMotion?.matches ?? false);
 
     // Previews sit in the header strip above the board, nearest one smallest.
     drawPreview(this.fb, bg, canvas.next3, NEXT3.x, NEXT3.y);

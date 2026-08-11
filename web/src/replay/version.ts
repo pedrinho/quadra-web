@@ -31,4 +31,4 @@ export const TAPE_FORMAT_VERSION = 1;
  * tapes. If it cannot (a comment, a rename, a type), leave `SIM_VERSION` alone. Either way,
  * paste the digest the test prints in here.
  */
-export const SIM_SOURCE_HASH = 'b64e4cc741e0e9a0';
+export const SIM_SOURCE_HASH = '208e21cb265fa324';

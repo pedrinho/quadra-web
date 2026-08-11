@@ -66,6 +66,18 @@ export function groupsFromBindings(codes: readonly string[]): Uint8Array {
   return groups;
 }
 
+/*
+ * The two palette indices the line-clear flash alternates between (source/player.cc:743-745).
+ *
+ * They are raw indices, not colours, and that is the point: `Canvas::change_level` copies all
+ * 256 entries straight out of `images/fond<N>.png` and nothing recolours them at runtime, so the
+ * flash picks up whatever each level's palette holds there. In every shipped palette that is
+ * white and red — but the indices are what the original stores, so the indices are what this
+ * stores.
+ */
+export const FLASH_BRIGHT = 255;
+export const FLASH_DIM = 200;
+
 /** One queued garbage line. */
 export interface BonusLine {
   color: number;
@@ -138,6 +150,33 @@ export class Canvas extends Board {
 
   /** Set once the player tops out. */
   dead = false;
+
+  /*
+   * The line-clear flash (`Canvas::flash` / `Canvas::color_flash`, source/canvas.h:97,115).
+   *
+   * Presentation only: the simulation writes these and never reads them back, so a host that
+   * draws none of it plays an identical game — the same contract sound-events.ts and notices.ts
+   * keep. They live here rather than in a render-side animator because the original puts them
+   * here, and because it makes the flash a pure function of the Canvas: the replay viewer's
+   * seek re-simulates from frame zero, so scrubbing lands on the right frame of the flash for
+   * free.
+   *
+   * Deliberately absent from replay/hash.ts, alongside `bflash`, `tmp` and `moved`. Hashing
+   * them would change every stored stateHash for a change that alters no game.
+   */
+
+  /**
+   * Rows currently flashing, as absolute board indices — 0 means an unused slot, which is safe
+   * because row 0 is up in the spawn buffer and never clears. Capped at 20, as the original is.
+   */
+  readonly flash = new Uint8Array(20);
+
+  /**
+   * Palette index the flash bars are painted in, or 0 for no flash. The two values it takes are
+   * raw indices into the level's own palette, which `Canvas::change_level` copies wholesale out
+   * of `images/fond<N>.png`: 255 is white and 200 is red in every one of them.
+   */
+  colorFlash = 0;
 
   constructor(seed: number | bigint = 0) {
     super();

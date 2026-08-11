@@ -52,6 +52,16 @@ Quadra is online. The solo game is unchanged; what is new is everywhere it now g
 - **The local leaderboard.** Scores lived in `localStorage` under `quadra.runs.v1`; there is one
   board now and it is the online one. A guest can still play, and nothing is kept when they do.
 
+### Fixed
+
+- **The line-clear flash.** The port had the sixteen frames the original spends flashing a cleared
+  row, and the sound that goes with them, but drew nothing in them — so a clear read as the rows
+  vanishing, a pause with the stack hanging in mid-air, and then the fall. `Canvas` now carries
+  `flash` and `colorFlash` as the original does, and the renderer paints the solid bars:
+  white for two frames, red for two, four times over. Presentation only — the simulation writes
+  them and never reads them back, so no game's outcome changes, no frame count moves and every
+  recording made before this still verifies to the same score and the same state hash.
+
 ## [0.5.0] — 2026-07-31
 
 First tagged release. The solo game is complete and playable in a browser.

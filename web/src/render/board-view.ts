@@ -9,7 +9,7 @@
 import type { Framebuffer } from './framebuffer.js';
 import type { QImage } from './qimg.js';
 import { CELL, SMALL_CELL, drawBloc, drawBlocCorner, drawBlocSmall } from './blocks.js';
-import type { Canvas } from '../engine/canvas.js';
+import { type Canvas, FLASH_BRIGHT } from '../engine/canvas.js';
 import type { Bloc } from '../engine/bloc.js';
 import { PLAY_BOTTOM, PLAY_LEFT, PLAY_RIGHT, PLAY_TOP, idx } from '../engine/board.js';
 
@@ -92,6 +92,29 @@ export function drawFallingPiece(fb: Framebuffer, bloc: Bloc, ghost = false): vo
       }
     }
   });
+}
+
+/**
+ * The line-clear flash — `Canvas::blit_flash`, source/canvas.cc:862-872.
+ *
+ * One solid bar per cleared row, painted straight over the gap the erase left. Eighteen stacked
+ * `hline`s rather than a `box` because that is what the original writes, and it comes to the same
+ * thing: the width is `10*18-1`, one pixel short of the well, which is the original's own edge
+ * and not a rounding slip here.
+ *
+ * `steady` holds the bright index for the whole window instead of alternating. Nothing about the
+ * timing changes — the cascade still waits the same sixteen frames — so this is the strobe
+ * removed, not the animation removed. `Screen` decides when to ask for it.
+ */
+export function drawFlash(fb: Framebuffer, canvas: Canvas, steady = false): void {
+  const index = steady ? FLASH_BRIGHT : canvas.colorFlash;
+  for (let j = 0; j < canvas.flash.length; j++) {
+    const row = canvas.flash[j]!;
+    // 0 is the empty slot: row 0 is up in the spawn buffer and never clears.
+    if (!row) continue;
+    const y = BOARD_Y + (row - PLAY_TOP) * CELL;
+    for (let i = 0; i < CELL; i++) fb.hline(y + i, BOARD_X, BOARD_W - 1, index);
+  }
 }
 
 /**
