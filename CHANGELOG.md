@@ -122,6 +122,13 @@ Quadra is online. The solo game is unchanged; what is new is everywhere it now g
   whatever fallback font a system had; and copy written for someone who has not played yet. The
   board grows to 1.5× on a 2× display — still a whole number of device pixels per source pixel —
   so a laptop gets a 608px board instead of a 405px one.
+- **Nothing covers the board when a run ends or pauses.** A dimmed, blurred layer used to go over
+  it, with the score in large type — the third copy of it on screen — hiding the death wipe and
+  the original's pause badge. What became of the run is now a line under the score in the panel,
+  with the link to its row; the heading reads "Final score" and Restart becomes **Play again**.
+  A verdict that comes back after another game has started is no longer shown over that one, and
+  no longer takes away its ranking either: the grant was cleared only once the answer arrived,
+  by which time it could be the new game's.
 
 ### Fixed
 

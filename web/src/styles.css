@@ -416,37 +416,6 @@ a {
   }
 }
 
-/* Pause and game over, over the board. */
-.board-state {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-content: center;
-  justify-items: center;
-  gap: 8px;
-  padding: 24px;
-  text-align: center;
-  line-height: 1.45;
-  background: rgb(18 20 20 / 0.84);
-  backdrop-filter: blur(2px);
-}
-.board-state strong {
-  font: 300 48px / 1 var(--display);
-  color: var(--ink);
-  margin-bottom: 4px;
-}
-.board-state span {
-  font-size: 14px;
-  color: var(--ink-2);
-}
-.board-state a {
-  margin-top: 6px;
-  font-size: 14px;
-  font-weight: 500;
-  text-decoration-color: var(--accent);
-  text-underline-offset: 3px;
-}
-
 /* The line under the board. The width is the board's, so its two ends line up with the board's
    two edges. */
 .strip-area {
@@ -762,6 +731,20 @@ a {
 .big {
   font: 300 76px / 0.9 var(--display);
 }
+/* Paused, or what became of the run, under the number it is about. */
+.run-state {
+  margin: 12px 0 0;
+  max-width: 36ch;
+  color: var(--ink-2);
+  line-height: 1.45;
+  text-wrap: pretty;
+}
+.run-state:empty {
+  display: none;
+}
+.run-state .more {
+  margin-top: 6px;
+}
 .stats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -817,6 +800,23 @@ kbd .icon {
 }
 .row .btn {
   flex: 1;
+}
+
+/* A short laptop window. The panel has about 24px to spare there, and a finished run's verdict
+   takes up to 83, so the controls close up rather than send the panel into a scroll. */
+@media (max-height: 780px) {
+  .stats {
+    margin-top: 16px;
+  }
+  #play-game h2.label {
+    margin-top: 20px;
+  }
+  .keys {
+    gap: 2px;
+  }
+  .keys kbd {
+    height: 24px;
+  }
 }
 
 /* --- about ----------------------------------------------------------------- */
