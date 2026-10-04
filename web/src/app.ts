@@ -51,9 +51,6 @@ const TITLES: Record<Route, string> = {
   about: 'How it works · Quadra',
 };
 
-/** The last line under every finished run. */
-const AGAIN = 'Press R to play again.';
-
 const isList = (route: Route): boolean => route === 'board' || route === 'runs';
 
 async function main(): Promise<void> {
@@ -90,7 +87,10 @@ async function main(): Promise<void> {
     stripAttract: el('strip-attract'),
     stripGame: el('strip-game'),
     stripScore: el('game-score'),
-    state: el('board-state'),
+    title: el('game-title'),
+    state: el('run-state'),
+    restart: el('hud-restart'),
+    hint: el('game-hint'),
     score: el('score'),
     lines: el('lines'),
     level: el('level'),
@@ -422,29 +422,35 @@ async function main(): Promise<void> {
    * Offer the finished run to the board.
    *
    * The score is not submitted — the recording is, and the server verifies it and derives the
-   * score itself. What comes back is the only number worth showing, because it is the only one
-   * nobody here could have chosen.
+   * score itself. What comes back is where the run landed, which nobody here could have chosen.
    */
   const submitRun = async (): Promise<void> => {
     submitted = true;
+    view.setOver(true);
     if (!recorder) return;
-    const score = game?.canvas.score ?? 0;
+    const ended = game;
 
     if (!grant) {
-      // Nothing was sent and nothing was kept, so this is the only place the score is shown.
+      // Nothing was sent and nothing was kept, so the panel is the only place this run is shown.
       let why = 'Sign in and your runs will count.';
       if (api.account) {
         why = api.account.verified
           ? 'The board was out of reach when this run started.'
           : 'Confirm your e-mail address and your runs will count.';
       }
-      view.setState(score.toLocaleString(), [`Not recorded. ${why}`, AGAIN]);
+      view.setState(`Not recorded. ${why}`);
       return;
     }
 
-    view.setState(score.toLocaleString(), ['Verifying…']);
-    const result = await api.submitRun(grant, recorder.bytes());
+    view.setState('Verifying…');
+    // Spent before the wait, not after it: a game started meanwhile has a grant of its own.
+    const spent = grant;
     grant = null;
+    const result = await api.submitRun(spent, recorder.bytes());
+    if (result.ok) void loadTopRuns();
+    else if (result.code === 'unverifiable') console.warn('run did not verify:', result.message);
+    // Pressing R while it verified has started another game, and this verdict is not about that one.
+    if (game !== ended) return;
 
     if (result.ok) {
       // `?fresh=` is what highlights the row once there. The board holds each player's best, so
@@ -452,18 +458,13 @@ async function main(): Promise<void> {
       // is rather than to a board it is missing from.
       const fresh = encodeURIComponent(result.run.id);
       view.setState(
-        result.run.score.toLocaleString(),
-        [
-          result.best
-            ? `Verified. Number ${result.rank} on the board.`
-            : `Verified. Number ${result.runRank} of every run; your best still stands.`,
-          AGAIN,
-        ],
+        result.best
+          ? `Verified. Number ${result.rank} on the board.`
+          : `Verified. Number ${result.runRank} of every run; your best still stands.`,
         result.best
           ? { href: `/records?fresh=${fresh}`, text: 'See it on the board' }
           : { href: `/player-highscores?fresh=${fresh}`, text: 'See it among every run' },
       );
-      void loadTopRuns();
       return;
     }
 
@@ -475,8 +476,7 @@ async function main(): Promise<void> {
           : isUnreachable(result)
             ? 'The board could not be reached.'
             : `The board would not take it (${result.code}).`;
-    view.setState(score.toLocaleString(), [because, AGAIN]);
-    if (result.code === 'unverifiable') console.warn('run did not verify:', result.message);
+    view.setState(because);
   };
 
   const frame = (now: number): void => {
@@ -511,7 +511,7 @@ async function main(): Promise<void> {
   const pauseForAway = (): void => {
     if (!playing || !game || game.isOver || game.paused) return;
     game.paused = true;
-    view.setState('Paused', ['Press P to carry on.']);
+    view.setState('Paused. Press P to carry on.');
     sounds()?.playPause();
   };
 
@@ -576,7 +576,7 @@ async function main(): Promise<void> {
     else if (e.code === 'KeyW' && game.isOver) watch(recorder?.bytes() ?? null, 'Your last run');
     else if (e.code === 'KeyP' && !game.isOver) {
       game.paused = !game.paused;
-      if (game.paused) view.setState('Paused', ['Press P to carry on.']);
+      if (game.paused) view.setState('Paused. Press P to carry on.');
       else view.clearState();
       sounds()?.playPause();
     }
