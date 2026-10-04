@@ -106,6 +106,15 @@ Quadra is online. The solo game is unchanged; what is new is everywhere it now g
   appeared in a dimmed, blurred layer over the list it came from, so the row being watched, and
   every row near it, was unreadable while it played. Narrow enough and the two stack, with the
   board pinned under the masthead instead.
+- **The page stops borrowing the 1998 artwork.** It was built out of cut-outs — a logo cropped
+  from the menu screen (which read "OUADRA", the crop took the Q's tail), the yellow menu label as
+  the Play button, two photographs as wallpaper — and five unrelated type styles. The artwork now
+  lives on the board only. Around it: one typeface, Archivo, replacing IBM Plex; a typeset
+  wordmark; real buttons, the primary one drawn as a Quadra cell in the cyan piece's own shades;
+  and copy written for someone who has not played yet. The two leaderboard pages are one
+  **Leaderboard** with a switch between best per player and every run, and their columns line up
+  under a header. The board grows to 1.5× on a 2× display, which is still a whole number of device
+  pixels per source pixel, so a laptop gets a 608px board instead of a 405px one.
 
 ### Fixed
 

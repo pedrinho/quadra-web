@@ -115,8 +115,9 @@ export class ReplayViewer {
       this.seek(target);
     });
 
-    const close = button('close', () => this.hide());
+    const close = button('×', () => this.hide());
     close.className = 'close';
+    close.setAttribute('aria-label', 'Close');
     const head = document.createElement('header');
     head.append(this.title, close);
 
@@ -132,7 +133,7 @@ export class ReplayViewer {
 
     const hint = document.createElement('div');
     hint.className = 'hint';
-    hint.textContent = 'Space plays and pauses · ← → step a second · Esc closes';
+    hint.textContent = 'Space plays and pauses, ← and → step a second, Esc closes.';
 
     const panel = document.createElement('div');
     panel.className = 'panel';

@@ -99,8 +99,9 @@ export class SettingsPanel {
 
     const title = document.createElement('h2');
     title.textContent = 'Settings';
-    const close = button('close', () => this.hide());
+    const close = button('×', () => this.hide());
     close.className = 'close';
+    close.setAttribute('aria-label', 'Close');
 
     const head = document.createElement('header');
     head.append(title, close);
@@ -265,10 +266,34 @@ export class SettingsPanel {
 }
 
 /** One line describing the current bindings, for the help text under the canvas. */
-export function bindingsHelp(settings: Settings): string {
-  const k = (a: Action) => keyLabel(settings.keys[a] ?? '');
-  const parts = ACTION_ORDER.map(({ action, label }) => `${k(action)} ${label.toLowerCase()}`);
-  return `${parts.join(' · ')} · P pause · R restart · Esc settings`;
+/** The controls as key and action pairs: the bound game actions, then the page's own keys. */
+export function bindingsList(settings: Settings): Array<[key: string, action: string]> {
+  return [
+    ...ACTION_ORDER.map(({ action, label }): [string, string] => [
+      keyLabel(settings.keys[action] ?? ''),
+      label,
+    ]),
+    ['P', 'Pause'],
+    ['R', 'Restart'],
+    ['Esc', 'Settings'],
+  ];
+}
+
+/** Write the controls into a `<dl>`, one key and its action to a row. */
+export function renderBindings(list: HTMLElement, settings: Settings): void {
+  list.replaceChildren(
+    ...bindingsList(settings).map(([key, action]) => {
+      const row = document.createElement('div');
+      const dt = document.createElement('dt');
+      const kbd = document.createElement('kbd');
+      kbd.textContent = key;
+      dt.append(kbd);
+      const dd = document.createElement('dd');
+      dd.textContent = action;
+      row.append(dt, dd);
+      return row;
+    }),
+  );
 }
 
 /* --- small DOM helpers --------------------------------------------------- */

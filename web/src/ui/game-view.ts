@@ -15,6 +15,8 @@ import { letteringCanvas } from '../render/lettering.js';
 
 export interface GameViewElements {
   attract: HTMLElement;
+  /** What the attract replay is, under the board. Not true of a game in progress. */
+  caption?: HTMLElement;
   hud: HTMLElement;
   state: HTMLElement;
   score: HTMLElement;
@@ -39,6 +41,7 @@ export class GameView {
   /** Swap the stage between the attract replay and a game in progress. */
   show(playing: boolean): void {
     this.els.attract.hidden = playing;
+    if (this.els.caption) this.els.caption.hidden = playing;
     this.els.hud.hidden = !playing;
     if (playing) this.reset();
     else this.clearState();
@@ -62,12 +65,13 @@ export class GameView {
   }
 
   /**
-   * A word over the board — paused, or what happened to the run that just ended.
+   * A word over the board — paused, or what happened to the run that just ended — and a line or
+   * two under it.
    *
    * `link` is how a finished run reaches the board it landed on: the records live on their own
    * page now, so this is the one place that can carry someone there with the row in hand.
    */
-  setState(headline: string, detail = '', link?: { href: string; text: string }): void {
+  setState(headline: string, detail: string[] = [], link?: { href: string; text: string }): void {
     this.els.state.replaceChildren();
     const strong = document.createElement('strong');
     if (this.font) {
@@ -86,9 +90,10 @@ export class GameView {
       strong.textContent = headline;
     }
     this.els.state.append(strong);
-    if (detail) {
+    // A line each: what happened to the run, then what to do next.
+    for (const line of detail) {
       const span = document.createElement('span');
-      span.textContent = detail;
+      span.textContent = line;
       this.els.state.append(span);
     }
     if (link) {

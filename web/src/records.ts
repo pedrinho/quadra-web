@@ -33,8 +33,7 @@ import {
   el,
   loadBackgrounds,
   maybeEl,
-  paintGround,
-  paintLettering,
+  paintVersion,
   readSignInLink,
   takeParam,
 } from './shell.js';
@@ -50,16 +49,7 @@ async function main(): Promise<void> {
   const image = createImages();
   const font = await loadQfnt('assets/font.qfnt');
 
-  void paintLettering(image);
-  /* Its two headings are painted in at y 15-30 and y 225-240; everything below is fireworks. */
-  void image('hscore').then((art) =>
-    paintGround(el<HTMLCanvasElement>('records-ground'), art, {
-      x: 0,
-      y: 270,
-      width: 640,
-      height: 210,
-    }),
-  );
+  paintVersion();
 
   const { backgrounds, ready } = loadBackgrounds(image, (level) => {
     // A run reaching level nine before its backdrop lands would otherwise be watched against
@@ -118,7 +108,7 @@ async function main(): Promise<void> {
       void api.tape(run.id).then((res) => {
         if (!res.ok) return;
         try {
-          viewer.show(decodeTape(res.bytes), `${run.player} · ${run.score.toLocaleString()}`);
+          viewer.show(decodeTape(res.bytes), `${run.player}, ${run.score.toLocaleString()}`);
         } catch (err) {
           // A stored recording that no longer decodes is a bug or a hand-edited blob, not a
           // reason to take the page down.
@@ -188,7 +178,7 @@ function openRecDemos(input: HTMLInputElement, note: HTMLElement, viewer: Replay
       // fail does so here, before the viewer is opened on it.
       const player = new RecPlayer(demo);
       const who = demo.info?.name.trim();
-      viewer.showSource(player, who ? `${who} · ${file.name}` : file.name);
+      viewer.showSource(player, who ? `${who}, ${file.name}` : file.name);
       say(invitation);
     } catch (err) {
       // A `.rec` comes off a stranger's disk, so failing to read one is expected traffic rather

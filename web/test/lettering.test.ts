@@ -1,14 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { decodeQfnt } from '../src/render/font.js';
-import { decodeQimg } from '../src/render/qimg.js';
-import {
-  cropPixels,
-  isMenuInk,
-  labelPixels,
-  letteringPixels,
-  spritePixels,
-} from '../src/render/lettering.js';
+import { letteringPixels } from '../src/render/lettering.js';
 
 const asset = (name: string) => {
   const buf = readFileSync(new URL(`../public/assets/${name}`, import.meta.url));
@@ -16,8 +9,6 @@ const asset = (name: string) => {
 };
 
 const font = decodeQfnt(asset('font.qfnt'));
-const menu = decodeQimg(asset('debuto.qimg'));
-const playLabel = decodeQimg(asset('debut0.qimg'));
 
 /** Every fourth byte, so "is anything drawn here" is one question rather than four. */
 const alphas = (rgba: Uint8ClampedArray) => rgba.filter((_, i) => i % 4 === 3);
@@ -60,48 +51,5 @@ describe('setting words in the game\'s lettering', () => {
     }
     expect(seen.has('255,255')).toBe(true); // full colour
     expect(seen.size).toBeGreaterThan(1); // and at least one step of the ramp
-  });
-});
-
-describe('cutting the artwork up', () => {
-  it('keeps a label\'s lettering and drops the photograph behind it', () => {
-    // debut0 is the yellow "SINGLE-PLAYER GAME", and it carries the menu photograph around the
-    // letters so that blitting it at 160,99 is invisible outside them. Subtracting the
-    // background it belongs to is what leaves the lettering alone.
-    const cut = labelPixels(playLabel, menu, 160, 99, isMenuInk);
-    const kept = alphas(cut.rgba).filter((a) => a === 255).length;
-    const whole = spritePixels(playLabel);
-    const before = alphas(whole.rgba).filter((a) => a === 255).length;
-
-    expect(kept).toBeGreaterThan(500);
-    // The overwhelming majority of the sprite is background, and it has to go.
-    expect(kept).toBeLessThan(before * 0.5);
-
-    // Everything kept is the yellow ink, not a scrap of the photograph.
-    for (let i = 0; i < cut.rgba.length; i += 4) {
-      if (cut.rgba[i + 3] !== 255) continue;
-      expect(isMenuInk(cut.rgba[i]!, cut.rgba[i + 1]!, cut.rgba[i + 2]!)).toBe(true);
-    }
-  });
-
-  it('cuts an opaque region for the wordmark', () => {
-    const crop = cropPixels(menu, 36, 6, 568, 92);
-    expect(crop.width).toBe(568);
-    expect(crop.height).toBe(92);
-    expect(alphas(crop.rgba).every((a) => a === 255)).toBe(true);
-  });
-
-  it('keys index zero out of a sprite', () => {
-    const pixels = spritePixels(playLabel);
-    let transparent = 0;
-    for (let i = 0; i < playLabel.indices.length; i++) {
-      if (playLabel.indices[i] === 0) {
-        transparent++;
-        expect(pixels.rgba[i * 4 + 3]).toBe(0);
-      }
-    }
-    // A sanity check on the fixture rather than on the code: if this sprite had no keyed
-    // pixels at all the assertion above would pass without testing anything.
-    expect(transparent).toBeGreaterThanOrEqual(0);
   });
 });

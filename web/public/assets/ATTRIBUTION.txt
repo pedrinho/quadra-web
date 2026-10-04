@@ -40,17 +40,17 @@ licence as the rest of the distribution and is not altered in any way.
 They are redistributed under the same LGPL-2.1-or-later licence as the original. The full
 licence text ships with this project as LICENSE.
 
-fonts/ is a separate matter and has nothing to do with Ludus Design. It holds IBM Plex, used
-for the page's body copy and its numbers -- not for any lettering, which is set in the game's
-own bitmap face from font.qfnt:
+fonts/ is a separate matter and has nothing to do with Ludus Design. It holds Archivo, the
+page's one typeface -- not used for any lettering on the board, which is set in the game's own
+bitmap face from font.qfnt:
 
-    IBM Plex               (c) 2017 IBM Corp., reserved font name "Plex"
-    Upstream source        https://github.com/IBM/plex
-    Taken from             npm @ibm/plex-sans 1.1.0 and @ibm/plex-mono 2.5.0
+    Archivo                (c) 2020 The Archivo Project Authors
+    Upstream source        https://github.com/Omnibus-Type/Archivo
+    Taken from             Google Fonts, the variable build (wdth 62-125, wght 100-900), v25
     License                SIL Open Font License 1.1 -- see fonts/OFL.txt
 
-The four .woff2 files are the unmodified `fonts/complete/woff2` builds from those packages.
-The complete faces are shipped rather than the smaller Latin subsets because the page's copy
-uses em dashes and middots that the subsets split across several files.
+The two .woff2 files are Google Fonts' unmodified `latin` and `latin-ext` subsets of that build.
+Latin covers U+2000-206F, so the em dashes in the copy do not pull in a second file.
 
-The Quadra Web project is not affiliated with or endorsed by Ludus Design, or by IBM.
+The Quadra Web project is not affiliated with or endorsed by Ludus Design, or by the Archivo
+Project Authors.

@@ -70,35 +70,45 @@ export class Records {
       li.classList.add('is-mine');
     }
 
-    li.append(
-      span('rank', String(run.rank).padStart(2, '0')),
-      span('score', run.score.toLocaleString()),
-      span('player', run.player),
-      span('detail', detail(run)),
+    const player = span('player', run.player);
+    player.title = run.player;
+    if (!run.over) player.append(span('tag', 'unfinished'));
+
+    // The facts are a box of their own so that a phone can lay them out as one line under the
+    // name, but on a wide screen it dissolves (`display: contents`) and each fact takes its own
+    // column under the header. The units are in the text for a screen reader and for the phone,
+    // and hidden where the header already says them.
+    const facts = document.createElement('span');
+    facts.className = 'facts';
+    const seconds = (run.ticks * TICK_MS) / 1000;
+    const when = run.startedAt || run.verifiedAt;
+    facts.append(
+      measure(String(run.lines), run.lines === 1 ? ' line' : ' lines'),
+      measure(String(run.level), 'Level ', true),
+      measure(formatDuration(seconds), ''),
+      span(
+        'when',
+        when ? new Date(when).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '',
+      ),
     );
 
-    // A span of its own for one button, because `margin-left: auto` on it is what holds the
-    // control against the right edge of the row.
+    // A cell of its own for one button, so the grid can hold it against the right edge.
     const actions = document.createElement('span');
     actions.className = 'row-actions';
     actions.append(button('Watch', () => this.opts.onWatch(run)));
 
-    li.append(actions);
+    li.append(span('rank', String(run.rank)), player, span('score num', run.score.toLocaleString()), facts, actions);
     return li;
   }
 }
 
-function detail(run: BoardRun): string {
-  const seconds = (run.ticks * TICK_MS) / 1000;
-  const when = run.startedAt || run.verifiedAt;
-  const parts = [
-    `${run.lines} ${run.lines === 1 ? 'line' : 'lines'}`,
-    `level ${run.level}`,
-    formatDuration(seconds),
-    when ? new Date(when).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '',
-  ];
-  if (!run.over) parts.push('unfinished');
-  return parts.filter(Boolean).join(' · ');
+/** A number in its column, with its unit in the text but shown only where no header says it. */
+function measure(value: string, unit: string, before = false): HTMLElement {
+  const el = span('num', '');
+  const u = span('unit', unit);
+  if (before) el.append(u, value);
+  else el.append(value, u);
+  return el;
 }
 
 function span(className: string, text: string): HTMLElement {
@@ -111,7 +121,7 @@ function span(className: string, text: string): HTMLElement {
 function button(label: string, onClick: () => void): HTMLButtonElement {
   const el = document.createElement('button');
   el.type = 'button';
-  el.className = 'link';
+  el.className = 'btn btn-secondary btn-small';
   el.textContent = label;
   el.addEventListener('click', onClick);
   return el;

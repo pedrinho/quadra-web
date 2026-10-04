@@ -19,12 +19,14 @@ import type { Tape } from '../replay/tape.js';
 import { verify } from '../replay/verify.js';
 import { formatDuration } from './format.js';
 
+/** The caption under the board, and the button that opens what it is playing full size. */
 export interface HeroElements {
   section: HTMLElement;
-  eyebrow: HTMLElement;
+  title: HTMLElement;
   score: HTMLElement;
+  by: HTMLElement;
   facts: HTMLElement;
-  lede: HTMLElement;
+  watch: HTMLElement;
 }
 
 export interface HeroSource {
@@ -80,30 +82,27 @@ export class Hero {
     this.player = new TapePlayer(source.tape, { checkpoints: false });
     this.screen.invalidate();
 
+    // Described from what the verifier reaches, not from anything stored beside the tape. The
+    // caption is for someone who has not played yet, so it carries the score, who set it and
+    // three facts a player recognises — not the seed or the engine's working.
     const result = verify(source.bytes);
     if (result.ok) {
       this.els.score.textContent = result.score.toLocaleString();
-      this.els.facts.textContent = [
-        `${result.lines} ${result.lines === 1 ? 'line' : 'lines'}`,
-        `level ${result.level}`,
-        formatDuration(result.simulatedMs / 1000),
-        `seed ${result.header.seed}`,
-      ].join(' · ');
+      this.els.facts.replaceChildren(
+        fact(`${result.lines} ${result.lines === 1 ? 'line' : 'lines'}`),
+        fact(`Level ${result.level}`),
+        fact(formatDuration(result.simulatedMs / 1000)),
+      );
     } else {
       this.els.score.textContent = '—';
-      this.els.facts.textContent = `this recording does not verify: ${result.code}`;
+      this.els.facts.replaceChildren(fact(`This recording does not verify (${result.code}).`));
     }
 
-    this.els.eyebrow.textContent = source.bundled
-      ? 'the demonstration'
-      : source.by
-        ? `the record to beat · ${source.by}`
-        : 'the record to beat';
-    this.els.lede.textContent = source.bundled
-      ? 'Nobody has taken the board yet, so this is the one that ships with the port — ' +
-        'played back from its recording, at the speed it was played.'
-      : 'Playing back from the recording that set it. The score above is what the engine ' +
-        'reaches when it runs those inputs again — which is how it got on the board.';
+    this.els.title.textContent = source.bundled
+      ? 'A demonstration run'
+      : 'The record to beat';
+    this.els.by.textContent = !source.bundled && source.by ? source.by : '';
+    this.els.watch.textContent = source.bundled ? 'Watch the demo' : 'Watch the record';
 
     this.restart();
   }
@@ -189,4 +188,10 @@ export class Hero {
   paint(): void {
     this.draw();
   }
+}
+
+function fact(text: string): HTMLElement {
+  const el = document.createElement('span');
+  el.textContent = text;
+  return el;
 }

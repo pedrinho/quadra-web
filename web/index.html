@@ -3,24 +3,18 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Quadra — the 1998 puzzle game, ported and provable</title>
+    <title>Quadra — the 1998 puzzle game, in your browser</title>
     <meta
       name="description"
-      content="A browser port of Quadra (Ludus Design, 1998). Every score is a recording that re-simulates to the same board."
+      content="Quadra, the 1998 puzzle game by Ludus Design, in your browser. Clear a line and what it held up falls as whole pieces."
     />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 
-    <!-- The two faces above the fold. The other weights can wait for the stylesheet.
+    <!-- The page has one face, and this file is all of it the copy above the fold needs.
          crossorigin is required on font preloads even same-origin, or the fetch is made twice. -->
     <link
       rel="preload"
-      href="/assets/fonts/IBMPlexSans-Regular.woff2"
-      as="font"
-      type="font/woff2"
-      crossorigin
-    />
-    <link
-      rel="preload"
-      href="/assets/fonts/IBMPlexMono-Regular.woff2"
+      href="/assets/fonts/Archivo-Variable-latin.woff2"
       as="font"
       type="font/woff2"
       crossorigin
@@ -28,42 +22,60 @@
   </head>
   <body>
     <header class="masthead">
-      <a class="wordmark" href="#top" data-crop="wordmark"><span class="vh">Quadra</span></a>
-      <nav class="nav">
-        <a href="#stage" data-play>Play</a>
-        <a href="/records">Records</a>
-        <a href="/player-highscores">Player highscores</a>
-        <a href="#how">How it works</a>
-        <a href="https://github.com/pedrinho/quadra-web" rel="noreferrer">Source</a>
-        <button type="button" class="account" id="account" data-state="out">Sign in</button>
-      </nav>
+      <div class="masthead-inner">
+        <a class="wordmark" href="/">Quadra</a>
+        <nav class="nav" aria-label="Site">
+          <a href="#stage" data-play>Play</a>
+          <a href="/records">Leaderboard</a>
+          <a href="#how">How it works</a>
+          <a href="https://github.com/pedrinho/quadra-web" rel="noreferrer">Source</a>
+        </nav>
+        <button type="button" class="account btn btn-secondary btn-small" id="account" data-state="out">
+          Sign in
+        </button>
+      </div>
     </header>
 
     <main id="top">
       <!-- The stage is the hero and the game: it shows a run replaying itself until you play. -->
       <section class="stage" id="stage">
-        <canvas class="stage-ground" id="ground" aria-hidden="true"></canvas>
-
         <div class="stage-inner">
-          <div class="board">
-            <!-- PLAYFIELD_VIEW, which main.ts sets again at load. Stated here so the board
-                 reserves the right box before the module runs and the page does not reflow. -->
-            <canvas id="screen" width="209" height="405" aria-label="Quadra playfield"></canvas>
-            <div class="board-state" id="board-state" hidden></div>
-          </div>
+          <figure class="board">
+            <div class="board-frame">
+              <!-- PLAYFIELD_VIEW, which main.ts sets again at load. Stated here so the board
+                   reserves the right box before the module runs and the page does not reflow. -->
+              <canvas id="screen" width="209" height="405" aria-label="Quadra playfield"></canvas>
+              <div class="board-state" id="board-state" hidden></div>
+            </div>
+            <!-- What the board is playing. It names the run rather than selling it: the run is
+                 already on screen. -->
+            <figcaption class="caption" id="attract-caption">
+              <span class="caption-title" id="attract-title">Loading a run…</span>
+              <span class="caption-score">
+                <span class="figure" id="attract-score"></span>
+                <span class="by" id="attract-by"></span>
+              </span>
+              <span class="facts" id="attract-facts"></span>
+            </figcaption>
+          </figure>
 
           <div class="stage-side">
             <div id="attract">
-              <p class="eyebrow" id="attract-eyebrow">the record to beat</p>
-              <p class="figure" id="attract-score">—</p>
-              <p class="facts" id="attract-facts"></p>
-              <p class="lede" id="attract-lede"></p>
+              <h1 class="headline">Pieces fall whole.</h1>
+              <p class="lede" id="attract-lede">
+                Quadra is the 1998 puzzle game by Ludus Design. Clear a line and what it held up
+                falls as whole pieces, not row by row — and can clear more lines on the way down.
+              </p>
               <div class="actions">
-                <button class="play" type="button" data-play>
-                  <span class="vh">Play a single-player game</span>
+                <button class="btn btn-primary" type="button" data-play>Play</button>
+                <button class="btn btn-secondary" type="button" id="attract-watch">
+                  Watch the record
                 </button>
-                <button class="link" type="button" id="attract-watch">Watch it full size</button>
               </div>
+              <p class="note">
+                Plays in your browser, nothing to install. Sign in and your runs go on the
+                <a href="/records">leaderboard</a>.
+              </p>
             </div>
 
             <div id="hud" hidden>
@@ -73,11 +85,17 @@
                 <div><dt>Level</dt><dd id="level">1</dd></div>
                 <div><dt>Best chain</dt><dd id="chain">0</dd></div>
               </dl>
-              <p class="facts" id="keys"></p>
+              <dl class="keys" id="keys"></dl>
               <div class="actions">
-                <button class="link" type="button" id="hud-restart">Restart</button>
-                <button class="link" type="button" id="hud-settings">Settings</button>
-                <button class="link" type="button" id="hud-leave">Leave the game</button>
+                <button class="btn btn-secondary btn-small" type="button" id="hud-restart">
+                  Restart
+                </button>
+                <button class="btn btn-secondary btn-small" type="button" id="hud-settings">
+                  Settings
+                </button>
+                <button class="btn btn-secondary btn-small" type="button" id="hud-leave">
+                  Leave game
+                </button>
               </div>
             </div>
           </div>
@@ -85,63 +103,56 @@
       </section>
 
       <section class="how" id="how">
-        <!-- Set in Plex, not in the artwork: the original never printed this phrase, so it does
-             not get to borrow the lettering. -->
-        <h2>How it works</h2>
-        <div class="beats">
-          <article>
-            <h3>Cells remember</h3>
-            <p>
-              Every cell keeps four bits saying which of its edges are welded to the piece it
-              arrived in. The bevels you can see are that mask — they are information, not
-              decoration.
-            </p>
-          </article>
-          <article>
-            <h3>A clear severs</h3>
-            <p>
-              Clearing a line erases the row and opens the welds directly above and below it. A
-              piece that spanned the line is cut into fragments that no longer hold together.
-            </p>
-          </article>
-          <article>
-            <h3>What is left falls as a body</h3>
-            <p>
-              Anything unsupported drops as one rigid group, not row by row. It can complete more
-              lines on the way down, and that cascades. No other game in this family plays this
-              way.
-            </p>
-          </article>
+        <div class="how-inner">
+          <h2>How it works</h2>
+          <div class="beats">
+            <article>
+              <h3>Cells remember their piece</h3>
+              <p>
+                Every cell knows which of its edges are joined to the piece it arrived in. The
+                bevels on the board are that record: an edge is drawn wherever a cell is not
+                joined to its neighbour.
+              </p>
+            </article>
+            <article>
+              <h3>A clear cuts pieces apart</h3>
+              <p>
+                Clearing a line removes the row and breaks the joins across it. A piece that
+                spanned the line is cut into fragments that no longer hold together.
+              </p>
+            </article>
+            <article>
+              <h3>What is left falls as one body</h3>
+              <p>
+                Anything unsupported drops as a single rigid group, not row by row. On the way
+                down it can complete more lines, and those clears cascade.
+              </p>
+            </article>
+          </div>
+          <p class="how-note">
+            Every score on the leaderboard is a recording. The server replays it through the same
+            engine before it counts, so a score can only be played, not typed in. The engine is a
+            bit-exact port of the 1998 C++, tested against the original game.
+          </p>
         </div>
-        <p class="lede">
-          Ported from the 1998 C++ with the original binary kept as the oracle: the 64-bit LCG,
-          the fixed-point piece maths and the input-sampling gate are all bit-exact, and the tests
-          fail if the simulation drifts.
-        </p>
       </section>
     </main>
 
     <footer class="colophon">
-      <a
-        class="signature"
-        href="https://github.com/quadra-game/quadra"
-        rel="noreferrer"
-        data-sprite="signature"
-        ><span class="vh">Ludus Design</span></a
-      >
-      <p>
-        <strong>Quadra was made by Ludus Design</strong>, © 1998–2000, and released as free
-        software. The rules, the artwork, the lettering and the sound on this page are theirs.
-        This is a translation of their work, not an original game, and it is not affiliated with
-        or endorsed by them.
-      </p>
-      <p class="facts">
-        LGPL-2.1-or-later ·
-        <a href="https://github.com/quadra-game/quadra" rel="noreferrer">upstream source</a> ·
-        <a href="https://github.com/pedrinho/quadra-web" rel="noreferrer">this port</a> ·
-        <a href="/privacy">privacy</a> ·
-        <span id="version"></span>
-      </p>
+      <div class="colophon-inner">
+        <p>
+          Quadra was made by Ludus Design, © 1998–2000, and released as free software. The rules,
+          the artwork on the board and the sound are theirs. This is a port of their work, not
+          affiliated with or endorsed by them.
+        </p>
+        <p class="colophon-links">
+          <a href="https://github.com/quadra-game/quadra" rel="noreferrer">Original game</a>
+          <a href="https://github.com/pedrinho/quadra-web" rel="noreferrer">This port</a>
+          <a href="/privacy">Privacy</a>
+          <span>LGPL-2.1-or-later</span>
+          <span id="version"></span>
+        </p>
+      </div>
     </footer>
 
     <script type="module" src="/src/main.ts"></script>

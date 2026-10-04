@@ -3,24 +3,18 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Player highscores — Quadra, ported and provable</title>
+    <title>Every run — Quadra leaderboard</title>
     <meta
       name="description"
-      content="Every Quadra run on the board, not just each player's best. Every row is a recording you can watch."
+      content="Every run played on the Quadra leaderboard, best first. Each one is a recording you can watch."
     />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 
-    <!-- The two faces above the fold. The other weights can wait for the stylesheet.
+    <!-- The page has one face, and this file is all of it the copy above the fold needs.
          crossorigin is required on font preloads even same-origin, or the fetch is made twice. -->
     <link
       rel="preload"
-      href="/assets/fonts/IBMPlexSans-Regular.woff2"
-      as="font"
-      type="font/woff2"
-      crossorigin
-    />
-    <link
-      rel="preload"
-      href="/assets/fonts/IBMPlexMono-Regular.woff2"
+      href="/assets/fonts/Archivo-Variable-latin.woff2"
       as="font"
       type="font/woff2"
       crossorigin
@@ -28,43 +22,51 @@
   </head>
   <body class="page-records">
     <header class="masthead">
-      <a class="wordmark" href="/" data-crop="wordmark"><span class="vh">Quadra</span></a>
-      <nav class="nav">
-        <a href="/">Play</a>
-        <a href="/records">Records</a>
-        <a href="/player-highscores" aria-current="page">Player highscores</a>
-        <a href="/#how">How it works</a>
-        <a href="https://github.com/pedrinho/quadra-web" rel="noreferrer">Source</a>
-        <button type="button" class="account" id="account" data-state="out">Sign in</button>
-      </nav>
+      <div class="masthead-inner">
+        <a class="wordmark" href="/">Quadra</a>
+        <nav class="nav" aria-label="Site">
+          <a href="/">Play</a>
+          <a href="/records" aria-current="page">Leaderboard</a>
+          <a href="/#how">How it works</a>
+          <a href="https://github.com/pedrinho/quadra-web" rel="noreferrer">Source</a>
+        </nav>
+        <button type="button" class="account btn btn-secondary btn-small" id="account" data-state="out">
+          Sign in
+        </button>
+      </div>
     </header>
 
     <main id="top">
-      <section class="records is-page" id="records">
-        <canvas class="section-ground" id="records-ground" aria-hidden="true"></canvas>
-
-        <div class="section-inner">
+      <section class="records" id="records">
+        <div class="records-inner">
           <!-- The playfield holds still on the left while the rows scroll past it, because a run
                being watched and the row it came from are the same object seen twice. -->
           <aside class="rail" id="rail">
             <div class="board">
-              <canvas id="screen" width="209" height="405" aria-label="Quadra playfield"></canvas>
+              <div class="board-frame">
+                <canvas id="screen" width="209" height="405" aria-label="Quadra playfield"></canvas>
+              </div>
             </div>
-            <p class="rail-hint" id="rail-hint">Pick a run and it plays here.</p>
+            <p class="rail-hint" id="rail-hint">Press Watch on any run and it plays here.</p>
           </aside>
 
           <div class="records-col">
-            <!-- The original never had this page, so it does not get the original's lettering:
-                 the heading is set in the port's own face. See `.label` in styles.css. -->
-            <h2 class="board-title">Player highscores</h2>
-            <p class="lede">
-              Every run anyone has played, best first — not only each player's best. Each row is
-              a recording: press Watch and the board on the left replays it, through the same
-              engine that played it.
-            </p>
-            <p class="lede-aside">
-              Each player's best alone is on <a href="/records">Highscores</a>.
-            </p>
+            <h1 class="board-title">Leaderboard</h1>
+            <nav class="tabs" aria-label="Leaderboard views">
+              <a href="/records">Best per player</a>
+              <a href="/player-highscores" aria-current="page">Every run</a>
+            </nav>
+            <p class="lede">Every run anyone has played, best first. Press Watch and the board replays it.</p>
+            <div class="records-head" aria-hidden="true">
+              <span>#</span>
+              <span>Player</span>
+              <span class="num">Score</span>
+              <span class="num">Lines</span>
+              <span class="num">Level</span>
+              <span class="num">Time</span>
+              <span>Date</span>
+              <span></span>
+            </div>
             <ol class="records-list" id="records-list" data-each="run"></ol>
             <p class="empty" id="records-empty">Loading the board…</p>
           </div>
@@ -73,26 +75,20 @@
     </main>
 
     <footer class="colophon">
-      <a
-        class="signature"
-        href="https://github.com/quadra-game/quadra"
-        rel="noreferrer"
-        data-sprite="signature"
-        ><span class="vh">Ludus Design</span></a
-      >
-      <p>
-        <strong>Quadra was made by Ludus Design</strong>, © 1998–2000, and released as free
-        software. The rules, the artwork, the lettering and the sound on this page are theirs.
-        This is a translation of their work, not an original game, and it is not affiliated with
-        or endorsed by them.
-      </p>
-      <p class="facts">
-        LGPL-2.1-or-later ·
-        <a href="https://github.com/quadra-game/quadra" rel="noreferrer">upstream source</a> ·
-        <a href="https://github.com/pedrinho/quadra-web" rel="noreferrer">this port</a> ·
-        <a href="/privacy">privacy</a> ·
-        <span id="version"></span>
-      </p>
+      <div class="colophon-inner">
+        <p>
+          Quadra was made by Ludus Design, © 1998–2000, and released as free software. The rules,
+          the artwork on the board and the sound are theirs. This is a port of their work, not
+          affiliated with or endorsed by them.
+        </p>
+        <p class="colophon-links">
+          <a href="https://github.com/quadra-game/quadra" rel="noreferrer">Original game</a>
+          <a href="https://github.com/pedrinho/quadra-web" rel="noreferrer">This port</a>
+          <a href="/privacy">Privacy</a>
+          <span>LGPL-2.1-or-later</span>
+          <span id="version"></span>
+        </p>
+      </div>
     </footer>
 
     <script type="module" src="/src/records.ts"></script>

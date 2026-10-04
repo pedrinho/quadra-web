@@ -1,26 +1,22 @@
 /*
- * The original's artwork, cut out for use on a web page.
+ * The game's own lettering, for the words it says on the board.
  * Copyright (C) 1998-2000 Ludus Design
  * Copyright (C) 2026 Quadra Web contributors
  * Licensed under the GNU LGPL v2.1 or later. See LICENSE at the repo root.
  *
- * Two conversions, both from indexed pixels to RGBA with a real alpha channel:
+ * `letteringPixels` sets text in Quadra's own 1998 bitmap face, from indexed glyphs to RGBA with
+ * a real alpha channel. The glyphs store intensities 0-7 rather than colours (see render/font.ts),
+ * so any word can be set in it — which is how pause and game over are said over the board in the
+ * game's voice rather than the page's.
  *
- * `letteringPixels` sets *any* text in Quadra's own 1998 face. The glyphs store intensities 0-7
- * rather than colours (see render/font.ts), so a heading this page needs but the game never
- * printed can still be set in the game's lettering. That is the difference between using the
- * artwork as material and replaying it.
+ * This module used to cut the menu labels and the wordmark out of the artwork for the page around
+ * the board too. The page no longer borrows the artwork, so only the lettering is left.
  *
- * `labelPixels` cuts out the words the original did print — the menu labels, the Ludus Design
- * signature. They are not transparent sprites, so this is a subtraction rather than a key; the
- * comment on the function explains why.
- *
- * All of it is pure so it can be tested without a browser; `toCanvas` and the two `*Canvas`
- * helpers are the thin DOM wrappers the page actually calls.
+ * The conversion is pure so it can be tested without a browser; `toCanvas` and `letteringCanvas`
+ * are the thin DOM wrappers the page actually calls.
  */
 
 import type { Fontdata, Rgb } from './font.js';
-import type { QImage } from './qimg.js';
 
 export interface Pixels {
   width: number;
@@ -90,90 +86,6 @@ export function letteringPixels(
   return { width, height, rgba };
 }
 
-/**
- * Cut a label out of the screen it was composed over.
- *
- * The menu labels are not transparent sprites. Each one carries the photograph that was behind
- * it, so that blitting it at its own coordinates is invisible outside the letters — which is
- * exactly what made the original's hover work and exactly what makes them useless on a page as
- * they are. Comparing the label against the background it belongs to, pixel for pixel, leaves
- * the lettering and nothing else.
- *
- * `atX`/`atY` are the coordinates the original blits it at (source/menu.cc:1481-1489).
- */
-export function labelPixels(
-  label: QImage,
-  over: QImage,
-  atX: number,
-  atY: number,
-  /**
-   * An optional second test on the colour. Difference alone is not quite enough for the menu
-   * labels: the background has the *white* version of the same word painted into it, and the
-   * sprite covers it with photograph, so those pixels differ too and come through as a ghost
-   * of the word beside the word. Keeping only the label's own ink settles it.
-   */
-  keep?: (r: number, g: number, b: number) => boolean,
-): Pixels {
-  const { width, height } = label;
-  const rgba = new Uint8ClampedArray(width * height * 4);
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const index = label.indices[y * width + x]!;
-      const behind = over.indices[(atY + y) * over.width + atX + x];
-      if (index === 0 || index === behind) continue;
-      const r = label.palette[index * 3]!;
-      const g = label.palette[index * 3 + 1]!;
-      const b = label.palette[index * 3 + 2]!;
-      if (keep && !keep(r, g, b)) continue;
-      const at = (y * width + x) * 4;
-      rgba[at] = r;
-      rgba[at + 1] = g;
-      rgba[at + 2] = b;
-      rgba[at + 3] = 255;
-    }
-  }
-  return { width, height, rgba };
-}
-
-/**
- * The menu lettering's ink: a yellow ramp from `#393100` up to `#ffff00`, with no blue in it.
- * Everything else in those sprites is the photograph they were composed over.
- */
-export const isMenuInk = (r: number, g: number, b: number): boolean =>
-  r + g > 60 && b * 10 < Math.min(r, g) * 6;
-
-/** Cut a sprite out of the artwork, keying palette index 0 to transparent. */
-export function spritePixels(img: QImage): Pixels {
-  const { width, height, indices, palette } = img;
-  const rgba = new Uint8ClampedArray(width * height * 4);
-  for (let i = 0; i < indices.length; i++) {
-    const index = indices[i]!;
-    if (index === 0) continue;
-    const at = i * 4;
-    rgba[at] = palette[index * 3]!;
-    rgba[at + 1] = palette[index * 3 + 1]!;
-    rgba[at + 2] = palette[index * 3 + 2]!;
-    rgba[at + 3] = 255;
-  }
-  return { width, height, rgba };
-}
-
-/** A region of an image, opaque — for taking the wordmark off the top of the menu artwork. */
-export function cropPixels(img: QImage, sx: number, sy: number, w: number, h: number): Pixels {
-  const rgba = new Uint8ClampedArray(w * h * 4);
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      const index = img.indices[(sy + y) * img.width + sx + x]!;
-      const at = (y * w + x) * 4;
-      rgba[at] = img.palette[index * 3]!;
-      rgba[at + 1] = img.palette[index * 3 + 1]!;
-      rgba[at + 2] = img.palette[index * 3 + 2]!;
-      rgba[at + 3] = 255;
-    }
-  }
-  return { width: w, height: h, rgba };
-}
-
 /* --- the DOM side -------------------------------------------------------- */
 
 /** A canvas at 1:1. The page scales it with CSS, so one canvas serves every size. */
@@ -195,10 +107,3 @@ export const letteringCanvas = (
   opts?: LetteringOptions,
 ): HTMLCanvasElement => toCanvas(letteringPixels(text, font, opts));
 
-export const labelCanvas = (
-  label: QImage,
-  over: QImage,
-  atX: number,
-  atY: number,
-  keep?: (r: number, g: number, b: number) => boolean,
-): HTMLCanvasElement => toCanvas(labelPixels(label, over, atX, atY, keep));

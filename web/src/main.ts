@@ -3,9 +3,9 @@
  * Copyright (C) 2026 Quadra Web contributors
  * Licensed under the GNU LGPL v2.1 or later. See LICENSE at the repo root.
  *
- * The page is a page. It is not the 1998 application redrawn inside a canvas — the artwork,
- * the lettering and the palette are the materials it is built from, and the only thing the
- * framebuffer draws is the playfield itself, which is the one part that has to be pixel-exact.
+ * The page is a page. It is not the 1998 application redrawn inside a canvas, and it is not
+ * built out of that application's artwork either: the 1998 art lives on the board, where it was
+ * made to be seen whole, and the framebuffer draws the playfield and nothing else.
  */
 
 import './styles.css';
@@ -16,7 +16,7 @@ import { loadQfnt } from './render/font.js';
 import { Screen, PLAYFIELD_VIEW } from './render/screen.js';
 import { Keyboard } from './input/keyboard.js';
 import { loadSettings, saveSettings } from './settings.js';
-import { SettingsPanel, bindingsHelp } from './ui/settings-panel.js';
+import { SettingsPanel, renderBindings } from './ui/settings-panel.js';
 import { ReplayViewer } from './ui/replay-viewer.js';
 import { Hero } from './ui/hero.js';
 import { GameView } from './ui/game-view.js';
@@ -30,10 +30,12 @@ import {
   createMuting,
   el,
   loadBackgrounds,
-  paintGround,
-  paintLettering,
+  paintVersion,
   readSignInLink,
 } from './shell.js';
+
+/** The last line under every finished run. */
+const AGAIN = 'Press R to play again.';
 
 async function main(): Promise<void> {
   const boardEl = el<HTMLCanvasElement>('screen');
@@ -45,12 +47,11 @@ async function main(): Promise<void> {
 
   const image = createImages();
 
-  /* Type first. The page is already painted by the time this runs; what these add is the
-   * lettering, which is the one thing that cannot be done with a web font. */
+  /* The game's own bitmap face, for the words it says on the board itself — paused, game over.
+   * Everything around the board is the page's, and set in the page's face. */
   const font = await loadQfnt('assets/font.qfnt');
 
-  void paintLettering(image);
-  void image('multi').then((art) => paintGround(el<HTMLCanvasElement>('ground'), art));
+  paintVersion();
 
   const { backgrounds, ready: backgroundsReady } = loadBackgrounds(image, (level) => {
     if (game && game.canvas.level === level) screen.invalidate();
@@ -69,6 +70,7 @@ async function main(): Promise<void> {
   const view = new GameView(
     {
       attract: el('attract'),
+      caption: el('attract-caption'),
       hud: el('hud'),
       state: el('board-state'),
       score: el('score'),
@@ -81,10 +83,11 @@ async function main(): Promise<void> {
 
   const hero = new Hero(screen, {
     section: el('stage'),
-    eyebrow: el('attract-eyebrow'),
+    title: el('attract-title'),
     score: el('attract-score'),
+    by: el('attract-by'),
     facts: el('attract-facts'),
-    lede: el('attract-lede'),
+    watch: el('attract-watch'),
   });
 
   let playing = false;
@@ -174,7 +177,7 @@ async function main(): Promise<void> {
     // Order matters: Keyboard pushes the bindings into the canvas, so its grouping wins.
     keyboard.setBindings(settings.keys);
     audio.applyVolume(settings);
-    el('keys').textContent = bindingsHelp(settings);
+    renderBindings(el('keys'), settings);
   }
   applySettings();
 
@@ -259,7 +262,7 @@ async function main(): Promise<void> {
 
   el('attract-watch').addEventListener('click', () => {
     const source = hero.current;
-    if (source) watch(source.bytes, source.bundled ? 'the demonstration' : 'the record to beat');
+    if (source) watch(source.bytes, source.bundled ? 'Demonstration run' : 'The record to beat');
   });
 
   /* --- playing ------------------------------------------------------------- */
@@ -338,17 +341,17 @@ async function main(): Promise<void> {
     if (!grant) {
       // A guest played a real game and it is over. Nothing was sent, and nothing was kept —
       // there is no local board any more, so this is the only place the score is ever shown.
-      let why = 'sign in to rank your runs';
+      let why = 'Sign in and your runs will count.';
       if (api.account) {
         why = api.account.verified
-          ? 'the board was out of reach when this run started'
-          : 'confirm your e-mail address and your runs will count';
+          ? 'The board was out of reach when this run started.'
+          : 'Confirm your e-mail address and your runs will count.';
       }
-      view.setState(score.toLocaleString(), `not recorded — ${why} · press R to play again`);
+      view.setState(score.toLocaleString(), [`Not recorded. ${why}`, AGAIN]);
       return;
     }
 
-    view.setState(score.toLocaleString(), 'verifying…');
+    view.setState(score.toLocaleString(), ['Verifying…']);
     const result = await api.submitRun(grant, recorder.bytes());
     grant = null;
 
@@ -360,9 +363,12 @@ async function main(): Promise<void> {
       const fresh = encodeURIComponent(result.run.id);
       view.setState(
         result.run.score.toLocaleString(),
-        result.best
-          ? `verified · number ${result.rank} on the board · press R to play again`
-          : `verified · number ${result.runRank} of every run · your best still stands · press R to play again`,
+        [
+          result.best
+            ? `Verified. Number ${result.rank} on the board.`
+            : `Verified. Number ${result.runRank} of every run; your best still stands.`,
+          AGAIN,
+        ],
         result.best
           ? { href: `/records?fresh=${fresh}`, text: 'See it on the board' }
           : { href: `/player-highscores?fresh=${fresh}`, text: 'See it among every run' },
@@ -372,13 +378,13 @@ async function main(): Promise<void> {
 
     const because =
       result.code === 'no-score'
-        ? 'no lines cleared, so nothing to record'
+        ? 'No lines cleared, so nothing to record.'
         : result.code === 'duplicate'
-          ? 'already on the board'
+          ? 'Already on the board.'
           : isUnreachable(result)
-            ? 'the board could not be reached'
-            : `the board would not take it (${result.code})`;
-    view.setState(score.toLocaleString(), `${because} · press R to play again`);
+            ? 'The board could not be reached.'
+            : `The board would not take it (${result.code}).`;
+    view.setState(score.toLocaleString(), [because, AGAIN]);
     if (result.code === 'unverifiable') console.warn('run did not verify:', result.message);
   };
 
@@ -435,10 +441,10 @@ async function main(): Promise<void> {
     // A key the player bound to a game action wins over these.
     if (keyboard.isBound(e.code)) return;
     if (e.code === 'KeyR') void startGame();
-    else if (e.code === 'KeyW' && game.isOver) watch(recorder?.bytes() ?? null, 'your last run');
+    else if (e.code === 'KeyW' && game.isOver) watch(recorder?.bytes() ?? null, 'Your last run');
     else if (e.code === 'KeyP') {
       game.paused = !game.paused;
-      if (game.paused) view.setState('Paused', 'press P to carry on');
+      if (game.paused) view.setState('Paused', ['Press P to carry on.']);
       else view.clearState();
       sounds()?.playPause();
     }

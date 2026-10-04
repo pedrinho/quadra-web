@@ -2,70 +2,74 @@
  * Copyright (C) 2026 Quadra Web contributors
  * Licensed under the GNU LGPL v2.1 or later. See LICENSE at the repo root.
  *
- * Every colour here was measured out of the game's own artwork rather than chosen: the ground
- * and the two accents are palette entries from `debuto.qimg`, the section ground is from
- * `fond5.qimg`. Sampling the source is why this does not look like a dark theme with a neon
- * accent bolted on — the teal is a 1998 airbrushed halo, and the yellow is the exact ink of the
- * hand-lettered menu.
+ * The 1998 artwork lives on the board and nowhere else. It was painted to be seen whole, on a
+ * 640x480 screen, and every earlier attempt to cut it into page parts — a cropped logo, menu
+ * labels as buttons, photographs as wallpaper — read as a collage. So the page around the board
+ * is quiet: one ground, one typeface, one accent, and the board is the loudest thing on it.
  *
- * Three faces, three jobs. The headings are the game's own bitmap lettering, drawn to a canvas
- * by `dressHeadings` — no web font can do that, which is the whole point of it. Everything else
- * is IBM Plex: Mono carries the numbers, and there are a lot of them, because a score here is a
- * measurement rather than a flourish; Sans carries the prose. Plex is the right neighbour for
- * 1998 lettering because it is drawn like an instrument panel and not like a brand.
+ * The accent is not chosen, it is the game's: the eight shades of the cyan piece, read out of the
+ * palette at `colorBase(1)` (src/render/blocks.ts). The primary button is drawn the way
+ * `drawBloc` draws a cell — flat fill in shade 4, a 3px bevel lit from the top left in 7/6/5 and
+ * shaded at the bottom right in 1/2/3 — so the one ornament on the page is a piece of the game.
+ *
+ * One face: Archivo, a variable grotesk with a width axis. The wordmark and headings take it wide,
+ * which is where the 1998 logo's letterforms were; the prose takes it at normal width; numbers
+ * take its tabular figures. A monospace face for the numbers would be a second voice for no gain.
  */
 
 /* Absolute paths: the stylesheet is served from /src in dev and /assets in the build, so a
-   relative URL cannot resolve in both. This is why the page assumes it is deployed at a root. */
+   relative URL cannot resolve in both. This is why the page assumes it is deployed at a root.
+   The ranges are Google Fonts' own subsets, so the second file loads only for a name that needs
+   it. */
 @font-face {
-  font-family: 'IBM Plex Sans';
+  font-family: 'Archivo';
   font-style: normal;
-  font-weight: 400;
+  font-weight: 100 900;
+  font-stretch: 62% 125%;
   font-display: swap;
-  src: url('/assets/fonts/IBMPlexSans-Regular.woff2') format('woff2');
+  src: url('/assets/fonts/Archivo-Variable-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+    U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 @font-face {
-  font-family: 'IBM Plex Sans';
+  font-family: 'Archivo';
   font-style: normal;
-  font-weight: 600;
+  font-weight: 100 900;
+  font-stretch: 62% 125%;
   font-display: swap;
-  src: url('/assets/fonts/IBMPlexSans-SemiBold.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'IBM Plex Mono';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url('/assets/fonts/IBMPlexMono-Regular.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'IBM Plex Mono';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url('/assets/fonts/IBMPlexMono-Medium.woff2') format('woff2');
+  src: url('/assets/fonts/Archivo-Variable-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308,
+    U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113,
+    U+2C60-2C7F, U+A720-A7FF;
 }
 
 :root {
   color-scheme: dark;
 
-  --void: #000810;
-  --void-lift: #0a1420;
-  --chrome: #eeeef6;
-  --chrome-dim: #cdd5d5;
-  --glow: #007ba4;
-  --glow-lit: #33b4d8;
-  --amber: #ffff00;
-  --blood: #431623;
+  --ground: #05080f;
+  --ground-2: #080c16;
+  --surface: #0d1320;
+  --surface-2: #131b2b;
+  --line: #1b2433;
+  --line-strong: #2b3649;
 
-  --ink: #b6bfcb;
-  --ink-quiet: #6f7b8a;
-  --rule: #ffffff14;
-  --alarm: #ff6b6b;
+  --text: #e9edf3;
+  --text-body: #b8c1ce;
+  --text-muted: #8b96a6;
 
-  --sans: 'IBM Plex Sans', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+  /* The cyan piece, shades 1-7. 4 is the fill; 7/6/5 light, 1/2/3 shade. */
+  --cyan-1: #001f23;
+  --cyan-2: #004347;
+  --cyan-3: #00676b;
+  --cyan-4: #008b8f;
+  --cyan-5: #00abb3;
+  --cyan-6: #00cfdb;
+  --cyan-7: #00f3ff;
+  /* The orange piece's shade 6, for the few things that have to read as a warning. */
+  --warn: #ff8b23;
+
+  --font: 'Archivo', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
     sans-serif;
-  --mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, "Cascadia Mono", monospace;
 
   /* One 4px step, so the vertical rhythm is countable rather than eyeballed. */
   --s-1: 4px;
@@ -76,29 +80,18 @@
   --s-6: 32px;
   --s-7: 48px;
   --s-8: 64px;
-  --section: clamp(48px, 7vw, 96px);
+  --section: clamp(56px, 8vw, 112px);
 
-  --t-micro: 11px;
-  --t-small: 12px;
-  --t-detail: 13px;
-  --t-ui: 14px;
-  --t-body: 16px;
-  --t-lead: 18px;
-  --t-h3: clamp(17px, 1.6vw, 20px);
-  /* Sized against the 40px "Highscores" cut-out, so the two section headings carry the same
-     weight even though only one of them is artwork. */
-  --t-display: clamp(30px, 3.4vw, 40px);
-  --t-figure: clamp(44px, 8vw, 76px);
+  --t-small: 14px;
+  --t-body: 17px;
+  --t-lead: 19px;
+  --t-h3: 18px;
+  --t-h2: clamp(28px, 3vw, 34px);
+  --t-headline: clamp(40px, 5vw, 64px);
 
-  --gutter: clamp(20px, 5vw, 64px);
-  /* The board at 2x is 418px. 418 + the stage gap + a comfortable text column lands here, which
-     is what lets the hero end on the same right edge as the record rows and the beats grid.
-     Three different right edges was most of why the page read as ungridded. */
-  --measure: 1040px;
-  /* For containers that carry the gutter as their own padding rather than sitting inside a
-     parent's. Capping those at `--measure` looks right and is not: the padding then eats into
-     the measure and their contents land a full gutter inboard of every other section. */
-  --frame: calc(var(--measure) + var(--gutter) * 2);
+  --gutter: clamp(16px, 4vw, 48px);
+  --frame: 1200px;
+  --masthead: 64px;
 }
 
 * {
@@ -107,14 +100,17 @@
 
 html {
   scroll-behavior: smooth;
+  /* The masthead is sticky, so an anchor would otherwise land underneath it. */
+  scroll-padding-top: var(--masthead);
 }
 
 body {
   margin: 0;
-  background: var(--void);
-  color: var(--ink);
-  font: 400 var(--t-body)/1.65 var(--sans);
+  background: var(--ground);
+  color: var(--text-body);
+  font: 400 var(--t-body) / 1.6 var(--font);
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -130,16 +126,17 @@ body {
 }
 
 a {
-  color: var(--chrome);
-  text-decoration-color: var(--glow);
+  color: var(--text);
+  text-decoration-color: var(--cyan-4);
+  text-decoration-thickness: 1px;
   text-underline-offset: 3px;
 }
 a:hover {
-  color: var(--glow-lit);
+  color: var(--cyan-6);
 }
 
-:where(a, button, input, [tabindex]):focus-visible {
-  outline: 2px solid var(--glow-lit);
+:where(a, button, input, label, [tabindex]):focus-visible {
+  outline: 2px solid var(--cyan-6);
   outline-offset: 3px;
 }
 
@@ -154,164 +151,426 @@ a:hover {
   white-space: nowrap;
 }
 
-/* The original's lettering, at 1:1 in the canvas and scaled by whole numbers here so it stays
-   as crisp as it was on a 1998 CRT. */
-canvas.lettering-art,
-canvas.sprite-art {
+/* The game's bitmap face, for the words said on the board. Whole multiples only. */
+canvas.lettering-art {
   image-rendering: pixelated;
   display: block;
 }
 
-/* --- masthead ------------------------------------------------------------- */
+[hidden] {
+  display: none !important;
+}
+
+/* --- buttons --------------------------------------------------------------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 48px;
+  padding: 0 var(--s-5);
+  border: 0;
+  border-radius: 0;
+  font: 600 16px / 1 var(--font);
+  font-stretch: 112%;
+  letter-spacing: 0.01em;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+/* A cell. Dark bands are listed first so they sit on top where the bands cross, which puts the
+   shade on the top-right and bottom-left corners — the corners `drawBloc` gives to the shade too,
+   because it draws the right and bottom edges last. */
+.btn-primary {
+  min-width: 152px;
+  color: #000;
+  background: var(--cyan-4);
+  box-shadow:
+    inset -1px -1px 0 var(--cyan-1),
+    inset -2px -2px 0 var(--cyan-2),
+    inset -3px -3px 0 var(--cyan-3),
+    inset 1px 1px 0 var(--cyan-7),
+    inset 2px 2px 0 var(--cyan-6),
+    inset 3px 3px 0 var(--cyan-5);
+}
+.btn-primary:hover {
+  color: #000;
+  background: var(--cyan-5);
+}
+/* Pressed is the same cell lit from the other side. */
+.btn-primary:active {
+  box-shadow:
+    inset 1px 1px 0 var(--cyan-1),
+    inset 2px 2px 0 var(--cyan-2),
+    inset 3px 3px 0 var(--cyan-3),
+    inset -1px -1px 0 var(--cyan-7),
+    inset -2px -2px 0 var(--cyan-6),
+    inset -3px -3px 0 var(--cyan-5);
+}
+
+.btn-secondary {
+  color: var(--text);
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+}
+.btn-secondary:hover {
+  color: var(--text);
+  background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px #3d4a61;
+}
+
+.btn-small {
+  height: 36px;
+  padding: 0 var(--s-4);
+  font-size: var(--t-small);
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* Prose that happens to be a button. */
+button.link {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  font: inherit;
+  color: var(--text);
+  text-decoration: underline;
+  text-decoration-color: var(--cyan-4);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+button.link:hover {
+  color: var(--cyan-6);
+  background: none;
+}
+
+/* --- masthead -------------------------------------------------------------- */
 
 .masthead {
   position: sticky;
   top: 0;
   z-index: 20;
+  background: color-mix(in srgb, var(--ground) 90%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
+}
+.masthead-inner {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: var(--s-2) var(--s-5);
-  padding: var(--s-3) var(--gutter);
-  background: color-mix(in srgb, var(--void) 88%, transparent);
-  backdrop-filter: blur(8px);
-  border-bottom: 1px solid var(--rule);
+  gap: var(--s-2) var(--s-6);
+  max-width: var(--frame);
+  min-height: var(--masthead);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
 }
 
+/* Wide and heavy, because the 1998 logo was: the letters there are drawn at about twice their
+   height in width, and Archivo's widest cut is the nearest a typeface gets to that. */
 .wordmark {
-  display: block;
-  line-height: 0;
+  font: 800 22px / 1 var(--font);
+  font-stretch: 125%;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text);
+  text-decoration: none;
 }
-/* Airbrushed rather than pixel art, so this one is free to take a fractional scale — `main.ts`
-   opts it out of `pixelated` for exactly that reason. */
-.wordmark canvas {
-  height: 40px;
-  width: auto;
+.wordmark:hover {
+  color: var(--text);
 }
 
 .nav {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--s-1) clamp(12px, 2vw, 28px);
-  font-size: var(--t-ui);
-  letter-spacing: 0.02em;
+  gap: var(--s-6);
+  margin-left: auto;
+  font-size: 15px;
 }
 .nav a {
-  color: var(--ink);
+  position: relative;
+  color: var(--text-muted);
   text-decoration: none;
-  padding: var(--s-1) 0;
-  border-bottom: 1px solid transparent;
+  padding-block: var(--s-2);
+  white-space: nowrap;
 }
-.nav a:hover {
-  color: var(--chrome);
-  border-bottom-color: var(--glow);
+.nav a:hover,
+.nav a[aria-current='page'] {
+  color: var(--text);
 }
-
-/* Sits in the nav and reads as one of its items, because that is what it is. The lit underline
-   is the signed-in tell: a name with nothing under it has not confirmed its address yet, and
-   its runs will not count. */
-.nav .account {
-  font: inherit;
-  color: var(--ink);
-  background: none;
-  border: 0;
-  border-bottom: 1px solid transparent;
-  padding: var(--s-1) 0;
-  cursor: pointer;
-  letter-spacing: inherit;
-}
-.nav .account:hover {
-  color: var(--chrome);
-  border-bottom-color: var(--glow);
-}
-.nav .account[data-state='verified'] {
-  color: var(--chrome);
-  border-bottom-color: var(--glow-lit);
-}
-.nav .account[data-state='unverified'] {
-  color: var(--amber);
+.nav a[aria-current='page']::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 -1px;
+  height: 2px;
+  background: var(--cyan-5);
 }
 
-/* --- the stage ------------------------------------------------------------ */
+/* The lit outline is the signed-in tell. A name in warning colour has not confirmed its address
+   yet, and its runs will not count. */
+.account[data-state='verified'] {
+  box-shadow: inset 0 0 0 1px var(--cyan-3);
+}
+.account[data-state='unverified'] {
+  color: var(--warn);
+}
+
+/* Two rows on a phone: the wordmark and the account on the first, the nav under them. */
+@media (max-width: 720px) {
+  :root {
+    --masthead: 100px;
+  }
+  .masthead-inner {
+    flex-wrap: wrap;
+    padding-block: var(--s-3) 0;
+  }
+  .account {
+    margin-left: auto;
+  }
+  .nav {
+    order: 3;
+    width: 100%;
+    margin-left: 0;
+    gap: var(--s-5);
+    overflow-x: auto;
+  }
+}
+
+/* --- the stage ------------------------------------------------------------- */
 
 .stage {
-  position: relative;
-  display: grid;
-  align-items: center;
-  min-height: calc(100vh - 120px);
-  padding: clamp(28px, 6vw, 72px) 0;
-  border-bottom: 1px solid var(--rule);
-  overflow: hidden;
+  padding-block: clamp(24px, 4vh, 56px);
+  border-bottom: 1px solid var(--line);
 }
 
-/* A photograph from the game, dimmed to a texture. It is the only wallpaper on the page. */
-.stage-ground {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  opacity: 0.28;
-  filter: saturate(0.8);
-  mask-image: radial-gradient(120% 90% at 30% 40%, #000 25%, transparent 78%);
-}
-
-/* The same box as every other section, so the board's left edge lines up with the headings
-   below it rather than floating in the middle of the stage. */
 .stage-inner {
-  position: relative;
   display: flex;
-  gap: clamp(24px, 5vw, 64px);
   align-items: center;
-  flex-wrap: wrap;
-  width: 100%;
+  gap: clamp(32px, 6vw, 96px);
   max-width: var(--frame);
   margin-inline: auto;
   padding-inline: var(--gutter);
 }
 
+/* `min-content`, so the caption wraps to the board's width rather than widening the figure. */
 .board {
   position: relative;
-  flex: 0 0 auto;
+  flex: none;
+  width: min-content;
+  margin: 0;
 }
+.board-frame {
+  position: relative;
+  line-height: 0;
+  box-shadow: 0 0 0 1px var(--line-strong);
+}
+
 /*
- * Whole multiples of the source (209x405) and nothing in between, so every cell stays the same
- * size as every other cell. A `max-height` that merely clamps 810 down to whatever fits looks
- * reasonable and is not: it lands on ratios like 1.42, and nearest-neighbour at 1.42 makes some
- * cells 25px and their neighbours 26px. The board has to be seen whole while it is being played,
- * so the rule is the largest whole multiple that fits the viewport.
+ * Whole multiples of the source (209x405) in *device* pixels, and nothing in between, so every
+ * cell stays the same size as every other cell. Nearest-neighbour at a ratio like 1.42 makes some
+ * cells 25px and their neighbours 26px.
+ *
+ * In CSS pixels that left only 1x and 2x, and 2x needs a window 940px tall — so on a laptop the
+ * board sat at 405px with half the stage empty around it. On a 2x display 1.5x is 3 device pixels
+ * to a source pixel, which is as whole as 1x is on any other, and that is the size a laptop gets.
  */
-.board canvas#screen {
+#screen {
   display: block;
   image-rendering: pixelated;
   height: 405px;
   width: auto;
   background: #000;
 }
-@media (min-height: 960px) {
-  .board canvas#screen {
+@media (min-resolution: 2dppx) and (min-height: 760px) {
+  .stage #screen {
+    height: 607.5px;
+  }
+}
+@media (min-height: 940px) {
+  .stage #screen {
     height: 810px;
   }
 }
-/* Below this even 1:1 does not fit, and then fitting wins — the same trade the play label makes
-   on a phone. This is the one place a fractional scale is allowed. */
+/* Below this even 1x does not fit, and then fitting wins. The one place a fractional scale is
+   allowed. */
 @media (max-height: 540px) {
-  .board canvas#screen {
+  .stage #screen {
     height: auto;
-    max-height: calc(100vh - 110px);
+    max-height: calc(100vh - var(--masthead) - 40px);
   }
 }
-.is-watching .board canvas#screen {
-  /* Room for the transport, which sits at the foot of the window while a replay is up. */
-  height: 405px;
+
+/* Pause and game over sit on the board. The headline is the game's own face (see game-view.ts);
+   what the port adds under it is in the page's. */
+.board-state {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: var(--s-3);
+  padding: var(--s-5);
+  text-align: center;
+  line-height: 1.5;
+  background: color-mix(in srgb, var(--ground) 80%, transparent);
+  backdrop-filter: blur(2px);
 }
-@media (min-height: 1200px) {
-  .is-watching .board canvas#screen {
-    height: 810px;
+.board-state strong {
+  display: block;
+  font: 700 var(--t-h3) / 1.2 var(--font);
+  color: var(--text);
+}
+/* The game's face at 2x of its 18px body — the only sizes it may take are multiples. */
+.board-state strong canvas {
+  height: 36px;
+  width: auto;
+  margin-inline: auto;
+}
+.board-state span {
+  font-size: var(--t-small);
+  color: var(--text-body);
+}
+.board-state a {
+  font-size: var(--t-small);
+}
+
+.caption {
+  display: grid;
+  gap: 2px;
+  margin-top: var(--s-4);
+  font-size: var(--t-small);
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+.caption-score {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--s-3);
+}
+.caption .figure {
+  font-size: 24px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.caption .by {
+  font-size: 15px;
+  color: var(--text-body);
+}
+.caption .facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--s-4);
+}
+
+.stage-side {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 36rem;
+}
+
+.headline {
+  margin: 0 0 var(--s-5);
+  font: 750 var(--t-headline) / 1.02 var(--font);
+  font-stretch: 112%;
+  letter-spacing: -0.015em;
+  color: var(--text);
+  text-wrap: balance;
+}
+
+.lede {
+  margin: 0;
+  max-width: 34em;
+  font-size: var(--t-lead);
+  line-height: 1.55;
+  color: var(--text-body);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-3);
+  margin-top: var(--s-6);
+}
+
+.note {
+  margin: var(--s-5) 0 0;
+  font-size: var(--t-small);
+  color: var(--text-muted);
+}
+
+/* While playing: the readouts, the keys, and three ways out. */
+.readouts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-5) var(--s-6);
+  max-width: 360px;
+  margin: 0;
+}
+.readouts dt {
+  font-size: var(--t-small);
+  color: var(--text-muted);
+}
+.readouts dd {
+  margin: 2px 0 0;
+  font: 650 32px / 1.1 var(--font);
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.keys {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-2) var(--s-5);
+  max-width: 420px;
+  margin: var(--s-6) 0 0;
+  font-size: var(--t-small);
+}
+.keys div {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+}
+.keys dt {
+  flex: none;
+}
+.keys dd {
+  margin: 0;
+  color: var(--text-muted);
+}
+kbd {
+  display: inline-block;
+  min-width: 28px;
+  padding: 3px 7px 2px;
+  border: 1px solid var(--line-strong);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  background: var(--surface);
+  font: 600 12px / 1.4 var(--font);
+  color: var(--text);
+  text-align: center;
+}
+
+/* Stacked, the words come first. The board at its phone size is taller than the rest of the
+   first screen, and above them it would push the headline and Play entirely below the fold. */
+@media (max-width: 760px) {
+  .stage-inner {
+    flex-direction: column-reverse;
+    align-items: flex-start;
+  }
+  .stage-side {
+    max-width: none;
   }
 }
-.is-watching .stage-side {
+
+/* Watching a run full size: the board in the middle, the transport at the foot of the window. */
+.is-watching .stage-side,
+.is-watching .caption {
   display: none;
 }
 .is-watching .stage-inner {
@@ -320,226 +579,117 @@ canvas.sprite-art {
 .is-watching .stage {
   padding-bottom: 200px;
 }
+.is-watching .stage #screen {
+  height: 405px;
+}
+@media (min-resolution: 2dppx) and (min-height: 900px) {
+  .is-watching .stage #screen {
+    height: 607.5px;
+  }
+}
+@media (min-height: 1200px) {
+  .is-watching .stage #screen {
+    height: 810px;
+  }
+}
+body.is-watching .masthead {
+  opacity: 0.3;
+}
 
-/* Pause and game over sit on the board, in the page's voice rather than the game's. */
-.board-state {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-content: center;
-  gap: 10px;
-  text-align: center;
-  padding: 20px;
-  background: color-mix(in srgb, var(--void) 78%, transparent);
-  backdrop-filter: blur(2px);
+/* --- how it works ---------------------------------------------------------- */
+
+.how {
+  padding: var(--section) 0;
+  background: var(--ground-2);
+  border-bottom: 1px solid var(--line);
 }
-.board-state[hidden] {
-  display: none;
-}
-.board-state strong {
-  display: block;
-  font: 600 var(--t-h3) / 1.2 var(--sans);
-  color: var(--chrome);
-}
-/* The game's own face, at 2x of its 18px body — the only sizes it may take are multiples. */
-.board-state strong canvas {
-  height: 36px;
-  width: auto;
+.how-inner {
+  max-width: var(--frame);
   margin-inline: auto;
+  padding-inline: var(--gutter);
 }
-.board-state span {
-  font: 400 var(--t-detail) / 1.5 var(--mono);
-  color: var(--ink-quiet);
-}
-
-.stage-side {
-  flex: 1 1 320px;
-  min-width: 280px;
-}
-
-.eyebrow {
-  margin: 0 0 var(--s-2);
-  font: 500 var(--t-small) / 1 var(--mono);
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--glow-lit);
-}
-
-.figure {
+h2 {
   margin: 0;
-  font: 400 var(--t-figure) / 0.95 var(--mono);
-  letter-spacing: -0.02em;
-  color: var(--chrome);
-  font-variant-numeric: tabular-nums;
+  font: 700 var(--t-h2) / 1.1 var(--font);
+  font-stretch: 112%;
+  letter-spacing: -0.01em;
+  color: var(--text);
 }
-
-.facts {
-  margin: var(--s-3) 0 0;
-  max-width: 62ch;
-  font: 400 var(--t-detail) / 1.7 var(--mono);
-  color: var(--ink-quiet);
-}
-
-.lede {
-  margin: var(--s-4) 0 0;
-  max-width: 46ch;
-  font-size: var(--t-lead);
-  color: var(--ink);
-}
-
-.actions {
-  display: flex;
-  align-items: center;
-  gap: var(--s-5);
-  flex-wrap: wrap;
+.beats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--s-6) clamp(24px, 4vw, 56px);
   margin-top: var(--s-6);
 }
-
-/* The play button *is* the original's menu label, cut out of the artwork. */
-button.play {
-  display: block;
-  padding: 0;
-  border: 0;
-  background: none;
-  cursor: pointer;
-  line-height: 0;
-  filter: drop-shadow(0 2px 0 #0008);
-  transition: transform 120ms ease;
+.beats h3 {
+  margin: 0 0 var(--s-2);
+  font: 650 var(--t-h3) / 1.3 var(--font);
+  color: var(--text);
 }
-/* 354x39 in the artwork, so 39px is 1:1. Anything else is a fractional nearest-neighbour
-   resample that drops pixel rows unevenly and frays the hand-lettering. 78px is the only other
-   size this may take. */
-button.play canvas {
-  height: 39px;
-  width: auto;
-  image-rendering: pixelated;
-}
-/* Below roughly 394px the label is wider than the page, and `.stage` clips rather than scrolls,
-   so the last letters would just be gone. The board makes the same trade at a short viewport:
-   when the integer scale and fitting on screen disagree, fitting wins. */
-@media (max-width: 440px) {
-  button.play {
-    max-width: 100%;
-  }
-  button.play canvas {
-    height: auto;
-    width: 100%;
-  }
-}
-button.play:hover {
-  transform: translateY(-1px) scale(1.02);
-}
-button.play:active {
-  transform: translateY(1px);
-}
-
-button.link {
-  padding: 0;
-  border: 0;
-  background: none;
-  cursor: pointer;
-  font: 400 var(--t-ui) / 1 var(--sans);
-  color: var(--ink);
-  border-bottom: 1px solid var(--glow);
-  padding-bottom: 2px;
-}
-button.link:hover {
-  color: var(--glow-lit);
-}
-
-/* Capped, because `1fr` across the whole side panel pushes Score and Best chain 600px apart and
-   they stop reading as one instrument cluster. */
-.readouts {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(94px, 1fr));
-  gap: var(--s-4) var(--s-5);
-  max-width: 480px;
+.beats p {
   margin: 0;
 }
-.readouts dt {
-  font: 500 var(--t-micro) / 1 var(--mono);
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--ink-quiet);
-}
-.readouts dd {
-  margin: var(--s-1) 0 0;
-  font: 400 30px/1 var(--mono);
-  color: var(--chrome);
-  font-variant-numeric: tabular-nums;
+.how-note {
+  max-width: 62ch;
+  margin: var(--s-7) 0 0;
+  padding-top: var(--s-5);
+  border-top: 1px solid var(--line);
+  color: var(--text-muted);
 }
 
-/* --- records -------------------------------------------------------------- */
+/* --- colophon -------------------------------------------------------------- */
 
-/* On its own document there is no stage above it, so the board carries the whole page. Without
-   a floor an empty board would leave the colophon riding up under the masthead. */
-.records.is-page {
-  min-height: calc(100vh - 220px);
+.colophon {
+  padding: var(--s-7) 0 var(--s-8);
+  font-size: var(--t-small);
+  color: var(--text-muted);
 }
-
-.records,
-.how {
-  max-width: var(--measure);
-  margin: 0 auto;
-  padding: var(--section) var(--gutter);
-}
-
-/* The stage has a photograph behind it and everything below it had nothing, which is where the
-   page used to fall apart. This is the highscore screen's own ground, treated exactly like
-   `.stage-ground` so the two read as the same device. */
-/* `clip` rather than `hidden`: both clip the ground, but `hidden` makes this a scroll container,
-   and a sticky child of a container whose height is its own content never sticks to anything. */
-.records {
-  position: relative;
-  max-width: none;
-  overflow: clip;
-}
-.section-ground {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  opacity: 0.18;
-  filter: saturate(0.75);
-  mask-image: radial-gradient(100% 80% at 70% 30%, #000 20%, transparent 75%);
-}
-.section-inner {
-  position: relative;
-  max-width: var(--measure);
+.colophon-inner {
+  max-width: var(--frame);
   margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+.colophon p {
+  max-width: 68ch;
+  margin: 0;
+}
+.colophon-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-5);
+  margin-top: var(--s-4) !important;
+}
+.colophon-links a {
+  color: var(--text-body);
+}
+
+/* --- the leaderboard ------------------------------------------------------- */
+
+.records {
+  padding: var(--s-6) 0 var(--section);
 }
 
 /*
- * The board page: playfield held on the left, rows scrolling past it on the right.
+ * The playfield holds still on the left while the rows scroll past it on the right.
  *
- * Everything here is scoped to the document, because `.board`, `.overlay` and `.replay` are the
- * stage's too and the stage still watches a replay the other way — full screen, dimmed, transport
- * at the foot of the window.
+ * Scoped to the document, because `.board` and `.overlay.replay` are the stage's too and the
+ * stage still watches a replay the other way — full size, transport at the foot of the window.
  *
- * Sticky rather than fixed: it holds just as still, but it holds a column of its own, so no row
- * can pass under it and no offset has to be measured by hand to keep them apart.
+ * Flex rather than a grid: in a grid the rail would have to span every row, and a spanning item
+ * hands its height out to the rows it spans. Sticky rather than fixed: it holds just as still, but
+ * it holds a column of its own, so no row can pass under it.
  */
-/* A section's worth of air above the board would put the transport under the fold on a laptop the
-   first time a run is watched, before anything has been scrolled. */
-.page-records .records {
-  padding-top: var(--s-6);
-}
-
-/* Flex rather than a grid: in a grid the rail would have to span every row, and a spanning item
-   hands its height out to the rows it spans — which pushes the lede and the list apart by the
-   height of the board. */
-.page-records .section-inner {
+.page-records .records-inner {
   display: flex;
   align-items: flex-start;
   gap: clamp(24px, 4vw, 56px);
-  /* A sticky child can only hold inside its own container, and here the rail is one of the two
-     things that set that container's height — so with a short list there is nothing for it to
-     hold *through*, and it scrolls away with the rows still on screen. A screenful of floor
-     gives it somewhere to be. */
-  min-height: 100vh;
-  /* Wider than `--measure`, which was sized for a text column standing alone. */
   max-width: var(--frame);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+  /* A sticky child can only hold inside its own container, and the rail is one of the two
+     things that set that container's height — so with a short list there would be nothing for
+     it to hold *through*. A screenful of floor gives it somewhere to be. */
+  min-height: 100vh;
 }
 .page-records .records-col {
   flex: 1 1 auto;
@@ -547,47 +697,51 @@ button.link:hover {
   min-width: 0;
 }
 .page-records .rail {
-  flex: 0 0 auto;
-  /* Fixed, and only a little wider than the board at 1:1 (209px): left to itself the transport
-     is the widest thing in the rail and the list gets shoved right by a row of buttons, while a
-     column cut to the board exactly folds the transport into a tower six lines tall. The board
-     stays flush left inside it, on the same margin as the wordmark above it. */
-  width: 264px;
-  align-items: flex-start;
   position: sticky;
-  /* Clear of the sticky masthead: 40px of wordmark inside var(--s-3) above and below it. */
-  top: calc(40px + var(--s-3) * 2 + var(--s-4));
+  top: calc(var(--masthead) + var(--s-5));
   display: flex;
+  flex: 0 0 auto;
   flex-direction: column;
+  align-items: flex-start;
   gap: var(--s-3);
+  /* A little wider than the board at 1x: cut to the board exactly, the transport folds into a
+     tower. */
+  width: 264px;
 }
-/* Whole multiples only, for the reason `.board canvas#screen` gives — but the ceiling is lower
-   here, because the transport is under the board rather than at the foot of the window. */
-.page-records .rail canvas#screen {
+/* The same device-pixel tiers as the stage, with a lower ceiling, because the transport sits
+   under the board here rather than at the foot of the window. */
+.page-records .rail #screen {
   height: 405px;
 }
-@media (min-height: 1100px) {
+@media (min-resolution: 2dppx) and (min-height: 900px) {
+  .page-records .rail {
+    width: 314px;
+  }
+  .page-records .rail #screen {
+    height: 607.5px;
+  }
+}
+@media (min-height: 1160px) {
   .page-records .rail {
     width: 418px;
   }
-  .page-records .rail canvas#screen {
+  .page-records .rail #screen {
     height: 810px;
   }
 }
-/* Under this even 1:1 and the transport together do not fit, and then fitting wins. */
 @media (max-height: 700px) {
-  .page-records .rail canvas#screen {
+  .page-records .rail #screen {
     height: auto;
     max-height: calc(100vh - 300px);
   }
 }
 .page-records .rail-hint {
   margin: 0;
-  color: var(--ink-quiet);
-  font: 400 var(--t-small) / 1.6 var(--mono);
+  font-size: var(--t-small);
+  color: var(--text-muted);
 }
-/* While a run plays the transport carries its own hint, and two would be one too many. */
-.page-records .rail.is-playing .rail-hint {
+.page-records .rail.is-playing .rail-hint,
+.page-records .rail.is-playing .rec-open {
   display: none;
 }
 
@@ -597,43 +751,25 @@ button.link:hover {
   flex-direction: column;
   align-items: flex-start;
   gap: var(--s-2);
-}
-/* A label, not a button — it is the file input's, and clicking it is what opens the picker.
-   Styled to match `.overlay button` so the rail has one kind of control in it. */
-.page-records .rec-button {
-  font: 400 var(--t-detail) / 1.4 var(--sans);
-  color: var(--ink);
-  background: #ffffff0d;
-  border: 1px solid var(--rule);
-  padding: 5px 10px;
-  cursor: pointer;
-}
-.page-records .rec-button:hover {
-  background: #ffffff1a;
-  color: var(--chrome);
+  margin-top: var(--s-2);
 }
 /* Keyboard reaches the input, not the label, so the ring has to be drawn from there. */
-.page-records #rec-file:focus-visible + .rec-button,
-.page-records .rec-button:focus-visible {
-  outline: 2px solid var(--glow-lit);
-  outline-offset: 2px;
+.page-records #rec-file:focus-visible + .rec-button {
+  outline: 2px solid var(--cyan-6);
+  outline-offset: 3px;
 }
 .page-records .rec-note {
   margin: 0;
-  color: var(--ink-quiet);
-  font: 400 var(--t-micro) / 1.5 var(--mono);
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-muted);
 }
-/* A refusal has to read as one — the note is otherwise the same grey as the invitation. */
 .page-records .rec-note.is-error {
-  color: var(--amber);
-}
-/* While a run plays the rail is the transport's, as with `.rail-hint` above. */
-.page-records .rail.is-playing .rec-open {
-  display: none;
+  color: var(--warn);
 }
 /* Dragging a file anywhere over the page arms the whole document, so the rail says so. */
 .page-records.is-dropping .rec-open {
-  outline: 1px dashed var(--glow-lit);
+  outline: 1px dashed var(--cyan-5);
   outline-offset: var(--s-2);
 }
 
@@ -641,19 +777,19 @@ button.link:hover {
 .page-records .rail .overlay.replay {
   position: static;
   display: block;
+  width: 100%;
   padding: 0;
   overflow: visible;
   pointer-events: auto;
+  background: none;
+  backdrop-filter: none;
   z-index: auto;
-}
-.page-records .rail .overlay.replay[hidden] {
-  display: none;
 }
 .page-records .rail .replay .panel {
   width: 100%;
   padding: var(--s-3);
   gap: var(--s-2);
-  background: var(--void-lift);
+  background: var(--surface);
   backdrop-filter: none;
 }
 /* A column as narrow as the board cannot hold the scrubber and four controls on one line, so the
@@ -670,262 +806,257 @@ button.link:hover {
   flex-wrap: wrap;
 }
 
-/* Two columns cannot hold at phone width. Stacked, the board stays sticky at the top rather than
-   scrolling away — otherwise pressing Watch would play a run nobody can see. */
-@media (max-width: 880px) {
-  .page-records .section-inner {
-    flex-direction: column;
-    /* Cross axis is the width now, and `flex-start` on it would shrink both columns to their
-       content instead of letting the list have the page. */
-    align-items: stretch;
-  }
-  .page-records .rail {
-    width: auto;
-    top: calc(40px + var(--s-3) * 2);
-    margin-bottom: var(--s-6);
-    align-items: center;
-    /* Stacked, the rows pass *behind* the rail rather than beside it, so it needs a ground of
-       its own — the same one the masthead it hangs from is drawn on. */
-    padding-block: var(--s-3);
-    background: color-mix(in srgb, var(--void) 88%, transparent);
-    backdrop-filter: blur(8px);
-  }
-  /* The second place a fractional scale is allowed, and for the same reason as the first. */
-  .page-records .rail canvas#screen {
-    height: auto;
-    max-height: min(405px, 42vh);
-  }
-}
-
-/* "Highscores" is the original's own menu label, cut out of the artwork — 209x40, so 40px is 1:1
-   and 80px is the only other size it may take. The port's own headings do not get to borrow the
-   lettering; see `.how h2`. */
-.label {
-  margin: 0 0 var(--s-5);
-  line-height: 0;
-}
-.label canvas {
-  height: 40px;
-  width: auto;
-}
-/* A page the original never had, so its heading is the port's: `.how h2`'s face, at a size that
-   tops out at the 40px the sprite stands at on the board. */
 .board-title {
-  margin: 0 0 var(--s-5);
-  font: 600 var(--t-display) / 1 var(--sans);
-  letter-spacing: -0.02em;
-  color: var(--chrome);
+  margin: 0;
+  font: 700 var(--t-h2) / 1.1 var(--font);
+  font-stretch: 112%;
+  letter-spacing: -0.01em;
+  color: var(--text);
 }
 
-/* The line that points from one board to the other. Under the lede, quieter than it. */
-.lede-aside {
-  margin: var(--s-3) 0 0;
-  max-width: 62ch;
-  font-size: var(--t-ui);
-  color: var(--ink-quiet);
+/* Two views of one board. Each is its own page, so these are links, drawn as a switch. */
+.tabs {
+  display: inline-flex;
+  margin-top: var(--s-5);
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+}
+.tabs a {
+  padding: var(--s-2) var(--s-4);
+  font-size: var(--t-small);
+  font-weight: 500;
+  color: var(--text-muted);
+  text-decoration: none;
+}
+.tabs a:hover {
+  color: var(--text);
+}
+.tabs a[aria-current='page'] {
+  color: var(--text);
+  background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px #3d4a61;
 }
 
+.records-col .lede {
+  margin-top: var(--s-4);
+  font-size: var(--t-body);
+  color: var(--text-muted);
+}
+
+/*
+ * One grid for the header and every row, so a column starts at the same x on every line. Each row
+ * used to be a flex line sized by its own content, and the name moved 31px depending on how many
+ * digits the score beside it had.
+ */
+.records-head,
+.record {
+  display: grid;
+  /* In px, not ch: the header is set smaller than the rows, and a `ch` track is as wide as the
+     font of the element it is on, so the same template gave the two different columns. */
+  grid-template-columns: 28px minmax(96px, 1fr) 96px 56px 56px 56px 64px 80px;
+  align-items: center;
+  column-gap: var(--s-4);
+  padding: 0 var(--s-3);
+}
+.records-head {
+  margin-top: var(--s-6);
+  padding-block: var(--s-2);
+  font-size: 13px;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--line-strong);
+}
+.records-head .num,
+.record .num {
+  text-align: right;
+}
 .records-list {
   list-style: none;
-  margin: var(--s-6) 0 0;
+  margin: 0;
   padding: 0;
 }
-
-/* Rows sit welded: no gap, one hairline between them, the way cells from the same piece share
-   an edge. The board's own rule.
-
-   Flex rather than fixed columns so a row folds on a narrow screen instead of overflowing it. */
 .record {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--s-2) var(--s-5);
-  padding: var(--s-4) var(--s-3);
-  border-top: 1px solid var(--rule);
-  transition: background-color 120ms ease;
-}
-.record:last-child {
-  border-bottom: 1px solid var(--rule);
-}
-.record:hover {
-  background: var(--void-lift);
-}
-.record.is-fresh {
-  box-shadow: inset 3px 0 0 var(--amber);
-}
-
-.record .rank {
-  flex: 0 0 2.2rem;
-  font: 400 var(--t-detail) / 1.6 var(--mono);
-  color: var(--ink-quiet);
-}
-.record .score {
-  flex: 0 0 auto;
-  min-width: 5ch;
-  font: 400 26px/1.1 var(--mono);
-  color: var(--chrome);
+  min-height: 56px;
+  padding-block: var(--s-2);
+  border-bottom: 1px solid var(--line);
+  font-size: 15px;
   font-variant-numeric: tabular-nums;
 }
-.record .player {
-  flex: 0 1 auto;
-  min-width: 8ch;
-  font: 400 var(--t-detail) / 1.6 var(--sans);
-  color: var(--ink);
+.record:hover {
+  background: var(--surface);
 }
-.record .detail {
-  flex: 1 1 16ch;
-  font: 400 var(--t-detail) / 1.6 var(--mono);
-  color: var(--ink-quiet);
+/* The run that was just played, carried here by `?fresh=`. */
+.record.is-fresh {
+  box-shadow: inset 3px 0 0 var(--cyan-5);
 }
 /* Your own runs, on a board that is everybody's. */
 .record.is-mine {
-  background: var(--void-lift);
+  background: var(--surface);
 }
 .record.is-mine .player {
-  color: var(--chrome);
+  color: var(--text);
+  font-weight: 600;
+}
+.record .rank {
+  color: var(--text-muted);
+}
+.record .player {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+}
+.record .tag {
+  margin-left: var(--s-2);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.record .score {
+  font-size: 18px;
+  font-weight: 650;
+  color: var(--text);
+}
+.record .when {
+  color: var(--text-muted);
+}
+.record .facts {
+  display: contents;
+}
+.record .facts > span {
+  color: var(--text-body);
 }
 .record .row-actions {
   display: flex;
-  flex: 0 0 auto;
-  margin-left: auto;
-  gap: var(--s-4);
-  align-items: center;
+  justify-content: flex-end;
+}
+/* Units only where there is no header to carry them. */
+.record .unit {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .empty {
   margin: var(--s-5) 0 0;
   padding: var(--s-5);
-  border: 1px dashed var(--rule);
-  color: var(--ink-quiet);
-}
-.empty[hidden] {
-  display: none;
+  border: 1px dashed var(--line-strong);
+  color: var(--text-muted);
 }
 
-/* --- how it works --------------------------------------------------------- */
-
-.how {
-  background:
-    radial-gradient(80% 60% at 50% 120%, color-mix(in srgb, var(--blood) 90%, transparent), transparent),
-    linear-gradient(180deg, transparent, color-mix(in srgb, var(--blood) 45%, transparent));
-  max-width: none;
-  border-top: 1px solid var(--rule);
-}
-.how > * {
-  max-width: var(--measure);
-  margin-inline: auto;
-}
-/* The port's own voice, so it is set in the page's face rather than the game's.
-   `auto` on the inline sides, not 0: `.how > *` centres its children on the measure, and a
-   shorthand `margin: 0 0 ...` here silently cancels that and knocks the heading out of line
-   with its own beats grid. */
-.how h2 {
-  margin: 0 auto var(--s-5);
-  font: 600 var(--t-display) / 1.05 var(--sans);
-  letter-spacing: -0.02em;
-  color: var(--chrome);
-}
-.beats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: clamp(20px, 4vw, 44px);
-  margin: var(--s-6) auto 0;
-}
-.beats h3 {
-  margin: 0 0 var(--s-2);
-  font: 600 var(--t-h3) / 1.3 var(--sans);
-  color: var(--chrome);
-}
-.beats p {
-  margin: 0;
-  color: var(--ink);
-}
-.how > .lede {
-  margin: var(--s-7) 0 0;
-  max-width: 62ch;
-  color: var(--ink-quiet);
+/* Two columns cannot hold at tablet width. Stacked, the board stays sticky at the top rather than
+   scrolling away — otherwise pressing Watch would play a run nobody can see. */
+@media (max-width: 880px) {
+  .page-records .records-inner {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .page-records .rail {
+    top: var(--masthead);
+    z-index: 5;
+    width: auto;
+    align-items: center;
+    padding-block: var(--s-3);
+    background: color-mix(in srgb, var(--ground) 92%, transparent);
+    backdrop-filter: blur(10px);
+  }
+  .page-records .rail #screen {
+    height: auto;
+    max-height: min(405px, 42vh);
+  }
 }
 
-/* --- colophon ------------------------------------------------------------- */
+/* A row folds into two lines: rank, name and score, then the facts and Watch under them. */
+@media (max-width: 640px) {
+  .records-head {
+    display: none;
+  }
+  .record {
+    grid-template-columns: 28px minmax(0, 1fr) auto;
+    grid-template-areas:
+      'rank player score'
+      '.    facts  watch';
+    row-gap: var(--s-1);
+    padding-block: var(--s-3);
+  }
+  .record .rank {
+    grid-area: rank;
+  }
+  .record .player {
+    grid-area: player;
+  }
+  .record .score {
+    grid-area: score;
+  }
+  .record .facts {
+    grid-area: facts;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 var(--s-3);
+    font-size: 13px;
+  }
+  .record .facts > span {
+    text-align: left;
+    color: var(--text-muted);
+  }
+  .record .row-actions {
+    grid-area: watch;
+  }
+  .record .unit {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip-path: none;
+  }
+}
 
-.colophon {
-  max-width: var(--frame);
-  margin: 0 auto;
-  padding: var(--section) var(--gutter) var(--s-8);
-  border-top: 1px solid var(--rule);
-  color: var(--ink-quiet);
-  font-size: var(--t-ui);
-}
-.colophon p {
-  max-width: 62ch;
-}
-.colophon strong {
-  color: var(--ink);
-  font-weight: 600;
-}
-.signature {
-  display: block;
-  line-height: 0;
-  margin-bottom: var(--s-5);
-}
-/* 221x90 in the artwork. 45px is exactly half, which nearest-neighbour can do cleanly; 90px is
-   1:1. The 54px this used to be was a 0.6 resample, and it showed on the thin strokes. */
-.signature canvas {
-  height: 45px;
-  width: auto;
-  opacity: 0.85;
-}
-.signature:hover canvas {
-  opacity: 1;
-}
-
-/* --- overlays: the settings panel and the replay transport ----------------- */
+/* --- overlays: settings, account, and the replay transport ----------------- */
 
 .overlay {
   position: fixed;
   inset: 0;
+  z-index: 30;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: color-mix(in srgb, var(--void) 82%, transparent);
-  backdrop-filter: blur(6px);
   padding: var(--s-4);
   overflow: auto;
-  z-index: 30;
-}
-.overlay[hidden] {
-  display: none;
+  background: color-mix(in srgb, var(--ground) 80%, transparent);
+  backdrop-filter: blur(6px);
 }
 .overlay .panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-5);
   width: min(460px, 100%);
   max-height: 100%;
   overflow: auto;
-  background: var(--void-lift);
-  border: 1px solid var(--rule);
   padding: var(--s-5);
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-4);
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+}
+/* A part a panel has nothing to say in still takes a gap, and an empty one at the foot reads as
+   a panel that forgot its last line. */
+.overlay .panel > :empty {
+  display: none;
 }
 .overlay header {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: var(--s-3);
 }
 .overlay h2 {
-  margin: 0;
-  font: 500 var(--t-small) / 1 var(--mono);
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--glow-lit);
+  font-size: 20px;
+  font-stretch: 100%;
+  letter-spacing: 0;
 }
 .overlay h3 {
-  margin: 0 0 var(--s-2);
-  font: 500 var(--t-micro) / 1 var(--mono);
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--ink-quiet);
+  margin: 0 0 var(--s-1);
+  font: 600 var(--t-small) / 1.3 var(--font);
+  color: var(--text-muted);
 }
 .overlay .group {
   display: flex;
@@ -935,7 +1066,7 @@ button.link:hover {
 .overlay .field {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--s-1);
 }
 .overlay .row {
   display: flex;
@@ -944,72 +1075,83 @@ button.link:hover {
 }
 .overlay .row label {
   flex: 1;
-  font-size: var(--t-ui);
+  font-size: 15px;
 }
 .overlay .readout {
-  color: var(--ink-quiet);
-  font: 400 var(--t-micro) / 1.5 var(--mono);
+  font-size: 13px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
 }
 .overlay input[type='range'] {
   flex: 1 1 180px;
-  accent-color: var(--glow-lit);
+  accent-color: var(--cyan-5);
 }
-.overlay button {
-  font: 400 var(--t-detail) / 1.4 var(--sans);
-  color: var(--ink);
-  background: #ffffff0d;
-  border: 1px solid var(--rule);
-  padding: 5px 10px;
+.overlay input[type='checkbox'] {
+  accent-color: var(--cyan-5);
+}
+
+/* The panels build plain <button>s; these give them the secondary button's look. `:where` keeps
+   the selector weightless, so a `.btn-primary` or `.link` on one of them still wins. */
+:where(.overlay) :where(button) {
+  min-height: 36px;
+  padding: 0 var(--s-4);
+  border: 0;
+  border-radius: 0;
+  font: 500 var(--t-small) / 1 var(--font);
+  color: var(--text);
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--line-strong);
   cursor: pointer;
 }
-.overlay button:hover {
-  background: #ffffff1a;
-  color: var(--chrome);
+:where(.overlay) :where(button):hover {
+  background: var(--surface-2);
 }
-.overlay button:disabled {
-  opacity: 0.4;
+:where(.overlay) :where(button):disabled {
+  opacity: 0.45;
   cursor: default;
 }
 .overlay button.key {
-  min-width: 130px;
-  font-family: var(--mono);
+  min-width: 132px;
+  font-variant-numeric: tabular-nums;
 }
 .overlay button.arming {
-  border-color: var(--amber);
-  color: var(--amber);
+  color: var(--cyan-6);
+  box-shadow: inset 0 0 0 1px var(--cyan-5);
 }
 .overlay button.duplicate {
-  border-color: #7a6033;
+  box-shadow: inset 0 0 0 1px var(--warn);
 }
 .overlay button.close {
-  padding: 2px 8px;
+  min-width: 36px;
+  padding: 0;
+  font-size: 18px;
 }
 .overlay .actions {
-  display: flex;
-  gap: var(--s-2);
   margin: 0;
+  gap: var(--s-2);
 }
 .overlay .hint {
-  color: var(--ink-quiet);
-  font-size: var(--t-small);
   min-height: 1.4em;
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted);
 }
 
 /* The replay transport sits at the bottom: what is behind it is the replay. */
-.replay {
-  background: none;
-  backdrop-filter: none;
+.overlay.replay {
   align-items: flex-end;
   padding-bottom: var(--s-6);
+  background: none;
+  backdrop-filter: none;
   pointer-events: none;
   z-index: 31;
 }
 .replay .panel {
   width: min(560px, 100%);
-  pointer-events: auto;
   gap: var(--s-3);
-  background: color-mix(in srgb, var(--void) 92%, transparent);
-  backdrop-filter: blur(8px);
+  pointer-events: auto;
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  backdrop-filter: blur(10px);
 }
 .transport-row {
   display: flex;
@@ -1018,27 +1160,18 @@ button.link:hover {
 }
 .transport-row input[type='range'] {
   flex: 1;
-  accent-color: var(--glow-lit);
+  accent-color: var(--cyan-5);
 }
 .replay button.transport {
   min-width: 3em;
 }
 /* Square, so the glyph swapping between speaker and crossed speaker does not shift the row. */
 .replay button.mute {
-  min-width: 2.75em;
-  line-height: 1;
+  min-width: 36px;
+  padding: 0;
 }
 
-/* While a replay is up the page behind it should not compete. */
-body.is-watching .masthead {
-  opacity: 0.25;
-}
-
-/* --- the account panel ----------------------------------------------------
-
-   The overlay rules above already carry the panel, the header and the fields. What is left is
-   the parts a form needs and a settings panel does not: an input that looks like the rest of
-   the page, and a submit that reads as the primary action. */
+/* --- the account panel ----------------------------------------------------- */
 
 .overlay.account .panel {
   max-width: 30rem;
@@ -1049,61 +1182,38 @@ body.is-watching .masthead {
   gap: var(--s-3);
 }
 .overlay.account .field span {
-  font-size: var(--t-micro);
-  color: var(--ink-quiet);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-size: 13px;
+  color: var(--text-muted);
 }
 .overlay.account input[type='text'],
 .overlay.account input[type='email'],
 .overlay.account input[type='password'] {
-  font: 400 var(--t-ui) / 1.5 var(--mono);
-  color: var(--ink);
-  background: #00000040;
-  border: 1px solid var(--rule);
-  border-radius: 2px;
-  padding: var(--s-2) var(--s-3);
+  height: 40px;
+  padding: 0 var(--s-3);
+  font: 400 15px / 1 var(--font);
+  color: var(--text);
+  background: var(--ground);
+  border: 1px solid var(--line-strong);
+  border-radius: 0;
 }
 .overlay.account input:focus-visible {
   outline: none;
-  border-color: var(--glow-lit);
+  border-color: var(--cyan-5);
 }
-.overlay.account button.play {
+.overlay.account .btn-primary {
   align-self: flex-start;
   margin-top: var(--s-2);
 }
 .overlay.account .verdict {
-  font: 400 var(--t-detail) / 1.5 var(--mono);
-  color: var(--ink-quiet);
+  margin: 0;
+  font-size: var(--t-small);
+  color: var(--text-muted);
 }
 .overlay.account .verdict[data-state='ok'] {
-  color: var(--glow-lit);
+  color: var(--cyan-6);
 }
 .overlay.account .verdict[data-state='bad'] {
-  color: var(--amber);
-}
-
-/* The switcher between sign in / register / reset is prose with links in it, not a row of
-   buttons — the overlay's default button styling makes those read as three equal choices when
-   one of them is the whole point of the panel. */
-.overlay.account .hint button.link,
-.overlay.account .group > button.link {
-  font: inherit;
-  color: var(--ink);
-  background: none;
-  border: 0;
-  padding: 0;
-  border-radius: 0;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  text-decoration-color: var(--rule);
-  cursor: pointer;
-}
-.overlay.account .hint button.link:hover,
-.overlay.account .group > button.link:hover {
-  color: var(--chrome);
-  background: none;
-  text-decoration-color: var(--glow-lit);
+  color: var(--warn);
 }
 .overlay.account .group > button.link {
   align-self: flex-start;

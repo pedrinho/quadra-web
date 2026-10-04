@@ -4,8 +4,9 @@
  * Licensed under the GNU LGPL v2.1 or later. See LICENSE at the repo root.
  *
  * The site is a few documents — the stage at `/`, the board at `/records`, every run at
- * `/player-highscores` — and everything in here is what they have in common: the artwork in the masthead, the identity in its corner, the
- * audio context, the settings, and the level backdrops a replay needs in order to be watched.
+ * `/player-highscores` — and everything in here is what they have in common: the identity in the
+ * masthead's corner, the audio context, the settings, and the level backdrops a replay needs in
+ * order to be watched.
  *
  * Split out rather than shared by importing `main.ts`, because that entry hard-requires the
  * stage's twenty-odd element ids and throws on the first one it cannot find. What belongs here is
@@ -13,7 +14,6 @@
  */
 
 import { loadQimg, type QImage } from './render/qimg.js';
-import { cropPixels, isMenuInk, labelCanvas, toCanvas } from './render/lettering.js';
 import { Api, type Account } from './api.js';
 import { AccountPanel } from './ui/account-panel.js';
 import { APP_VERSION } from './version.js';
@@ -24,16 +24,6 @@ import { DEFAULT_VOLUME, type Settings } from './settings.js';
 
 /** Number of level backdrops. */
 export const LEVELS = 10;
-
-/* Coordinates in the menu artwork. The logo crop is measured off `debuto.qimg`; the label
- * positions are the ones the original blits them at (source/menu.cc:1481-1519), which is what
- * makes it possible to subtract the background from behind the lettering. */
-const WORDMARK = { x: 36, y: 6, width: 568, height: 92 };
-const PLAY_LABEL = { x: 160, y: 99 };
-/* The fourth item down the menu. The board has a page by the same name, so it uses the
- * original's own word for it (source/menu.cc:1484). */
-const HIGHSCORES_LABEL = { x: 235, y: 225 };
-const SIGNATURE = { x: 0, y: 390 };
 
 /** An element a page cannot do without. Throws, so a broken document fails loudly. */
 export const el = <T extends HTMLElement>(id: string): T => {
@@ -59,72 +49,10 @@ export function createImages(): (name: string) => Promise<QImage> {
   };
 }
 
-/**
- * A photograph from the game, laid in behind a section as texture.
- *
- * `rect` takes a part of it. The highscore screen has its own headings painted into the
- * photograph, and a ground that says "Local highscores" behind a heading that already says
- * Highscores reads as a mistake — so that section takes the fireworks below the lettering.
- */
-export function paintGround(
-  canvas: HTMLCanvasElement,
-  art: QImage,
-  rect = { x: 0, y: 0, width: art.width, height: art.height },
-): void {
-  canvas.width = rect.width;
-  canvas.height = rect.height;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return;
-  const pixels = cropPixels(art, rect.x, rect.y, rect.width, rect.height);
-  const image = ctx.createImageData(rect.width, rect.height);
-  image.data.set(pixels.rgba);
-  ctx.putImageData(image, 0, 0);
-}
-
-/**
- * The lettering: the wordmark, the signature, and any label the page happens to carry.
- *
- * Every target is looked up optionally, so the same call serves both documents — the stage has
- * play buttons and no heading, the board has a heading and no play buttons.
- */
-export function paintLettering(image: (name: string) => Promise<QImage>): Promise<void> {
+/** The build's version, in the colophon of whichever page carries one. */
+export function paintVersion(): void {
   const version = maybeEl('version');
   if (version) version.textContent = `port ${APP_VERSION}`;
-
-  return Promise.all([image('debuto'), image('debut0'), image('debut3'), image('debut8')]).then(
-    ([menu, play, highscores, mark]) => {
-      const wordmark = toCanvas(
-        cropPixels(menu, WORDMARK.x, WORDMARK.y, WORDMARK.width, WORDMARK.height),
-      );
-      // Airbrushed, not pixel art: let the browser scale it smoothly.
-      wordmark.style.imageRendering = 'auto';
-      document.querySelector('[data-crop="wordmark"]')?.prepend(wordmark);
-
-      // One canvas each: cloning a canvas element copies its size and not a pixel of its bitmap.
-      for (const button of document.querySelectorAll('button.play')) {
-        const label = labelCanvas(play, menu, PLAY_LABEL.x, PLAY_LABEL.y, isMenuInk);
-        label.className = 'sprite-art';
-        button.prepend(label);
-      }
-
-      const heading = document.querySelector('[data-sprite="highscores"]');
-      if (heading) {
-        const cut = labelCanvas(
-          highscores,
-          menu,
-          HIGHSCORES_LABEL.x,
-          HIGHSCORES_LABEL.y,
-          isMenuInk,
-        );
-        cut.className = 'sprite-art';
-        heading.prepend(cut);
-      }
-
-      const signature = labelCanvas(mark, menu, SIGNATURE.x, SIGNATURE.y);
-      signature.className = 'sprite-art';
-      document.querySelector('[data-sprite="signature"]')?.prepend(signature);
-    },
-  );
 }
 
 export interface Audio {

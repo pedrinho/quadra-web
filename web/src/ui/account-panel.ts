@@ -166,7 +166,7 @@ export class AccountPanel {
       const go = action('Sign in with Google', () =>
         location.assign(this.opts.api.googleSignInUrl(location.pathname)),
       );
-      go.className = 'play';
+      go.className = 'btn btn-primary';
       this.body.append(
         go,
         note(
@@ -377,7 +377,7 @@ export class AccountPanel {
 
     const submit = document.createElement('button');
     submit.type = 'submit';
-    submit.className = 'play';
+    submit.className = 'btn btn-primary';
     submit.textContent = submitLabel;
     form.append(submit);
 
