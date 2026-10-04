@@ -2,104 +2,35 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Leaderboard — Quadra</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Leaderboard · Quadra</title>
     <meta
       name="description"
-      content="The Quadra leaderboard. Every score is a recording you can watch, replayed by the same engine that played it."
+      content="The Quadra leaderboard, each player’s best run. Every score is a recording you can watch."
     />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <meta name="theme-color" content="#121414" />
 
-    <!-- The page has one face, and this file is all of it the copy above the fold needs.
+    <!-- The two faces the first screen is set in. The other weights can wait for the stylesheet.
          crossorigin is required on font preloads even same-origin, or the fetch is made twice. -->
     <link
       rel="preload"
-      href="/assets/fonts/Archivo-Variable-latin.woff2"
+      href="/assets/fonts/SofiaSans-Regular-latin.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      href="/assets/fonts/SofiaSansExtraCondensed-Light-latin.woff2"
       as="font"
       type="font/woff2"
       crossorigin
     />
   </head>
-  <body class="page-records">
-    <header class="masthead">
-      <div class="masthead-inner">
-        <a class="wordmark" href="/">Quadra</a>
-        <nav class="nav" aria-label="Site">
-          <a href="/">Play</a>
-          <a href="/records" aria-current="page">Leaderboard</a>
-          <a href="/#how">How it works</a>
-          <a href="https://github.com/pedrinho/quadra-web" rel="noreferrer">Source</a>
-        </nav>
-        <button type="button" class="account btn btn-secondary btn-small" id="account" data-state="out">
-          Sign in
-        </button>
-      </div>
-    </header>
-
-    <main id="top">
-      <section class="records" id="records">
-        <div class="records-inner">
-          <!-- The playfield holds still on the left while the rows scroll past it, because a run
-               being watched and the row it came from are the same object seen twice. -->
-          <aside class="rail" id="rail">
-            <div class="board">
-              <div class="board-frame">
-                <canvas id="screen" width="209" height="405" aria-label="Quadra playfield"></canvas>
-              </div>
-            </div>
-            <p class="rail-hint" id="rail-hint">Press Watch on any run and it plays here.</p>
-            <!-- The 1998 game recorded .rec files, and a lot of them survive. They are not tapes
-                 and never become tapes — nothing here can reach the board — but the engine can
-                 replay one, so the page lets you drop one on it and watch. -->
-            <div class="rec-open" id="rec-open">
-              <!-- Input before label, so the focus ring can be drawn from `:focus-visible +`. -->
-              <input type="file" id="rec-file" accept=".rec" class="vh" />
-              <label class="rec-button btn btn-secondary btn-small" for="rec-file">Open a 1998 .rec demo</label>
-              <p class="rec-note" id="rec-note">Or drop one on this page. Old single-player recordings only.</p>
-            </div>
-          </aside>
-
-          <div class="records-col">
-            <h1 class="board-title">Leaderboard</h1>
-            <nav class="tabs" aria-label="Leaderboard views">
-              <a href="/records" aria-current="page">Best per player</a>
-              <a href="/player-highscores">Every run</a>
-            </nav>
-            <p class="lede">Each player’s best run. Every score is a recording: press Watch and the board replays it.</p>
-            <div class="records-head" aria-hidden="true">
-              <span>#</span>
-              <span>Player</span>
-              <span class="num">Score</span>
-              <span class="num">Lines</span>
-              <span class="num">Level</span>
-              <span class="num">Time</span>
-              <span>Date</span>
-              <span></span>
-            </div>
-            <ol class="records-list" id="records-list"></ol>
-            <p class="empty" id="records-empty">Loading the board…</p>
-          </div>
-        </div>
-      </section>
-    </main>
-
-    <footer class="colophon">
-      <div class="colophon-inner">
-        <p>
-          Quadra was made by Ludus Design, © 1998–2000, and released as free software. The rules,
-          the artwork on the board and the sound are theirs. This is a port of their work, not
-          affiliated with or endorsed by them.
-        </p>
-        <p class="colophon-links">
-          <a href="https://github.com/quadra-game/quadra" rel="noreferrer">Original game</a>
-          <a href="https://github.com/pedrinho/quadra-web" rel="noreferrer">This port</a>
-          <a href="/privacy">Privacy</a>
-          <span>LGPL-2.1-or-later</span>
-          <span id="version"></span>
-        </p>
-      </div>
-    </footer>
-
-    <script type="module" src="/src/records.ts"></script>
+  <!-- One of four doors into the same app; see vite.config.ts. The route is where it opens. -->
+  <body data-route="board">
+<!--shell-->
+    <script type="module" src="/src/app.ts"></script>
   </body>
 </html>

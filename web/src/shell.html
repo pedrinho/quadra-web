@@ -1,0 +1,203 @@
+    <!--
+      The app, the same in all four documents (see vite.config.ts). A menu fixed on the left, the
+      board fixed in the middle, and a panel on the right that changes with what you are doing.
+      Moving between Play, Leaderboard and About swaps the panel and nothing else: the board keeps
+      its pixels, the sound keeps playing, and nothing is fetched twice.
+    -->
+    <div class="app">
+      <nav class="side" aria-label="Quadra">
+        <a class="mark" href="/" data-link>
+          <svg viewBox="0 0 18 18" shape-rendering="crispEdges" aria-hidden="true">
+            <rect width="18" height="18" fill="#008b8f" />
+            <path fill="#00f3ff" d="M0 0h18v1H0zM0 0h1v18H0z" />
+            <path fill="#00cfdb" d="M1 1h16v1H1zM1 1h1v16H1z" />
+            <path fill="#00abb3" d="M2 2h14v1H2zM2 2h1v14H2z" />
+            <path fill="#001f23" d="M0 17h18v1H0zM17 0h1v18h-1z" />
+            <path fill="#004347" d="M1 16h16v1H1zM16 1h1v16h-1z" />
+            <path fill="#00676b" d="M2 15h14v1H2zM15 2h1v14h-1z" />
+          </svg>
+          <span>Quadra</span>
+        </a>
+
+        <div class="menu">
+          <a href="/" data-link data-nav="play">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3 9h6v6H3zM9 9h6v6H9zM15 9h6v6h-6zM9 15h6v6H9z" />
+            </svg>
+            <span>Play</span>
+          </a>
+          <a href="/records" data-link data-nav="board">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round" aria-hidden="true">
+              <path d="M4 20v-7h5v7M9.5 20V8h5v12M15 20v-9h5v9M3 20h18" />
+            </svg>
+            <span>Leaderboard</span>
+          </a>
+          <a href="/about" data-link data-nav="about">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="9" />
+              <path d="M12 11v6M12 7.5v.01" />
+            </svg>
+            <span>About</span>
+          </a>
+        </div>
+
+        <div class="side-foot">
+          <div class="menu">
+            <button type="button" id="open-settings">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true">
+                <path d="M4 7h10M18 7h2M4 17h4M12 17h8" />
+                <circle cx="16" cy="7" r="2" />
+                <circle cx="10" cy="17" r="2" />
+              </svg>
+              <span>Settings</span>
+            </button>
+          </div>
+          <button type="button" class="btn btn-ghost btn-small account" id="account" data-state="out">
+            Sign in
+          </button>
+          <p class="credit">© 1998–2000 Ludus Design<br />Ported to the web, free software</p>
+        </div>
+      </nav>
+
+      <main class="stage" id="stage">
+        <div class="board-area">
+          <div class="board-frame">
+            <!-- PLAYFIELD_VIEW, which app.ts sets again at load. Stated here so the board reserves
+                 the right box before the module runs and nothing reflows. -->
+            <canvas id="screen" width="209" height="405" aria-label="Quadra playfield"></canvas>
+            <div class="board-state" id="board-state" hidden></div>
+          </div>
+        </div>
+
+        <!-- One line under the board, always the same height, so the board never moves when what
+             is under it changes: the run replaying itself, your game, or the replay transport. -->
+        <div class="strip-area" id="strip">
+          <div class="strip" id="strip-attract">
+            <div class="who"><b id="attract-by"></b><span id="attract-title">Loading a run…</span></div>
+            <span class="num" id="attract-score"></span>
+          </div>
+          <div class="strip" id="strip-game" hidden>
+            <div class="who"><b id="game-who">You</b><span id="game-status">playing as a guest</span></div>
+            <span class="num" id="game-score">0</span>
+          </div>
+        </div>
+      </main>
+
+      <aside class="pane" id="pane">
+        <!-- Play, before a game -->
+        <section class="view" id="play-idle" aria-labelledby="play-title">
+          <div class="pane-body">
+            <h1 id="play-title">Pieces fall whole.</h1>
+            <p class="lede" id="attract-lede">
+              Quadra is the 1998 puzzle game by Ludus Design. Clear a line and what it held up falls
+              as whole pieces, and can clear more lines on the way down.
+            </p>
+            <h2 class="label">Top runs</h2>
+            <ol class="runs" id="top-runs"></ol>
+            <a class="more" href="/player-highscores" data-link>See every run</a>
+          </div>
+          <div class="pane-foot">
+            <button class="btn btn-primary btn-wide" type="button" data-play>Play</button>
+            <button class="btn btn-ghost btn-wide" type="button" id="attract-watch">Watch the record</button>
+            <p class="hint" id="rank-hint">Sign in and your runs go on the leaderboard.</p>
+          </div>
+        </section>
+
+        <!-- Play, during a game -->
+        <section class="view" id="play-game" aria-labelledby="game-title" hidden>
+          <div class="pane-body">
+            <h1 class="label" id="game-title">Score</h1>
+            <div class="big" id="score">0</div>
+            <dl class="stats">
+              <div><dt>Lines</dt><dd class="num" id="lines">0</dd></div>
+              <div><dt>Level</dt><dd class="num" id="level">1</dd></div>
+              <div><dt>Best chain</dt><dd class="num" id="chain">0</dd></div>
+            </dl>
+            <h2 class="label">Controls</h2>
+            <dl class="keys" id="keys"></dl>
+          </div>
+          <div class="pane-foot">
+            <div class="row">
+              <button class="btn btn-ghost btn-small" type="button" id="hud-restart">Restart</button>
+              <button class="btn btn-ghost btn-small" type="button" id="hud-settings">Settings</button>
+              <button class="btn btn-ghost btn-small" type="button" id="hud-leave">Leave</button>
+            </div>
+            <p class="hint" id="game-hint">Playing as a guest. This run will not be ranked.</p>
+          </div>
+        </section>
+
+        <!-- Leaderboard -->
+        <section class="view" id="view-board" aria-labelledby="board-title" hidden>
+          <div class="pane-body">
+            <h1 class="title" id="board-title">Leaderboard</h1>
+            <nav class="tabs" aria-label="Leaderboard views">
+              <a href="/records" data-link data-tab="player">Best per player</a>
+              <a href="/player-highscores" data-link data-tab="run">Every run</a>
+            </nav>
+            <ol class="runs board-list" id="records-list"></ol>
+            <p class="empty" id="records-empty">Loading the board…</p>
+          </div>
+          <!-- The 1998 game recorded .rec files, and a lot of them survive. They are not tapes and
+               never become tapes, so nothing here can reach the board, but the engine can replay
+               one, so the page lets you open one and watch. -->
+          <div class="pane-foot rec-open" id="rec-open">
+            <!-- Input before label, so the focus ring can be drawn from `:focus-visible +`. -->
+            <input type="file" id="rec-file" accept=".rec" class="vh" />
+            <label class="btn btn-ghost btn-small" for="rec-file">Open a 1998 .rec demo</label>
+            <p class="hint" id="rec-note">Or drop one anywhere on the page. Old single-player recordings only.</p>
+          </div>
+        </section>
+
+        <!-- About -->
+        <section class="view" id="view-about" aria-labelledby="about-title" hidden>
+          <div class="pane-body">
+            <h1 class="title" id="about-title">How it works</h1>
+            <div class="beats">
+              <div>
+                <h2>Cells remember their piece</h2>
+                <p>
+                  Every cell knows which of its edges are joined to the piece it arrived in. The
+                  bevels on the board show it: an edge is drawn wherever a cell is not joined to its
+                  neighbour.
+                </p>
+              </div>
+              <div>
+                <h2>A clear cuts pieces apart</h2>
+                <p>
+                  Clearing a line removes the row and breaks the joins across it. A piece that
+                  spanned the line becomes fragments that no longer hold together.
+                </p>
+              </div>
+              <div>
+                <h2>What is left falls as one body</h2>
+                <p>
+                  Anything unsupported drops as a single rigid group, not row by row. On the way
+                  down it can complete more lines, and those clears cascade.
+                </p>
+              </div>
+              <div>
+                <h2>Every score is a replay</h2>
+                <p>
+                  The leaderboard stores the recording of each run. The server replays it through
+                  the same engine before it counts, so a score can only be played, not typed in.
+                </p>
+              </div>
+            </div>
+
+            <h2 class="label">Credits</h2>
+            <p class="about-note">
+              Quadra was made by Ludus Design, © 1998–2000, and released as free software. The
+              rules, the artwork on the board and the sound are theirs. This is a port of their
+              work, not affiliated with or endorsed by them. The engine is a bit-exact port of the
+              1998 C++, tested against the original game.
+            </p>
+            <p class="links">
+              <a href="https://github.com/quadra-game/quadra" rel="noreferrer">Original game</a>
+              <a href="https://github.com/pedrinho/quadra-web" rel="noreferrer">Source of this port</a>
+              <a href="/privacy">Privacy</a>
+            </p>
+            <p class="hint left"><span>LGPL-2.1-or-later</span> <span id="version"></span></p>
+          </div>
+        </section>
+      </aside>
+    </div>

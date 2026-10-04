@@ -2,42 +2,95 @@
  * Copyright (C) 2026 Quadra Web contributors
  * Licensed under the GNU LGPL v2.1 or later. See LICENSE at the repo root.
  *
- * The 1998 artwork lives on the board and nowhere else. It was painted to be seen whole, on a
- * 640x480 screen, and every earlier attempt to cut it into page parts — a cropped logo, menu
- * labels as buttons, photographs as wallpaper — read as a collage. So the page around the board
- * is quiet: one ground, one typeface, one accent, and the board is the loudest thing on it.
+ * An app, not a page, laid out the way chess.com lays out a game: a menu fixed on the left, the
+ * board fixed in the middle, and a panel on the right that changes with what you are doing. The
+ * document never scrolls on a laptop; the panel scrolls inside itself when it has to.
  *
- * The accent is not chosen, it is the game's: the eight shades of the cyan piece, read out of the
- * palette at `colorBase(1)` (src/render/blocks.ts). The primary button is drawn the way
- * `drawBloc` draws a cell — flat fill in shade 4, a 3px bevel lit from the top left in 7/6/5 and
- * shaded at the bottom right in 1/2/3 — so the one ornament on the page is a piece of the game.
+ * Quiet the way impeccable.style is quiet. One dark neutral ground, near-white text, and one
+ * accent: the cyan piece's own light shade, used only to say where you are. The board is the one
+ * loud thing on the screen, and the 1998 art lives on it and nowhere else — it was painted to be
+ * seen whole at 640x480, and every earlier attempt to cut it into page parts read as a collage.
  *
- * One face: Archivo, a variable grotesk with a width axis. The wordmark and headings take it wide,
- * which is where the 1998 logo's letterforms were; the prose takes it at normal width; numbers
- * take its tabular figures. A monospace face for the numbers would be a second voice for no gain.
+ * Two faces with two jobs and no overlap: Sofia Sans Extra Condensed, light, for titles and big
+ * numbers only; Sofia Sans for everything else. Icons are drawn (ui/icons.ts), because the arrows
+ * and transport glyphs the old page typed came from whatever fallback font the system had.
  */
 
 /* Absolute paths: the stylesheet is served from /src in dev and /assets in the build, so a
-   relative URL cannot resolve in both. This is why the page assumes it is deployed at a root.
-   The ranges are Google Fonts' own subsets, so the second file loads only for a name that needs
-   it. */
+   relative URL cannot resolve in both. The ranges are Google Fonts' own subsets, so the second
+   file of each loads only for a name that needs it. */
 @font-face {
-  font-family: 'Archivo';
+  font-family: 'Sofia Sans';
   font-style: normal;
-  font-weight: 100 900;
-  font-stretch: 62% 125%;
+  font-weight: 400;
   font-display: swap;
-  src: url('/assets/fonts/Archivo-Variable-latin.woff2') format('woff2');
+  src: url('/assets/fonts/SofiaSans-Regular-latin.woff2') format('woff2');
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
     U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 @font-face {
-  font-family: 'Archivo';
+  font-family: 'Sofia Sans';
   font-style: normal;
-  font-weight: 100 900;
-  font-stretch: 62% 125%;
+  font-weight: 400;
   font-display: swap;
-  src: url('/assets/fonts/Archivo-Variable-latin-ext.woff2') format('woff2');
+  src: url('/assets/fonts/SofiaSans-Regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308,
+    U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113,
+    U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/assets/fonts/SofiaSans-Medium-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+    U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Sofia Sans';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/assets/fonts/SofiaSans-Medium-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308,
+    U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113,
+    U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/assets/fonts/SofiaSans-SemiBold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+    U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Sofia Sans';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/assets/fonts/SofiaSans-SemiBold-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308,
+    U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113,
+    U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Extra Condensed';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url('/assets/fonts/SofiaSansExtraCondensed-Light-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+    U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Sofia Sans Extra Condensed';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url('/assets/fonts/SofiaSansExtraCondensed-Light-latin-ext.woff2') format('woff2');
   unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308,
     U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113,
     U+2C60-2C7F, U+A720-A7FF;
@@ -46,98 +99,65 @@
 :root {
   color-scheme: dark;
 
-  --ground: #05080f;
-  --ground-2: #080c16;
-  --surface: #0d1320;
-  --surface-2: #131b2b;
-  --line: #1b2433;
-  --line-strong: #2b3649;
+  --paper: #121414;
+  --surface: #191c1c;
+  --chip: #232727;
+  --hairline: #2a2e2e;
+  --ink: #eceeee;
+  --ink-2: #a3a9a9;
+  --ink-3: #6e7575;
+  /* The cyan piece's own light shade, for the one thing that is lit: where you are. */
+  --accent: #19c3cc;
+  --warn: #e8a33d;
+  --button: #eceeee;
+  --button-ink: #121414;
 
-  --text: #e9edf3;
-  --text-body: #b8c1ce;
-  --text-muted: #8b96a6;
+  --display: 'Sofia Sans Extra Condensed', 'Arial Narrow', sans-serif;
+  --text: 'Sofia Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 
-  /* The cyan piece, shades 1-7. 4 is the fill; 7/6/5 light, 1/2/3 shade. */
-  --cyan-1: #001f23;
-  --cyan-2: #004347;
-  --cyan-3: #00676b;
-  --cyan-4: #008b8f;
-  --cyan-5: #00abb3;
-  --cyan-6: #00cfdb;
-  --cyan-7: #00f3ff;
-  /* The orange piece's shade 6, for the few things that have to read as a warning. */
-  --warn: #ff8b23;
-
-  --font: 'Archivo', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
-    sans-serif;
-
-  /* One 4px step, so the vertical rhythm is countable rather than eyeballed. */
-  --s-1: 4px;
-  --s-2: 8px;
-  --s-3: 12px;
-  --s-4: 16px;
-  --s-5: 24px;
-  --s-6: 32px;
-  --s-7: 48px;
-  --s-8: 64px;
-  --section: clamp(56px, 8vw, 112px);
-
-  --t-small: 14px;
-  --t-body: 17px;
-  --t-lead: 19px;
-  --t-h3: 18px;
-  --t-h2: clamp(28px, 3vw, 34px);
-  --t-headline: clamp(40px, 5vw, 64px);
-
-  --gutter: clamp(16px, 4vw, 48px);
-  --frame: 1200px;
-  --masthead: 64px;
+  --side: 220px;
+  --pane: 384px;
+  --gap: 24px;
+  /* The line under the board: a replay's title and its transport, or one caption. Fixed, so
+     the board sits at the same place whatever is under it. */
+  --strip: 64px;
 }
 
 * {
   box-sizing: border-box;
 }
 
-html {
-  scroll-behavior: smooth;
-  /* The masthead is sticky, so an anchor would otherwise land underneath it. */
-  scroll-padding-top: var(--masthead);
+html,
+body {
+  height: 100%;
 }
 
 body {
   margin: 0;
-  background: var(--ground);
-  color: var(--text-body);
-  font: 400 var(--t-body) / 1.6 var(--font);
+  overflow: hidden;
+  background: var(--paper);
+  color: var(--ink);
+  font: 400 15px / 1.5 var(--text);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
-  }
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
-  }
+button,
+input {
+  font: inherit;
+  color: inherit;
 }
-
 a {
-  color: var(--text);
-  text-decoration-color: var(--cyan-4);
-  text-decoration-thickness: 1px;
-  text-underline-offset: 3px;
-}
-a:hover {
-  color: var(--cyan-6);
+  color: inherit;
 }
 
-:where(a, button, input, label, [tabindex]):focus-visible {
-  outline: 2px solid var(--cyan-6);
-  outline-offset: 3px;
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+[hidden] {
+  display: none !important;
 }
 
 .vh {
@@ -151,14 +171,118 @@ a:hover {
   white-space: nowrap;
 }
 
-/* The game's bitmap face, for the words said on the board. Whole multiples only. */
-canvas.lettering-art {
-  image-rendering: pixelated;
-  display: block;
+.num {
+  font-variant-numeric: tabular-nums;
 }
 
-[hidden] {
-  display: none !important;
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* --- the shell ------------------------------------------------------------- */
+
+.app {
+  display: grid;
+  height: 100%;
+  grid-template-columns: var(--side) minmax(0, 1fr) var(--pane);
+  grid-template-rows: minmax(0, 1fr);
+}
+
+/* --- the menu -------------------------------------------------------------- */
+
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  min-height: 0;
+  padding: 22px 14px 18px;
+  border-right: 1px solid var(--hairline);
+}
+
+.mark {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 10px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+.mark svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+
+.menu {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.menu a,
+.menu button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 40px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--ink-2);
+  font-weight: 500;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+.menu svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+.menu a:hover,
+.menu button:hover {
+  color: var(--ink);
+  background: var(--chip);
+}
+.menu a[aria-current='page'] {
+  color: var(--ink);
+  background: var(--chip);
+}
+.menu a[aria-current='page'] svg {
+  color: var(--accent);
+}
+
+.side-foot {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: auto;
+}
+.credit {
+  margin: 0;
+  padding: 6px 10px 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--ink-3);
+}
+
+/* Signed in, the button carries the name. A name in amber has not confirmed its address yet, and
+   its runs will not count. */
+.account {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.account[data-state='unverified'] {
+  color: var(--warn);
 }
 
 /* --- buttons --------------------------------------------------------------- */
@@ -167,68 +291,708 @@ canvas.lettering-art {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 48px;
-  padding: 0 var(--s-5);
+  gap: 8px;
+  height: 44px;
+  padding: 0 18px;
   border: 0;
-  border-radius: 0;
-  font: 600 16px / 1 var(--font);
-  font-stretch: 112%;
-  letter-spacing: 0.01em;
+  border-radius: 8px;
+  font: 600 15px / 1 var(--text);
   text-decoration: none;
   white-space: nowrap;
   cursor: pointer;
 }
-
-/* A cell. Dark bands are listed first so they sit on top where the bands cross, which puts the
-   shade on the top-right and bottom-left corners — the corners `drawBloc` gives to the shade too,
-   because it draws the right and bottom edges last. */
 .btn-primary {
-  min-width: 152px;
-  color: #000;
-  background: var(--cyan-4);
-  box-shadow:
-    inset -1px -1px 0 var(--cyan-1),
-    inset -2px -2px 0 var(--cyan-2),
-    inset -3px -3px 0 var(--cyan-3),
-    inset 1px 1px 0 var(--cyan-7),
-    inset 2px 2px 0 var(--cyan-6),
-    inset 3px 3px 0 var(--cyan-5);
+  background: var(--button);
+  color: var(--button-ink);
 }
 .btn-primary:hover {
-  color: #000;
-  background: var(--cyan-5);
+  opacity: 0.88;
 }
-/* Pressed is the same cell lit from the other side. */
-.btn-primary:active {
-  box-shadow:
-    inset 1px 1px 0 var(--cyan-1),
-    inset 2px 2px 0 var(--cyan-2),
-    inset 3px 3px 0 var(--cyan-3),
-    inset -1px -1px 0 var(--cyan-7),
-    inset -2px -2px 0 var(--cyan-6),
-    inset -3px -3px 0 var(--cyan-5);
-}
-
-.btn-secondary {
-  color: var(--text);
+.btn-ghost {
   background: transparent;
-  box-shadow: inset 0 0 0 1px var(--line-strong);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--hairline);
 }
-.btn-secondary:hover {
-  color: var(--text);
-  background: var(--surface-2);
-  box-shadow: inset 0 0 0 1px #3d4a61;
+.btn-ghost:hover {
+  background: var(--chip);
 }
-
+.btn-wide {
+  width: 100%;
+  height: 52px;
+  font-size: 16px;
+}
 .btn-small {
-  height: 36px;
-  padding: 0 var(--s-4);
-  font-size: var(--t-small);
+  height: 34px;
+  padding: 0 12px;
+  font-size: 14px;
+  font-weight: 500;
 }
-
 .btn:disabled {
   opacity: 0.45;
   cursor: default;
+}
+
+.icon-btn {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  min-width: 34px;
+  height: 34px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.icon-btn:hover {
+  background: var(--chip);
+  color: var(--ink);
+}
+.icon {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+/* --- the board ------------------------------------------------------------- */
+
+.stage {
+  display: grid;
+  grid-template-rows: auto var(--strip);
+  align-content: center;
+  justify-items: center;
+  gap: 12px;
+  min-width: 0;
+  min-height: 0;
+  padding: var(--gap);
+}
+.board-area {
+  min-height: 0;
+}
+.board-frame {
+  position: relative;
+  line-height: 0;
+  box-shadow:
+    0 0 0 1px rgb(255 255 255 / 0.06),
+    0 24px 48px -24px rgb(0 0 0 / 0.9);
+}
+
+/*
+ * Whole multiples of the source (209x405) in *device* pixels, and nothing in between, so every
+ * cell stays the same size as every other cell: nearest-neighbour at a ratio like 1.42 makes some
+ * cells 25px and their neighbours 26px. On a 2x display 1.5x is 3 device pixels to a source pixel,
+ * as whole as 1x is anywhere, so that is the size a laptop gets.
+ *
+ * The thresholds are the board plus everything stacked with it: the padding above and below, the
+ * gap, and the line under it.
+ */
+#screen {
+  display: block;
+  height: var(--board-h);
+  width: var(--board-w);
+  image-rendering: pixelated;
+  background: #000;
+}
+:root {
+  --board-h: 405px;
+  --board-w: calc(var(--board-h) * 209 / 405);
+}
+@media (min-resolution: 2dppx) and (min-height: 732px) {
+  :root {
+    --board-h: 607.5px;
+  }
+}
+@media (min-height: 934px) {
+  :root {
+    --board-h: 810px;
+  }
+}
+/* Below this even 1x does not fit, and then fitting wins: the one place a fractional scale is
+   allowed. */
+@media (max-height: 530px) {
+  :root {
+    --board-h: calc(100vh - var(--gap) * 2 - var(--strip) - 12px);
+  }
+}
+
+/* Pause and game over, over the board. */
+.board-state {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 8px;
+  padding: 24px;
+  text-align: center;
+  line-height: 1.45;
+  background: rgb(18 20 20 / 0.84);
+  backdrop-filter: blur(2px);
+}
+.board-state strong {
+  font: 300 48px / 1 var(--display);
+  color: var(--ink);
+  margin-bottom: 4px;
+}
+.board-state span {
+  font-size: 14px;
+  color: var(--ink-2);
+}
+.board-state a {
+  margin-top: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration-color: var(--accent);
+  text-underline-offset: 3px;
+}
+
+/* The line under the board. The width is the board's, so its two ends line up with the board's
+   two edges. */
+.strip-area {
+  /* The board's own width, so the line's two ends sit under the board's two edges — but never
+     narrower than the transport needs. */
+  width: max(var(--board-w), 300px);
+  max-width: 100%;
+  min-width: 0;
+}
+.strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 34px;
+  font-size: 14px;
+}
+.strip .num {
+  font-weight: 600;
+}
+.strip .who {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.strip .who b {
+  font-weight: 600;
+}
+.strip .who span {
+  color: var(--ink-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.strip-area.is-replay > .strip {
+  display: none;
+}
+
+/* A run being watched: what it is and how far it has got, then the transport. */
+.replay {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 4px;
+}
+.replay-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+.replay-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+.replay-score {
+  color: var(--ink-2);
+  font-weight: 600;
+}
+.replay-head .icon-btn {
+  height: 26px;
+  min-width: 26px;
+}
+.transport {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+/* `width: 0` and a zero basis, or the range keeps the 129px a browser gives it and pushes the
+   transport past the board's right edge. */
+.transport input[type='range'] {
+  flex: 1 1 0;
+  width: 0;
+  min-width: 40px;
+  accent-color: var(--ink);
+}
+.transport .time {
+  min-width: 84px;
+  font-size: 13px;
+  color: var(--ink-3);
+  text-align: right;
+}
+.transport .speed {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* --- the panel ------------------------------------------------------------- */
+
+.pane {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--surface);
+  border-left: 1px solid var(--hairline);
+}
+.pane .view {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.pane-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 32px 28px 20px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--chip) transparent;
+}
+.pane-foot {
+  display: grid;
+  gap: 10px;
+  padding: 16px 28px 24px;
+  border-top: 1px solid var(--hairline);
+}
+
+/* The display face is for titles only, and never smaller than a title. */
+.pane h1 {
+  margin: 0;
+  font: 300 64px / 0.95 var(--display);
+  letter-spacing: -0.005em;
+  text-wrap: balance;
+}
+.pane h1.title {
+  font-size: 44px;
+}
+.pane h1:focus {
+  outline: none;
+}
+
+.lede {
+  margin: 16px 0 0;
+  max-width: 36ch;
+  color: var(--ink-2);
+}
+
+.label {
+  margin: 32px 0 8px;
+  font: 500 13px / 1.4 var(--text);
+  color: var(--ink-3);
+}
+.pane h1.label {
+  margin-top: 0;
+  font: 500 13px / 1.4 var(--text);
+}
+
+.hint {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink-3);
+  text-align: center;
+}
+.hint.left {
+  text-align: left;
+}
+.hint.is-error {
+  color: var(--warn);
+}
+
+.more {
+  display: inline-block;
+  margin-top: 12px;
+  font-size: 14px;
+  color: var(--ink-2);
+  text-decoration-color: var(--accent);
+  text-underline-offset: 3px;
+}
+.more:hover {
+  color: var(--ink);
+}
+
+/* Runs, as a short list on Play and as the whole board on Leaderboard. */
+.runs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.runs li {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  border-bottom: 1px solid var(--hairline);
+  font-size: 14px;
+}
+.runs li:last-child {
+  border-bottom: 0;
+}
+.runs li.none {
+  display: block;
+  padding-top: 8px;
+  color: var(--ink-3);
+}
+.runs .rank {
+  color: var(--ink-3);
+}
+.runs .player {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.runs .score {
+  font-weight: 600;
+  text-align: right;
+}
+
+.board-list {
+  margin-top: 20px;
+}
+.board-list li {
+  grid-template-columns: 24px minmax(0, 1fr) auto 34px;
+  min-height: 58px;
+  margin: 0 -10px;
+  padding: 0 10px;
+  border-bottom: 0;
+  border-radius: 8px;
+}
+.board-list li + li {
+  box-shadow: 0 -1px 0 var(--hairline);
+}
+.board-list li.is-watching,
+.board-list li.is-fresh {
+  background: var(--chip);
+}
+.board-list li.is-watching,
+.board-list li.is-watching + li,
+.board-list li.is-fresh,
+.board-list li.is-fresh + li {
+  box-shadow: none;
+}
+.board-list li.is-fresh .rank,
+.board-list li.is-watching .rank {
+  color: var(--accent);
+}
+.board-list li.is-mine .player {
+  font-weight: 600;
+}
+.board-list .who {
+  display: grid;
+  gap: 1px;
+  align-items: start;
+}
+.board-list .meta {
+  font-size: 12px;
+  color: var(--ink-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.board-list .score {
+  font-size: 15px;
+}
+
+.empty {
+  margin: 16px 0 0;
+  color: var(--ink-3);
+}
+
+/* Two views of one board, as a switch. Each is an address of its own, so these are links. */
+.tabs {
+  display: inline-flex;
+  margin-top: 20px;
+  padding: 3px;
+  border-radius: 10px;
+  background: var(--chip);
+}
+.tabs a {
+  padding: 6px 14px;
+  border-radius: 7px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink-2);
+  text-decoration: none;
+}
+.tabs a:hover {
+  color: var(--ink);
+}
+.tabs a[aria-current='page'] {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.3);
+}
+
+/* Opening a 1998 .rec: quiet, at the foot of the leaderboard. */
+.rec-open {
+  justify-items: start;
+}
+.rec-open .hint {
+  text-align: left;
+}
+#rec-file:focus-visible + label {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.is-dropping .stage {
+  outline: 1px dashed var(--accent);
+  outline-offset: -12px;
+}
+
+/* --- the game in the panel ------------------------------------------------- */
+
+/* Proportional figures, not tabular: in a condensed face tabular digits are spaced as wide as the
+   widest one and the number comes apart. */
+.big {
+  font: 300 76px / 0.9 var(--display);
+}
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin: 24px 0 0;
+}
+.stats dt {
+  font-size: 13px;
+  color: var(--ink-3);
+}
+.stats dd {
+  margin: 2px 0 0;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.keys {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+}
+.keys div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+.keys dd {
+  margin: 0;
+}
+kbd {
+  display: inline-grid;
+  place-items: center;
+  min-width: 28px;
+  height: 26px;
+  padding: 0 7px;
+  border-radius: 6px;
+  background: var(--chip);
+  box-shadow: inset 0 -1px 0 var(--hairline);
+  font: 600 12px / 1 var(--text);
+  color: var(--ink);
+}
+kbd .icon {
+  width: 14px;
+  height: 14px;
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+}
+.row .btn {
+  flex: 1;
+}
+
+/* --- about ----------------------------------------------------------------- */
+
+.beats {
+  display: grid;
+  gap: 22px;
+  margin-top: 24px;
+}
+.beats h2 {
+  margin: 0 0 4px;
+  font: 600 15px / 1.4 var(--text);
+}
+.beats p,
+.about-note {
+  margin: 0;
+  color: var(--ink-2);
+}
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin: 16px 0;
+  font-size: 14px;
+}
+.links a {
+  text-decoration-color: var(--accent);
+  text-underline-offset: 3px;
+}
+.hint span + span::before {
+  content: '·';
+  margin: 0 6px;
+}
+
+/* --- dialogs: settings and the account ------------------------------------- */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  overflow: auto;
+  background: rgb(0 0 0 / 0.55);
+  backdrop-filter: blur(4px);
+}
+.overlay .panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: min(460px, 100%);
+  max-height: 100%;
+  overflow: auto;
+  padding: 24px;
+  border: 1px solid var(--hairline);
+  border-radius: 14px;
+  background: var(--surface);
+  scrollbar-width: thin;
+  scrollbar-color: var(--chip) transparent;
+}
+/* A part a dialog has nothing to say in still takes a gap; an empty one at the foot reads as a
+   dialog that forgot its last line. */
+.overlay .panel > :empty {
+  display: none;
+}
+.overlay header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.overlay h2 {
+  margin: 0;
+  font: 300 36px / 1 var(--display);
+}
+.overlay h3 {
+  margin: 0 0 4px;
+  font: 500 13px / 1.4 var(--text);
+  color: var(--ink-3);
+}
+.overlay .group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.overlay .field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.overlay .row {
+  align-items: center;
+  gap: 12px;
+}
+.overlay .row label {
+  flex: 1;
+}
+.overlay .readout {
+  font-size: 13px;
+  color: var(--ink-3);
+}
+.overlay input[type='range'],
+.overlay input[type='checkbox'] {
+  accent-color: var(--ink);
+}
+.overlay input[type='range'] {
+  flex: 1 1 180px;
+}
+.overlay .hint {
+  min-height: 1.4em;
+  text-align: left;
+}
+
+/* The dialogs build plain <button>s, and these give them the ghost button's look. `:where` keeps
+   the selector weightless, so a `.btn-primary` or `.link` on one of them still wins. */
+:where(.overlay) :where(button) {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 8px;
+  font: 500 14px / 1 var(--text);
+  color: var(--ink);
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--hairline);
+  cursor: pointer;
+}
+:where(.overlay) :where(button):hover {
+  background: var(--chip);
+}
+:where(.overlay) :where(button):disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.overlay button.key {
+  display: inline-grid;
+  place-items: center;
+  min-width: 120px;
+}
+.overlay button.key .icon {
+  width: 16px;
+  height: 16px;
+}
+.overlay button.arming {
+  color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.overlay button.duplicate {
+  box-shadow: inset 0 0 0 1px var(--warn);
+}
+.overlay button.close {
+  min-width: 34px;
+  padding: 0;
+  font-size: 20px;
+  box-shadow: none;
+  color: var(--ink-2);
+}
+.overlay .actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.overlay .btn-primary {
+  align-self: flex-start;
+  height: 44px;
+  padding: 0 18px;
+  font: 600 15px / 1 var(--text);
+  background: var(--button);
+  color: var(--button-ink);
+  box-shadow: none;
+}
+.overlay .btn-primary:hover {
+  background: var(--button);
+  opacity: 0.88;
 }
 
 /* Prose that happens to be a button. */
@@ -239,982 +1003,149 @@ button.link {
   background: none;
   box-shadow: none;
   font: inherit;
-  color: var(--text);
+  color: var(--ink);
   text-decoration: underline;
-  text-decoration-color: var(--cyan-4);
+  text-decoration-color: var(--accent);
   text-underline-offset: 3px;
   cursor: pointer;
 }
 button.link:hover {
-  color: var(--cyan-6);
   background: none;
-}
-
-/* --- masthead -------------------------------------------------------------- */
-
-.masthead {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  background: color-mix(in srgb, var(--ground) 90%, transparent);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid var(--line);
-}
-.masthead-inner {
-  display: flex;
-  align-items: center;
-  gap: var(--s-2) var(--s-6);
-  max-width: var(--frame);
-  min-height: var(--masthead);
-  margin-inline: auto;
-  padding-inline: var(--gutter);
-}
-
-/* Wide and heavy, because the 1998 logo was: the letters there are drawn at about twice their
-   height in width, and Archivo's widest cut is the nearest a typeface gets to that. */
-.wordmark {
-  font: 800 22px / 1 var(--font);
-  font-stretch: 125%;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text);
-  text-decoration: none;
-}
-.wordmark:hover {
-  color: var(--text);
-}
-
-.nav {
-  display: flex;
-  gap: var(--s-6);
-  margin-left: auto;
-  font-size: 15px;
-}
-.nav a {
-  position: relative;
-  color: var(--text-muted);
-  text-decoration: none;
-  padding-block: var(--s-2);
-  white-space: nowrap;
-}
-.nav a:hover,
-.nav a[aria-current='page'] {
-  color: var(--text);
-}
-.nav a[aria-current='page']::after {
-  content: '';
-  position: absolute;
-  inset: auto 0 -1px;
-  height: 2px;
-  background: var(--cyan-5);
-}
-
-/* The lit outline is the signed-in tell. A name in warning colour has not confirmed its address
-   yet, and its runs will not count. */
-.account[data-state='verified'] {
-  box-shadow: inset 0 0 0 1px var(--cyan-3);
-}
-.account[data-state='unverified'] {
-  color: var(--warn);
-}
-
-/* Two rows on a phone: the wordmark and the account on the first, the nav under them. */
-@media (max-width: 720px) {
-  :root {
-    --masthead: 100px;
-  }
-  .masthead-inner {
-    flex-wrap: wrap;
-    padding-block: var(--s-3) 0;
-  }
-  .account {
-    margin-left: auto;
-  }
-  .nav {
-    order: 3;
-    width: 100%;
-    margin-left: 0;
-    gap: var(--s-5);
-    overflow-x: auto;
-  }
-}
-
-/* --- the stage ------------------------------------------------------------- */
-
-.stage {
-  padding-block: clamp(24px, 4vh, 56px);
-  border-bottom: 1px solid var(--line);
-}
-
-.stage-inner {
-  display: flex;
-  align-items: center;
-  gap: clamp(32px, 6vw, 96px);
-  max-width: var(--frame);
-  margin-inline: auto;
-  padding-inline: var(--gutter);
-}
-
-/* `min-content`, so the caption wraps to the board's width rather than widening the figure. */
-.board {
-  position: relative;
-  flex: none;
-  width: min-content;
-  margin: 0;
-}
-.board-frame {
-  position: relative;
-  line-height: 0;
-  box-shadow: 0 0 0 1px var(--line-strong);
-}
-
-/*
- * Whole multiples of the source (209x405) in *device* pixels, and nothing in between, so every
- * cell stays the same size as every other cell. Nearest-neighbour at a ratio like 1.42 makes some
- * cells 25px and their neighbours 26px.
- *
- * In CSS pixels that left only 1x and 2x, and 2x needs a window 940px tall — so on a laptop the
- * board sat at 405px with half the stage empty around it. On a 2x display 1.5x is 3 device pixels
- * to a source pixel, which is as whole as 1x is on any other, and that is the size a laptop gets.
- */
-#screen {
-  display: block;
-  image-rendering: pixelated;
-  height: 405px;
-  width: auto;
-  background: #000;
-}
-@media (min-resolution: 2dppx) and (min-height: 760px) {
-  .stage #screen {
-    height: 607.5px;
-  }
-}
-@media (min-height: 940px) {
-  .stage #screen {
-    height: 810px;
-  }
-}
-/* Below this even 1x does not fit, and then fitting wins. The one place a fractional scale is
-   allowed. */
-@media (max-height: 540px) {
-  .stage #screen {
-    height: auto;
-    max-height: calc(100vh - var(--masthead) - 40px);
-  }
-}
-
-/* Pause and game over sit on the board. The headline is the game's own face (see game-view.ts);
-   what the port adds under it is in the page's. */
-.board-state {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-content: center;
-  justify-items: center;
-  gap: var(--s-3);
-  padding: var(--s-5);
-  text-align: center;
-  line-height: 1.5;
-  background: color-mix(in srgb, var(--ground) 80%, transparent);
-  backdrop-filter: blur(2px);
-}
-.board-state strong {
-  display: block;
-  font: 700 var(--t-h3) / 1.2 var(--font);
-  color: var(--text);
-}
-/* The game's face at 2x of its 18px body — the only sizes it may take are multiples. */
-.board-state strong canvas {
-  height: 36px;
-  width: auto;
-  margin-inline: auto;
-}
-.board-state span {
-  font-size: var(--t-small);
-  color: var(--text-body);
-}
-.board-state a {
-  font-size: var(--t-small);
-}
-
-.caption {
-  display: grid;
-  gap: 2px;
-  margin-top: var(--s-4);
-  font-size: var(--t-small);
-  line-height: 1.45;
-  color: var(--text-muted);
-}
-.caption-score {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0 var(--s-3);
-}
-.caption .figure {
-  font-size: 24px;
-  font-weight: 650;
-  font-variant-numeric: tabular-nums;
-  color: var(--text);
-}
-.caption .by {
-  font-size: 15px;
-  color: var(--text-body);
-}
-.caption .facts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0 var(--s-4);
-}
-
-.stage-side {
-  flex: 1 1 0;
-  min-width: 0;
-  max-width: 36rem;
-}
-
-.headline {
-  margin: 0 0 var(--s-5);
-  font: 750 var(--t-headline) / 1.02 var(--font);
-  font-stretch: 112%;
-  letter-spacing: -0.015em;
-  color: var(--text);
-  text-wrap: balance;
-}
-
-.lede {
-  margin: 0;
-  max-width: 34em;
-  font-size: var(--t-lead);
-  line-height: 1.55;
-  color: var(--text-body);
-}
-
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--s-3);
-  margin-top: var(--s-6);
-}
-
-.note {
-  margin: var(--s-5) 0 0;
-  font-size: var(--t-small);
-  color: var(--text-muted);
-}
-
-/* While playing: the readouts, the keys, and three ways out. */
-.readouts {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--s-5) var(--s-6);
-  max-width: 360px;
-  margin: 0;
-}
-.readouts dt {
-  font-size: var(--t-small);
-  color: var(--text-muted);
-}
-.readouts dd {
-  margin: 2px 0 0;
-  font: 650 32px / 1.1 var(--font);
-  font-variant-numeric: tabular-nums;
-  color: var(--text);
-}
-
-.keys {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--s-2) var(--s-5);
-  max-width: 420px;
-  margin: var(--s-6) 0 0;
-  font-size: var(--t-small);
-}
-.keys div {
-  display: flex;
-  align-items: center;
-  gap: var(--s-3);
-}
-.keys dt {
-  flex: none;
-}
-.keys dd {
-  margin: 0;
-  color: var(--text-muted);
-}
-kbd {
-  display: inline-block;
-  min-width: 28px;
-  padding: 3px 7px 2px;
-  border: 1px solid var(--line-strong);
-  border-bottom-width: 2px;
-  border-radius: 4px;
-  background: var(--surface);
-  font: 600 12px / 1.4 var(--font);
-  color: var(--text);
-  text-align: center;
-}
-
-/* Stacked, the words come first. The board at its phone size is taller than the rest of the
-   first screen, and above them it would push the headline and Play entirely below the fold. */
-@media (max-width: 760px) {
-  .stage-inner {
-    flex-direction: column-reverse;
-    align-items: flex-start;
-  }
-  .stage-side {
-    max-width: none;
-  }
-}
-
-/* Watching a run full size: the board in the middle, the transport at the foot of the window. */
-.is-watching .stage-side,
-.is-watching .caption {
-  display: none;
-}
-.is-watching .stage-inner {
-  justify-content: center;
-}
-.is-watching .stage {
-  padding-bottom: 200px;
-}
-.is-watching .stage #screen {
-  height: 405px;
-}
-@media (min-resolution: 2dppx) and (min-height: 900px) {
-  .is-watching .stage #screen {
-    height: 607.5px;
-  }
-}
-@media (min-height: 1200px) {
-  .is-watching .stage #screen {
-    height: 810px;
-  }
-}
-body.is-watching .masthead {
-  opacity: 0.3;
-}
-
-/* --- how it works ---------------------------------------------------------- */
-
-.how {
-  padding: var(--section) 0;
-  background: var(--ground-2);
-  border-bottom: 1px solid var(--line);
-}
-.how-inner {
-  max-width: var(--frame);
-  margin-inline: auto;
-  padding-inline: var(--gutter);
-}
-h2 {
-  margin: 0;
-  font: 700 var(--t-h2) / 1.1 var(--font);
-  font-stretch: 112%;
-  letter-spacing: -0.01em;
-  color: var(--text);
-}
-.beats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: var(--s-6) clamp(24px, 4vw, 56px);
-  margin-top: var(--s-6);
-}
-.beats h3 {
-  margin: 0 0 var(--s-2);
-  font: 650 var(--t-h3) / 1.3 var(--font);
-  color: var(--text);
-}
-.beats p {
-  margin: 0;
-}
-.how-note {
-  max-width: 62ch;
-  margin: var(--s-7) 0 0;
-  padding-top: var(--s-5);
-  border-top: 1px solid var(--line);
-  color: var(--text-muted);
-}
-
-/* --- colophon -------------------------------------------------------------- */
-
-.colophon {
-  padding: var(--s-7) 0 var(--s-8);
-  font-size: var(--t-small);
-  color: var(--text-muted);
-}
-.colophon-inner {
-  max-width: var(--frame);
-  margin-inline: auto;
-  padding-inline: var(--gutter);
-}
-.colophon p {
-  max-width: 68ch;
-  margin: 0;
-}
-.colophon-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--s-2) var(--s-5);
-  margin-top: var(--s-4) !important;
-}
-.colophon-links a {
-  color: var(--text-body);
-}
-
-/* --- the leaderboard ------------------------------------------------------- */
-
-.records {
-  padding: var(--s-6) 0 var(--section);
-}
-
-/*
- * The playfield holds still on the left while the rows scroll past it on the right.
- *
- * Scoped to the document, because `.board` and `.overlay.replay` are the stage's too and the
- * stage still watches a replay the other way — full size, transport at the foot of the window.
- *
- * Flex rather than a grid: in a grid the rail would have to span every row, and a spanning item
- * hands its height out to the rows it spans. Sticky rather than fixed: it holds just as still, but
- * it holds a column of its own, so no row can pass under it.
- */
-.page-records .records-inner {
-  display: flex;
-  align-items: flex-start;
-  gap: clamp(24px, 4vw, 56px);
-  max-width: var(--frame);
-  margin-inline: auto;
-  padding-inline: var(--gutter);
-  /* A sticky child can only hold inside its own container, and the rail is one of the two
-     things that set that container's height — so with a short list there would be nothing for
-     it to hold *through*. A screenful of floor gives it somewhere to be. */
-  min-height: 100vh;
-}
-.page-records .records-col {
-  flex: 1 1 auto;
-  /* Or a long name in a row would push the column wider than its share instead of folding. */
-  min-width: 0;
-}
-.page-records .rail {
-  position: sticky;
-  top: calc(var(--masthead) + var(--s-5));
-  display: flex;
-  flex: 0 0 auto;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--s-3);
-  /* A little wider than the board at 1x: cut to the board exactly, the transport folds into a
-     tower. */
-  width: 264px;
-}
-/* The same device-pixel tiers as the stage, with a lower ceiling, because the transport sits
-   under the board here rather than at the foot of the window. */
-.page-records .rail #screen {
-  height: 405px;
-}
-@media (min-resolution: 2dppx) and (min-height: 900px) {
-  .page-records .rail {
-    width: 314px;
-  }
-  .page-records .rail #screen {
-    height: 607.5px;
-  }
-}
-@media (min-height: 1160px) {
-  .page-records .rail {
-    width: 418px;
-  }
-  .page-records .rail #screen {
-    height: 810px;
-  }
-}
-@media (max-height: 700px) {
-  .page-records .rail #screen {
-    height: auto;
-    max-height: calc(100vh - 300px);
-  }
-}
-.page-records .rail-hint {
-  margin: 0;
-  font-size: var(--t-small);
-  color: var(--text-muted);
-}
-.page-records .rail.is-playing .rail-hint,
-.page-records .rail.is-playing .rec-open {
-  display: none;
-}
-
-/* Opening a 1998 .rec. Below the hint, quiet: it is a side door, not what the page is for. */
-.page-records .rec-open {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--s-2);
-  margin-top: var(--s-2);
-}
-/* Keyboard reaches the input, not the label, so the ring has to be drawn from there. */
-.page-records #rec-file:focus-visible + .rec-button {
-  outline: 2px solid var(--cyan-6);
-  outline-offset: 3px;
-}
-.page-records .rec-note {
-  margin: 0;
-  font-size: 13px;
-  line-height: 1.45;
-  color: var(--text-muted);
-}
-.page-records .rec-note.is-error {
-  color: var(--warn);
-}
-/* Dragging a file anywhere over the page arms the whole document, so the rail says so. */
-.page-records.is-dropping .rec-open {
-  outline: 1px dashed var(--cyan-5);
-  outline-offset: var(--s-2);
-}
-
-/* The transport is not an overlay on this page: it is the rail's second row. */
-.page-records .rail .overlay.replay {
-  position: static;
-  display: block;
-  width: 100%;
-  padding: 0;
-  overflow: visible;
-  pointer-events: auto;
-  background: none;
-  backdrop-filter: none;
-  z-index: auto;
-}
-.page-records .rail .replay .panel {
-  width: 100%;
-  padding: var(--s-3);
-  gap: var(--s-2);
-  background: var(--surface);
-  backdrop-filter: none;
-}
-/* A column as narrow as the board cannot hold the scrubber and four controls on one line, so the
-   scrubber takes a line of its own above them. */
-.page-records .rail .transport-row {
-  flex-wrap: wrap;
-}
-.page-records .rail .transport-row input[type='range'] {
-  order: -1;
-  flex: 1 1 100%;
-  min-width: 0;
-}
-.page-records .rail .overlay header {
-  flex-wrap: wrap;
-}
-
-.board-title {
-  margin: 0;
-  font: 700 var(--t-h2) / 1.1 var(--font);
-  font-stretch: 112%;
-  letter-spacing: -0.01em;
-  color: var(--text);
-}
-
-/* Two views of one board. Each is its own page, so these are links, drawn as a switch. */
-.tabs {
-  display: inline-flex;
-  margin-top: var(--s-5);
-  box-shadow: inset 0 0 0 1px var(--line-strong);
-}
-.tabs a {
-  padding: var(--s-2) var(--s-4);
-  font-size: var(--t-small);
-  font-weight: 500;
-  color: var(--text-muted);
-  text-decoration: none;
-}
-.tabs a:hover {
-  color: var(--text);
-}
-.tabs a[aria-current='page'] {
-  color: var(--text);
-  background: var(--surface-2);
-  box-shadow: inset 0 0 0 1px #3d4a61;
-}
-
-.records-col .lede {
-  margin-top: var(--s-4);
-  font-size: var(--t-body);
-  color: var(--text-muted);
-}
-
-/*
- * One grid for the header and every row, so a column starts at the same x on every line. Each row
- * used to be a flex line sized by its own content, and the name moved 31px depending on how many
- * digits the score beside it had.
- */
-.records-head,
-.record {
-  display: grid;
-  /* In px, not ch: the header is set smaller than the rows, and a `ch` track is as wide as the
-     font of the element it is on, so the same template gave the two different columns. */
-  grid-template-columns: 28px minmax(96px, 1fr) 96px 56px 56px 56px 64px 80px;
-  align-items: center;
-  column-gap: var(--s-4);
-  padding: 0 var(--s-3);
-}
-.records-head {
-  margin-top: var(--s-6);
-  padding-block: var(--s-2);
-  font-size: 13px;
-  color: var(--text-muted);
-  border-bottom: 1px solid var(--line-strong);
-}
-.records-head .num,
-.record .num {
-  text-align: right;
-}
-.records-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-.record {
-  min-height: 56px;
-  padding-block: var(--s-2);
-  border-bottom: 1px solid var(--line);
-  font-size: 15px;
-  font-variant-numeric: tabular-nums;
-}
-.record:hover {
-  background: var(--surface);
-}
-/* The run that was just played, carried here by `?fresh=`. */
-.record.is-fresh {
-  box-shadow: inset 3px 0 0 var(--cyan-5);
-}
-/* Your own runs, on a board that is everybody's. */
-.record.is-mine {
-  background: var(--surface);
-}
-.record.is-mine .player {
-  color: var(--text);
-  font-weight: 600;
-}
-.record .rank {
-  color: var(--text-muted);
-}
-.record .player {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--text);
-}
-.record .tag {
-  margin-left: var(--s-2);
-  font-size: 12px;
-  color: var(--text-muted);
-}
-.record .score {
-  font-size: 18px;
-  font-weight: 650;
-  color: var(--text);
-}
-.record .when {
-  color: var(--text-muted);
-}
-.record .facts {
-  display: contents;
-}
-.record .facts > span {
-  color: var(--text-body);
-}
-.record .row-actions {
-  display: flex;
-  justify-content: flex-end;
-}
-/* Units only where there is no header to carry them. */
-.record .unit {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
-.empty {
-  margin: var(--s-5) 0 0;
-  padding: var(--s-5);
-  border: 1px dashed var(--line-strong);
-  color: var(--text-muted);
-}
-
-/* Two columns cannot hold at tablet width. Stacked, the board stays sticky at the top rather than
-   scrolling away — otherwise pressing Watch would play a run nobody can see. */
-@media (max-width: 880px) {
-  .page-records .records-inner {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .page-records .rail {
-    top: var(--masthead);
-    z-index: 5;
-    width: auto;
-    align-items: center;
-    padding-block: var(--s-3);
-    background: color-mix(in srgb, var(--ground) 92%, transparent);
-    backdrop-filter: blur(10px);
-  }
-  .page-records .rail #screen {
-    height: auto;
-    max-height: min(405px, 42vh);
-  }
-}
-
-/* A row folds into two lines: rank, name and score, then the facts and Watch under them. */
-@media (max-width: 640px) {
-  .records-head {
-    display: none;
-  }
-  .record {
-    grid-template-columns: 28px minmax(0, 1fr) auto;
-    grid-template-areas:
-      'rank player score'
-      '.    facts  watch';
-    row-gap: var(--s-1);
-    padding-block: var(--s-3);
-  }
-  .record .rank {
-    grid-area: rank;
-  }
-  .record .player {
-    grid-area: player;
-  }
-  .record .score {
-    grid-area: score;
-  }
-  .record .facts {
-    grid-area: facts;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0 var(--s-3);
-    font-size: 13px;
-  }
-  .record .facts > span {
-    text-align: left;
-    color: var(--text-muted);
-  }
-  .record .row-actions {
-    grid-area: watch;
-  }
-  .record .unit {
-    position: static;
-    width: auto;
-    height: auto;
-    overflow: visible;
-    clip-path: none;
-  }
-}
-
-/* --- overlays: settings, account, and the replay transport ----------------- */
-
-.overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 30;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--s-4);
-  overflow: auto;
-  background: color-mix(in srgb, var(--ground) 80%, transparent);
-  backdrop-filter: blur(6px);
-}
-.overlay .panel {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-5);
-  width: min(460px, 100%);
-  max-height: 100%;
-  overflow: auto;
-  padding: var(--s-5);
-  background: var(--surface);
-  border: 1px solid var(--line-strong);
-}
-/* A part a panel has nothing to say in still takes a gap, and an empty one at the foot reads as
-   a panel that forgot its last line. */
-.overlay .panel > :empty {
-  display: none;
-}
-.overlay header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--s-3);
-}
-.overlay h2 {
-  font-size: 20px;
-  font-stretch: 100%;
-  letter-spacing: 0;
-}
-.overlay h3 {
-  margin: 0 0 var(--s-1);
-  font: 600 var(--t-small) / 1.3 var(--font);
-  color: var(--text-muted);
-}
-.overlay .group {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-3);
-}
-.overlay .field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-1);
-}
-.overlay .row {
-  display: flex;
-  align-items: center;
-  gap: var(--s-3);
-}
-.overlay .row label {
-  flex: 1;
-  font-size: 15px;
-}
-.overlay .readout {
-  font-size: 13px;
-  color: var(--text-muted);
-  font-variant-numeric: tabular-nums;
-}
-.overlay input[type='range'] {
-  flex: 1 1 180px;
-  accent-color: var(--cyan-5);
-}
-.overlay input[type='checkbox'] {
-  accent-color: var(--cyan-5);
-}
-
-/* The panels build plain <button>s; these give them the secondary button's look. `:where` keeps
-   the selector weightless, so a `.btn-primary` or `.link` on one of them still wins. */
-:where(.overlay) :where(button) {
-  min-height: 36px;
-  padding: 0 var(--s-4);
-  border: 0;
-  border-radius: 0;
-  font: 500 var(--t-small) / 1 var(--font);
-  color: var(--text);
-  background: transparent;
-  box-shadow: inset 0 0 0 1px var(--line-strong);
-  cursor: pointer;
-}
-:where(.overlay) :where(button):hover {
-  background: var(--surface-2);
-}
-:where(.overlay) :where(button):disabled {
-  opacity: 0.45;
-  cursor: default;
-}
-.overlay button.key {
-  min-width: 132px;
-  font-variant-numeric: tabular-nums;
-}
-.overlay button.arming {
-  color: var(--cyan-6);
-  box-shadow: inset 0 0 0 1px var(--cyan-5);
-}
-.overlay button.duplicate {
-  box-shadow: inset 0 0 0 1px var(--warn);
-}
-.overlay button.close {
-  min-width: 36px;
-  padding: 0;
-  font-size: 18px;
-}
-.overlay .actions {
-  margin: 0;
-  gap: var(--s-2);
-}
-.overlay .hint {
-  min-height: 1.4em;
-  margin: 0;
-  font-size: 13px;
-  color: var(--text-muted);
-}
-
-/* The replay transport sits at the bottom: what is behind it is the replay. */
-.overlay.replay {
-  align-items: flex-end;
-  padding-bottom: var(--s-6);
-  background: none;
-  backdrop-filter: none;
-  pointer-events: none;
-  z-index: 31;
-}
-.replay .panel {
-  width: min(560px, 100%);
-  gap: var(--s-3);
-  pointer-events: auto;
-  background: color-mix(in srgb, var(--surface) 94%, transparent);
-  backdrop-filter: blur(10px);
-}
-.transport-row {
-  display: flex;
-  align-items: center;
-  gap: var(--s-3);
-}
-.transport-row input[type='range'] {
-  flex: 1;
-  accent-color: var(--cyan-5);
-}
-.replay button.transport {
-  min-width: 3em;
-}
-/* Square, so the glyph swapping between speaker and crossed speaker does not shift the row. */
-.replay button.mute {
-  min-width: 36px;
-  padding: 0;
-}
-
-/* --- the account panel ----------------------------------------------------- */
-
-.overlay.account .panel {
-  max-width: 30rem;
+  color: var(--accent);
 }
 .overlay.account form {
   display: flex;
   flex-direction: column;
-  gap: var(--s-3);
+  gap: 12px;
 }
 .overlay.account .field span {
   font-size: 13px;
-  color: var(--text-muted);
+  color: var(--ink-3);
 }
 .overlay.account input[type='text'],
 .overlay.account input[type='email'],
 .overlay.account input[type='password'] {
-  height: 40px;
-  padding: 0 var(--s-3);
-  font: 400 15px / 1 var(--font);
-  color: var(--text);
-  background: var(--ground);
-  border: 1px solid var(--line-strong);
-  border-radius: 0;
+  height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  background: var(--paper);
+  font: 400 15px / 1 var(--text);
 }
 .overlay.account input:focus-visible {
   outline: none;
-  border-color: var(--cyan-5);
-}
-.overlay.account .btn-primary {
-  align-self: flex-start;
-  margin-top: var(--s-2);
+  border-color: var(--accent);
 }
 .overlay.account .verdict {
   margin: 0;
-  font-size: var(--t-small);
-  color: var(--text-muted);
+  font-size: 14px;
+  color: var(--ink-2);
 }
 .overlay.account .verdict[data-state='ok'] {
-  color: var(--cyan-6);
+  color: var(--accent);
 }
 .overlay.account .verdict[data-state='bad'] {
   color: var(--warn);
 }
 .overlay.account .group > button.link {
   align-self: flex-start;
+}
+
+/* --- smaller screens ------------------------------------------------------- */
+
+/* Narrower than a laptop: the menu folds to its icons and the panel gives up a little width. */
+@media (max-width: 1180px) {
+  :root {
+    --side: 68px;
+    --pane: 340px;
+  }
+  .side {
+    padding-inline: 10px;
+    align-items: center;
+  }
+  .mark span,
+  .menu span,
+  .credit {
+    display: none;
+  }
+  .mark {
+    padding: 0;
+  }
+  .menu a,
+  .menu button {
+    justify-content: center;
+    width: 44px;
+    padding: 0;
+  }
+  .account {
+    width: 44px;
+    padding: 0;
+    font-size: 0;
+  }
+  .account::before {
+    content: '';
+    width: 18px;
+    height: 18px;
+    background: currentColor;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round'%3E%3Ccircle cx='12' cy='8' r='4'/%3E%3Cpath d='M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6'/%3E%3C/svg%3E") center / contain no-repeat;
+  }
+}
+/* A tablet-width window has no room for the larger boards beside the menu and the panel. */
+@media (max-width: 1000px) and (min-width: 761px) {
+  :root {
+    --board-h: 405px;
+  }
+}
+
+/* A phone: everything in one column, and the page may scroll. */
+@media (max-width: 760px) {
+  body {
+    overflow: auto;
+  }
+  .app {
+    height: auto;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+  }
+  .side {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--paper);
+    border-right: 0;
+    border-bottom: 1px solid var(--hairline);
+  }
+  .menu {
+    flex-direction: row;
+  }
+  .side-foot {
+    flex-direction: row;
+    align-items: center;
+    margin: 0 0 0 auto;
+  }
+  .stage {
+    grid-template-rows: auto var(--strip);
+    padding: 16px;
+  }
+  :root {
+    --board-h: min(607.5px, 62vh);
+  }
+  .pane {
+    border-left: 0;
+    border-top: 1px solid var(--hairline);
+  }
+  .pane-body {
+    overflow: visible;
+    padding: 24px 16px 16px;
+  }
+  .pane-foot {
+    padding: 16px;
+  }
+  .pane h1 {
+    font-size: 52px;
+  }
 }

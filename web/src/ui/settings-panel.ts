@@ -14,6 +14,7 @@ import { ACTION_ORDER, RESERVED_KEYS, defaultSettings, keyLabel, type Settings }
 import { SENSITIVITY_PRESETS, deriveRepeat } from '../engine/sensitivity.js';
 import { TICK_MS } from '../engine/game.js';
 import { ACTION_COUNT, type Action } from '../engine/canvas.js';
+import { icon, type IconName } from './icons.js';
 
 /** One playfield cell is 18px, and positions are tracked in 1/16ths of a pixel. */
 const CELL_SUBPIXELS = 18 << 4;
@@ -240,11 +241,16 @@ export class SettingsPanel {
       `${(tuning.hRepeatDelay + 10) * TICK_MS} ms`;
     this.vReadout.textContent =
       `${this.settings.vSensitivity}%${presetSuffix(this.settings.vSensitivity)} · ` +
-      `soft drop ≈ ${((tuning.downSpeed * 100) / CELL_SUBPIXELS).toFixed(1)} cells/sec`;
+      `soft drop about ${((tuning.downSpeed * 100) / CELL_SUBPIXELS).toFixed(1)} cells a second`;
 
     for (const [action, b] of this.keyButtons) {
       const capturing = action === armed;
-      b.textContent = capturing ? 'press a key…' : keyLabel(this.settings.keys[action] ?? '');
+      const code = this.settings.keys[action] ?? '';
+      const arrow = ARROWS[code];
+      if (capturing) b.textContent = 'Press a key…';
+      else if (arrow) b.replaceChildren(icon(arrow));
+      else b.textContent = keyLabel(code);
+      b.setAttribute('aria-label', capturing ? 'Press a key' : keyLabel(code));
       b.classList.toggle('arming', capturing);
       b.classList.toggle('duplicate', !capturing && this.isDuplicate(action));
     }
@@ -266,30 +272,45 @@ export class SettingsPanel {
 }
 
 /** One line describing the current bindings, for the help text under the canvas. */
-/** The controls as key and action pairs: the bound game actions, then the page's own keys. */
-export function bindingsList(settings: Settings): Array<[key: string, action: string]> {
+/** The controls as action and key pairs: the bound game actions, then the page's own keys. */
+export function bindingsList(settings: Settings): Array<[action: string, code: string]> {
   return [
-    ...ACTION_ORDER.map(({ action, label }): [string, string] => [
-      keyLabel(settings.keys[action] ?? ''),
-      label,
-    ]),
-    ['P', 'Pause'],
-    ['R', 'Restart'],
-    ['Esc', 'Settings'],
+    ...ACTION_ORDER.map(({ action, label }): [string, string] => [label, settings.keys[action] ?? '']),
+    ['Pause', 'KeyP'],
+    ['Restart', 'KeyR'],
+    ['Settings', 'Escape'],
   ];
 }
 
-/** Write the controls into a `<dl>`, one key and its action to a row. */
+const ARROWS: Record<string, IconName> = {
+  ArrowLeft: 'left',
+  ArrowRight: 'right',
+  ArrowUp: 'up',
+  ArrowDown: 'down',
+};
+
+/** A key as a keycap. The arrows are drawn: the page's faces have no arrow glyphs. */
+export function keyCap(code: string): HTMLElement {
+  const kbd = document.createElement('kbd');
+  const arrow = ARROWS[code];
+  if (arrow) {
+    kbd.append(icon(arrow));
+    kbd.setAttribute('aria-label', keyLabel(code));
+  } else {
+    kbd.textContent = code === 'Escape' ? 'Esc' : keyLabel(code);
+  }
+  return kbd;
+}
+
+/** Write the controls into a `<dl>`, one action and its key to a row. */
 export function renderBindings(list: HTMLElement, settings: Settings): void {
   list.replaceChildren(
-    ...bindingsList(settings).map(([key, action]) => {
+    ...bindingsList(settings).map(([action, code]) => {
       const row = document.createElement('div');
       const dt = document.createElement('dt');
-      const kbd = document.createElement('kbd');
-      kbd.textContent = key;
-      dt.append(kbd);
+      dt.textContent = action;
       const dd = document.createElement('dd');
-      dd.textContent = action;
+      dd.append(keyCap(code));
       row.append(dt, dd);
       return row;
     }),

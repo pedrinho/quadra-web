@@ -1,16 +1,11 @@
 /*
- * The furniture both pages are built out of.
+ * The furniture the app is built out of.
  * Copyright (C) 2026 Quadra Web contributors
  * Licensed under the GNU LGPL v2.1 or later. See LICENSE at the repo root.
  *
- * The site is a few documents — the stage at `/`, the board at `/records`, every run at
- * `/player-highscores` — and everything in here is what they have in common: the identity in the
- * masthead's corner, the audio context, the settings, and the level backdrops a replay needs in
- * order to be watched.
- *
- * Split out rather than shared by importing `main.ts`, because that entry hard-requires the
- * stage's twenty-odd element ids and throws on the first one it cannot find. What belongs here is
- * only what is true of any page; anything a single page needs stays in that page's entry.
+ * Pieces that are not about any one view: the identity in the menu's corner, the audio context,
+ * the settings' volume, the artwork cache, and the level backdrops the board needs whatever it
+ * is showing. `app.ts` puts them together; nothing here knows which view is open.
  */
 
 import { loadQimg, type QImage } from './render/qimg.js';

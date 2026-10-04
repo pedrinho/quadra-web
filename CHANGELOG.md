@@ -106,15 +106,22 @@ Quadra is online. The solo game is unchanged; what is new is everywhere it now g
   appeared in a dimmed, blurred layer over the list it came from, so the row being watched, and
   every row near it, was unreadable while it played. Narrow enough and the two stack, with the
   board pinned under the masthead instead.
+- **The site is an app now, laid out like chess.com.** A menu fixed on the left, the board fixed
+  in the middle, and a panel on the right that changes with what you are doing: Play, the
+  leaderboard, About, or your score and controls while you play. Moving between them never
+  reloads, so the board keeps its pixels and a game in progress survives it (leaving Play pauses
+  it). Watching a run plays it on that same board, with the transport underneath, instead of in a
+  window of its own. Nothing scrolls on a laptop; the panel scrolls inside itself when it has to.
+  `/records`, `/player-highscores` and the new `/about` are still real addresses, each the same
+  app opened at a different view (`src/shell.html`, spliced in by a Vite plugin).
 - **The page stops borrowing the 1998 artwork.** It was built out of cut-outs — a logo cropped
-  from the menu screen (which read "OUADRA", the crop took the Q's tail), the yellow menu label as
-  the Play button, two photographs as wallpaper — and five unrelated type styles. The artwork now
-  lives on the board only. Around it: one typeface, Archivo, replacing IBM Plex; a typeset
-  wordmark; real buttons, the primary one drawn as a Quadra cell in the cyan piece's own shades;
-  and copy written for someone who has not played yet. The two leaderboard pages are one
-  **Leaderboard** with a switch between best per player and every run, and their columns line up
-  under a header. The board grows to 1.5× on a 2× display, which is still a whole number of device
-  pixels per source pixel, so a laptop gets a 608px board instead of a 405px one.
+  from the menu screen that read "OUADRA", the yellow menu label as the Play button, two
+  photographs as wallpaper — in five unrelated type styles. The artwork lives on the board only.
+  Around it: a dark, quiet ground; two faces with two jobs, Sofia Sans Extra Condensed for titles
+  and Sofia Sans for everything else, replacing IBM Plex; drawn icons instead of glyphs from
+  whatever fallback font a system had; and copy written for someone who has not played yet. The
+  board grows to 1.5× on a 2× display — still a whole number of device pixels per source pixel —
+  so a laptop gets a 608px board instead of a 405px one.
 
 ### Fixed
 

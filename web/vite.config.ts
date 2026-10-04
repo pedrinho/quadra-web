@@ -1,5 +1,6 @@
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { createLogger, defineConfig, type ProxyOptions } from 'vite';
+import { createLogger, defineConfig, type Plugin, type ProxyOptions } from 'vite';
 
 const API = 'http://localhost:8787';
 
@@ -61,17 +62,37 @@ logger.error = (msg, options) => {
 };
 
 /*
- * Three documents, not one: the stage at `/`, the board at `/records` and every run at
- * `/player-highscores`. A board is a thing you link someone to, and a section of a scrolling page
- * cannot be linked, reloaded into, or served without the game loading behind it.
+ * Four documents, one app: the stage at `/`, the board at `/records`, every run at
+ * `/player-highscores` and `/about`. Once one has loaded, moving between them is the app's own
+ * router and never reloads — but each still has to exist as a file, because a link can land on any
+ * of them and Workers Assets serves `records.html` at `/records` with `not_found_handling = "none"`.
  *
- * Workers Assets serves `records.html` at `/records` on its own, and the same for the others, so
- * this is the only place a page needs declaring.
+ * So the four are thin: a title, a description and a `data-route`. Everything inside `<body>` is
+ * `src/shell.html`, spliced in where each says `<!--shell-->`, so there is one copy of the app's
+ * markup rather than four that drift apart.
  */
 const page = (name: string) => fileURLToPath(new URL(name, import.meta.url));
+const SHELL = page('src/shell.html');
+
+function shell(): Plugin {
+  return {
+    name: 'quadra-shell',
+    transformIndexHtml: {
+      order: 'pre',
+      handler: (html) => html.replace('<!--shell-->', readFileSync(SHELL, 'utf8')),
+    },
+    configureServer(server) {
+      server.watcher.add(SHELL);
+    },
+    handleHotUpdate({ file, server }) {
+      if (file === SHELL) server.ws.send({ type: 'full-reload' });
+    },
+  };
+}
 
 export default defineConfig({
   customLogger: logger,
+  plugins: [shell()],
   server: { port: 5173, proxy: { '/v1': api } },
   build: {
     outDir: 'dist',
@@ -82,6 +103,7 @@ export default defineConfig({
         main: page('index.html'),
         records: page('records.html'),
         playerHighscores: page('player-highscores.html'),
+        about: page('about.html'),
       },
     },
   },

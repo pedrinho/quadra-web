@@ -13,27 +13,37 @@
     -->
     <style>
       @font-face {
-        font-family: 'Archivo';
-        font-weight: 100 900;
-        font-stretch: 62% 125%;
+        font-family: 'Sofia Sans';
+        font-weight: 400;
         font-display: swap;
-        src: url('/assets/fonts/Archivo-Variable-latin.woff2') format('woff2');
+        src: url('/assets/fonts/SofiaSans-Regular-latin.woff2') format('woff2');
+      }
+      @font-face {
+        font-family: 'Sofia Sans';
+        font-weight: 600;
+        font-display: swap;
+        src: url('/assets/fonts/SofiaSans-SemiBold-latin.woff2') format('woff2');
+      }
+      @font-face {
+        font-family: 'Sofia Sans Extra Condensed';
+        font-weight: 300;
+        font-display: swap;
+        src: url('/assets/fonts/SofiaSansExtraCondensed-Light-latin.woff2') format('woff2');
       }
       :root {
         color-scheme: dark;
-        --ground: #05080f;
-        --line: #1b2433;
-        --text: #e9edf3;
-        --text-body: #b8c1ce;
-        --text-muted: #8b96a6;
-        --cyan-4: #008b8f;
-        --cyan-6: #00cfdb;
+        --paper: #121414;
+        --hairline: #2a2e2e;
+        --ink: #eceeee;
+        --ink-2: #a3a9a9;
+        --ink-3: #6e7575;
+        --accent: #19c3cc;
       }
       body {
         margin: 0;
-        background: var(--ground);
-        color: var(--text-body);
-        font: 17px/1.6 'Archivo', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        background: var(--paper);
+        color: var(--ink-2);
+        font: 16px/1.6 'Sofia Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
         -webkit-font-smoothing: antialiased;
       }
       main {
@@ -42,41 +52,36 @@
         padding: 40px 16px 64px;
       }
       .wordmark {
-        font-weight: 800;
-        font-stretch: 125%;
-        font-size: 20px;
-        letter-spacing: 0.08em;
+        font-weight: 600;
+        font-size: 14px;
+        letter-spacing: 0.26em;
         text-transform: uppercase;
-        color: var(--text);
+        color: var(--ink);
         text-decoration: none;
       }
-      h1,
-      h2 {
-        color: var(--text);
-        font-weight: 700;
-        font-stretch: 112%;
-        line-height: 1.2;
-      }
       h1 {
-        font-size: 2rem;
         margin: 40px 0 8px;
+        font: 300 56px/0.95 'Sofia Sans Extra Condensed', 'Arial Narrow', sans-serif;
+        color: var(--ink);
       }
       h2 {
-        font-size: 1.125rem;
         margin: 32px 0 8px;
         padding-top: 24px;
-        border-top: 1px solid var(--line);
+        border-top: 1px solid var(--hairline);
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--ink);
       }
       a {
-        color: var(--text);
-        text-decoration-color: var(--cyan-4);
+        color: var(--ink);
+        text-decoration-color: var(--accent);
         text-underline-offset: 3px;
       }
       a:hover {
-        color: var(--cyan-6);
+        color: var(--accent);
       }
       strong {
-        color: var(--text);
+        color: var(--ink);
         font-weight: 600;
       }
       ul {
@@ -86,7 +91,7 @@
         margin-top: 4px;
       }
       .quiet {
-        color: var(--text-muted);
+        color: var(--ink-3);
       }
     </style>
   </head>

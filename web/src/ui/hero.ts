@@ -17,15 +17,13 @@ import type { Screen } from '../render/screen.js';
 import { TapePlayer } from '../replay/playback.js';
 import type { Tape } from '../replay/tape.js';
 import { verify } from '../replay/verify.js';
-import { formatDuration } from './format.js';
 
-/** The caption under the board, and the button that opens what it is playing full size. */
+/** The line under the board that says what it is playing, and the button that watches it. */
 export interface HeroElements {
   section: HTMLElement;
   title: HTMLElement;
   score: HTMLElement;
   by: HTMLElement;
-  facts: HTMLElement;
   watch: HTMLElement;
 }
 
@@ -82,26 +80,16 @@ export class Hero {
     this.player = new TapePlayer(source.tape, { checkpoints: false });
     this.screen.invalidate();
 
-    // Described from what the verifier reaches, not from anything stored beside the tape. The
-    // caption is for someone who has not played yet, so it carries the score, who set it and
-    // three facts a player recognises — not the seed or the engine's working.
+    // Described from what the verifier reaches, not from anything stored beside the tape: the
+    // score under the board is the one the engine gets to by playing these inputs again.
     const result = verify(source.bytes);
-    if (result.ok) {
-      this.els.score.textContent = result.score.toLocaleString();
-      this.els.facts.replaceChildren(
-        fact(`${result.lines} ${result.lines === 1 ? 'line' : 'lines'}`),
-        fact(`Level ${result.level}`),
-        fact(formatDuration(result.simulatedMs / 1000)),
-      );
-    } else {
-      this.els.score.textContent = '—';
-      this.els.facts.replaceChildren(fact(`This recording does not verify (${result.code}).`));
-    }
-
-    this.els.title.textContent = source.bundled
-      ? 'A demonstration run'
-      : 'The record to beat';
-    this.els.by.textContent = !source.bundled && source.by ? source.by : '';
+    this.els.score.textContent = result.ok ? result.score.toLocaleString() : '';
+    this.els.by.textContent = source.bundled ? 'Demonstration' : (source.by ?? 'The record');
+    this.els.title.textContent = !result.ok
+      ? `this recording does not verify (${result.code})`
+      : source.bundled
+        ? 'nobody has set a record yet'
+        : 'the record, replaying';
     this.els.watch.textContent = source.bundled ? 'Watch the demo' : 'Watch the record';
 
     this.restart();
@@ -190,8 +178,3 @@ export class Hero {
   }
 }
 
-function fact(text: string): HTMLElement {
-  const el = document.createElement('span');
-  el.textContent = text;
-  return el;
-}

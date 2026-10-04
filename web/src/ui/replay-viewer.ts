@@ -20,6 +20,8 @@ import type { Tape } from '../replay/tape.js';
 import type { Screen } from '../render/screen.js';
 import { ReplayAudio } from '../audio/replay-audio.js';
 import type { SoundPlayer } from '../audio/sound-player.js';
+import { formatDuration } from './format.js';
+import { setIcon } from './icons.js';
 
 /**
  * Something the transport can drive: a game, a position in it, and a way to move.
@@ -71,12 +73,15 @@ export class ReplayViewer {
   private readonly playButton: HTMLButtonElement;
   private readonly scrub: HTMLInputElement;
   private readonly readout: HTMLElement;
+  private readonly time: HTMLElement;
   private readonly speedButton: HTMLButtonElement;
   private readonly muteButton: HTMLButtonElement | null;
   private readonly muting: ReplayViewerOptions['muting'];
 
   private readonly audio: ReplayAudio;
   private player: ReplaySource | null = null;
+  /** How long the whole run lasts, in seconds, summed from its frames once when it opens. */
+  private total = 0;
   private playing = false;
   private speed = 1;
   private budget = 0;
@@ -90,22 +95,39 @@ export class ReplayViewer {
     const sounds = opts.sounds;
     this.audio = new ReplayAudio(sounds ?? (() => null));
 
+    // Under the board, in the line the run's caption otherwise takes: a head that says what is
+    // playing and how far it has got, and the transport under it. No hint line — the keys are on
+    // the buttons' titles, and a line of instructions under every replay is noise.
     this.root = document.createElement('div');
-    this.root.className = 'overlay replay';
+    this.root.className = 'replay';
     this.root.hidden = true;
 
-    this.title = document.createElement('h2');
-    this.playButton = button('▶', () => this.toggle());
-    this.playButton.className = 'transport';
-    this.speedButton = button('1×', () => this.cycleSpeed());
-    this.readout = document.createElement('div');
-    this.readout.className = 'readout';
+    this.title = document.createElement('span');
+    this.title.className = 'replay-title';
+    this.readout = document.createElement('span');
+    this.readout.className = 'replay-score num';
+
+    const close = button(() => this.hide());
+    close.className = 'icon-btn';
+    setIcon(close, 'close', 'Close the replay (Esc)');
+    const head = document.createElement('div');
+    head.className = 'replay-head';
+    head.append(this.title, this.readout, close);
+
+    this.playButton = button(() => this.toggle());
+    this.playButton.className = 'icon-btn';
+    this.speedButton = button(() => this.cycleSpeed());
+    this.speedButton.className = 'icon-btn speed num';
+    this.speedButton.title = 'Playback speed';
+    this.time = document.createElement('span');
+    this.time.className = 'time num';
 
     this.scrub = document.createElement('input');
     this.scrub.type = 'range';
     this.scrub.min = '0';
     this.scrub.step = '1';
     this.scrub.value = '0';
+    this.scrub.setAttribute('aria-label', 'Position in the run');
     this.scrub.addEventListener('input', () => {
       // Read the target *before* pausing: pausing re-renders, and the render writes the
       // current frame back into this very input. Reading after would seek to where the
@@ -115,30 +137,17 @@ export class ReplayViewer {
       this.seek(target);
     });
 
-    const close = button('×', () => this.hide());
-    close.className = 'close';
-    close.setAttribute('aria-label', 'Close');
-    const head = document.createElement('header');
-    head.append(this.title, close);
-
-    // Sound that cannot be turned off from the page it is playing on is a defect, and the
-    // records page carries no settings panel — so the control lives with the transport.
-    this.muteButton = this.muting ? button('', () => this.toggleMute()) : null;
-    if (this.muteButton) this.muteButton.className = 'mute';
+    // Sound that cannot be turned off from where it is playing is a defect, so the control
+    // lives with the transport rather than only in Settings.
+    this.muteButton = this.muting ? button(() => this.toggleMute()) : null;
+    if (this.muteButton) this.muteButton.className = 'icon-btn';
 
     const transport = document.createElement('div');
-    transport.className = 'transport-row';
-    transport.append(this.playButton, this.scrub, this.speedButton);
+    transport.className = 'transport';
+    transport.append(this.playButton, this.scrub, this.time, this.speedButton);
     if (this.muteButton) transport.append(this.muteButton);
 
-    const hint = document.createElement('div');
-    hint.className = 'hint';
-    hint.textContent = 'Space plays and pauses, ← and → step a second, Esc closes.';
-
-    const panel = document.createElement('div');
-    panel.className = 'panel';
-    panel.append(head, transport, this.readout, hint);
-    this.root.append(panel);
+    this.root.append(head, transport);
     opts.host.append(this.root);
 
     // Capture phase, so the game never sees the keys while a replay is up.
@@ -166,17 +175,24 @@ export class ReplayViewer {
    * cannot come in above. See replay/rec.ts.
    */
   showSource(source: ReplaySource, label: string): void {
+    // Opening one run while another is up replaces it. The host is told about opening only once,
+    // or it would count two openings against one close and never resume the game behind them.
+    const wasOpen = this.isOpen;
+    this.pause();
     this.player = source;
     // A fresh game arrives with the queue its construction filled, as a live one does.
     this.audio.reset();
     this.title.textContent = label;
+    let ticks = 0;
+    for (let i = 0; i < source.length; i++) ticks += source.ticksAt(i);
+    this.total = (ticks * TICK_MS) / 1000;
     this.scrub.max = String(this.player.length);
     this.scrub.value = '0';
     this.speed = 1;
     this.root.hidden = false;
     this.screen.invalidate();
     this.draw();
-    this.onVisibility?.(true);
+    if (!wasOpen) this.onVisibility?.(true);
     this.play();
   }
 
@@ -275,20 +291,17 @@ export class ReplayViewer {
   private render(): void {
     const player = this.player;
     if (!player) return;
-    this.playButton.textContent = this.playing ? '❚❚' : '▶';
+    setIcon(this.playButton, this.playing ? 'pause' : 'play', this.playing ? 'Pause (Space)' : 'Play (Space)');
     this.speedButton.textContent = `${this.speed}×`;
     if (this.muteButton && this.muting) {
       const muted = this.muting.isMuted();
-      this.muteButton.textContent = muted ? '🔇' : '🔊';
-      this.muteButton.setAttribute('aria-label', muted ? 'Unmute' : 'Mute');
+      setIcon(this.muteButton, muted ? 'muted' : 'sound', muted ? 'Turn the sound on' : 'Turn the sound off');
       this.muteButton.setAttribute('aria-pressed', String(muted));
     }
     this.scrub.value = String(player.index);
     const seconds = (player.game.ticks * TICK_MS) / 1000;
-    this.readout.textContent =
-      `frame ${player.index} / ${player.length} · ${seconds.toFixed(1)}s · ` +
-      `score ${player.game.canvas.score} · ${player.game.canvas.linesTot} lines · ` +
-      `level ${player.game.canvas.level}`;
+    this.time.textContent = `${formatDuration(seconds)} / ${formatDuration(this.total)}`;
+    this.readout.textContent = `Score ${player.game.canvas.score.toLocaleString()}`;
   }
 
   private readonly onKeyDown = (e: KeyboardEvent): void => {
@@ -320,10 +333,9 @@ export class ReplayViewer {
   };
 }
 
-function button(text: string, onClick: () => void): HTMLButtonElement {
+function button(onClick: () => void): HTMLButtonElement {
   const el = document.createElement('button');
   el.type = 'button';
-  el.textContent = text;
   el.addEventListener('click', onClick);
   return el;
 }
