@@ -140,6 +140,13 @@ Quadra is online. The solo game is unchanged; what is new is everywhere it now g
   white for two frames, red for two, four times over. Presentation only — the simulation writes
   them and never reads them back, so no game's outcome changes, no frame count moves and every
   recording made before this still verifies to the same score and the same state hash.
+- **The death wipe.** Topping out in the original recolours the stack over a second, a cell every
+  other tick in each quadrant — outer columns first, each one closing from the top and bottom
+  edges toward the middle row — with a sample as each column finishes. The port reduced that to
+  the game simply stopping and one beep. `web/src/render/death-sweep.ts` ports `Player_dead::step`'s
+  order and timing, and the live game, the replay viewer and the attract loop all play it. It
+  stays out of the engine on purpose: the game still ends on the tick it always did, so tapes,
+  state hashes and the verifier are untouched.
 
 ## [0.5.0] — 2026-07-31
 

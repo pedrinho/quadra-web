@@ -15,7 +15,7 @@
 
 import './styles.css';
 
-import { Game } from './engine/game.js';
+import { Game, TICK_MS } from './engine/game.js';
 import type { QImage } from './render/qimg.js';
 import { loadQfnt } from './render/font.js';
 import { Screen, PLAYFIELD_VIEW } from './render/screen.js';
@@ -494,6 +494,9 @@ async function main(): Promise<void> {
       player.level = game.canvas.level;
       player.play(game.drainSounds());
     }
+    // The game has stopped running by the time this has anything to do, so it goes by the clock.
+    const wiped = screen.sweep.follow(game.canvas, delta);
+    for (let i = 0; i < wiped; i++) player?.playWipeColumn();
 
     screen.scrollers?.follow(game);
     screen.draw(game.canvas);
@@ -623,6 +626,7 @@ async function main(): Promise<void> {
         for (let i = 0; i < frames; i++) game.stepFrame(1);
         if (game.isOver && !submitted) void submitRun();
         sounds()?.play(game.drainSounds());
+        screen.sweep.follow(game.canvas, frames * TICK_MS);
         screen.scrollers?.follow(game);
         screen.draw(game.canvas);
         view.update(game);

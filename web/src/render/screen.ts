@@ -8,13 +8,16 @@
  * cannot produce, which is the one thing a replay must never do.
  *
  * It takes a `Canvas` and nothing else — no game, no clock — because everything visible is a
- * function of the playfield state.
+ * function of the playfield state. The two exceptions run on after the simulation has said its
+ * piece, the rising text and the death wipe, and each is followed by its host rather than read
+ * off the board.
  */
 
 import { Framebuffer } from './framebuffer.js';
 import type { QImage } from './qimg.js';
 import type { Fontdata } from './font.js';
 import { TextScrollers } from './scrollers.js';
+import { DeathSweep } from './death-sweep.js';
 import {
   drawBoard,
   drawFallingPiece,
@@ -71,6 +74,11 @@ export class Screen {
    * Null without a face to set it in, which keeps a `Screen` cheap to build in a test.
    */
   readonly scrollers: TextScrollers | null;
+  /**
+   * The grey wipe over a board that has died. Shared for the same reason as `scrollers`, and
+   * driven the same way: whoever is drawing says which game it is following, and for how long.
+   */
+  readonly sweep = new DeathSweep();
   private level = -1;
 
   /**
@@ -131,7 +139,7 @@ export class Screen {
     }
 
     const bg = this.background();
-    drawBoard(this.fb, bg, canvas);
+    drawBoard(this.fb, bg, canvas, this.sweep.stepsFor(canvas));
     if (canvas.blocShadow) drawFallingPiece(this.fb, canvas.blocShadow, true);
     if (canvas.bloc) drawFallingPiece(this.fb, canvas.bloc);
     // After the piece and over it, as Zone_canvas_bloc::draw has it (source/zone.cc:63-73).

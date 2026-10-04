@@ -74,12 +74,17 @@ export class SoundPlayer {
         this.emit(GLOBAL_SOUNDS.levelUp, -200 - rnd(127), 0, 11000);
         break;
 
-      // source/player.cc:1282. The original repeats this through a multi-frame death wipe;
-      // the port reduced that animation to a state change, so it fires once.
+      // Silent on purpose. The original makes no sound at the moment of death; its wipe plays
+      // one sample per column as it greys the stack, and the wipe is the host's to drive —
+      // see `playWipeColumn` and render/death-sweep.ts.
       case 'gameOver':
-        this.emit(theme.flash, -600, -1, 22500 + rnd(1023));
         break;
     }
+  }
+
+  /** A column of the death wipe finished — source/player.cc:1253-1254, `vo = -600` locally. */
+  playWipeColumn(): void {
+    this.emit(themeForLevel(this.level).flash, -600, -1, 22500 + this.rnd(1023));
   }
 
   /** `sons.pause` — source/multi_player.cc:256. */

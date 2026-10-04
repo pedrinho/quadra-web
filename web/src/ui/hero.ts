@@ -14,6 +14,7 @@
 
 import { TICK_MS } from '../engine/game.js';
 import type { Screen } from '../render/screen.js';
+import { SWEEP_TICKS } from '../render/death-sweep.js';
 import { TapePlayer } from '../replay/playback.js';
 import type { Tape } from '../replay/tape.js';
 import { verify } from '../replay/verify.js';
@@ -142,6 +143,11 @@ export class Hero {
 
     if (this.restingUntil) {
       if (now >= this.restingUntil) this.restart();
+      // The wipe plays out in the rest, silently like everything else here.
+      else if (!this.screen.sweep.settled(player.game.canvas)) {
+        this.screen.sweep.follow(player.game.canvas, elapsed);
+        this.draw();
+      }
       return;
     }
 
@@ -162,8 +168,13 @@ export class Hero {
     // it for the same reason.
     player.game.drainSounds();
 
+    this.screen.sweep.follow(player.game.canvas, elapsed);
     this.draw();
-    if (player.done) this.restingUntil = now + REST_MS;
+    // The beat of stillness comes after the wipe, not during it.
+    if (player.done) {
+      const wipe = player.game.canvas.dead ? SWEEP_TICKS * TICK_MS : 0;
+      this.restingUntil = now + wipe + REST_MS;
+    }
   };
 
   private draw(): void {

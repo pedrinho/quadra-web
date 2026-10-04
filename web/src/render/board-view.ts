@@ -12,6 +12,7 @@ import { CELL, SMALL_CELL, drawBloc, drawBlocCorner, drawBlocSmall } from './blo
 import { type Canvas, FLASH_BRIGHT } from '../engine/canvas.js';
 import type { Bloc } from '../engine/bloc.js';
 import { PLAY_BOTTOM, PLAY_LEFT, PLAY_RIGHT, PLAY_TOP, idx } from '../engine/board.js';
+import { DEAD_COLOR, isSwept } from './death-sweep.js';
 
 /* The original runs three 214px panes side by side; single-player puts the board in the
  * middle one. These coordinates place the playfield where the background art expects it. */
@@ -41,8 +42,11 @@ function eraseRegion(
   fb.putImageRegion(bg.indices, bg.width, x, y, w, h, x, y);
 }
 
-/** Draw the settled cells of a board. */
-export function drawBoard(fb: Framebuffer, bg: QImage, canvas: Canvas): void {
+/**
+ * Draw the settled cells of a board. `swept` is how far the death wipe has got — see
+ * death-sweep.ts. A swept cell keeps its edges and loses its colour, as `Player_dead` leaves it.
+ */
+export function drawBoard(fb: Framebuffer, bg: QImage, canvas: Canvas, swept = 0): void {
   eraseRegion(fb, bg, BOARD_X, BOARD_Y, BOARD_W, BOARD_H);
 
   for (let j = PLAY_TOP; j < PLAY_BOTTOM; j++) {
@@ -50,7 +54,7 @@ export function drawBoard(fb: Framebuffer, bg: QImage, canvas: Canvas): void {
       if (!canvas.occupied[idx(j, i)]) continue;
       const cell = canvas.block[idx(j, i)]!;
       const side = cell & 15;
-      const col = cell >> 4;
+      const col = swept && isSwept(j, i, swept) ? DEAD_COLOR : cell >> 4;
       // Neighbour masks drive the corner joins, so two welded cells read as one shape.
       const to = [
         canvas.block[idx(j, i - 1)]!,

@@ -104,19 +104,24 @@ describe('sound event mapping', () => {
     });
   });
 
-  it('plays game over high and off-centre', () => {
-    // source/player.cc:1282 — the port fires this once instead of per wipe frame.
-    expect(play({ kind: 'gameOver' })).toEqual({
-      name: SOUND_THEMES[0]!.flash,
-      vol: -600,
-      pan: -1,
-      freq: 22500,
-    });
+  it('says nothing at the moment of death — the wipe does, column by column', () => {
+    const { mixer, player } = setup();
+    player.playOne({ kind: 'gameOver' });
+    expect(mixer.calls).toHaveLength(0);
+  });
+
+  it('plays each wipe column high and off-centre', () => {
+    // source/player.cc:1253-1254, with the local player's `vo = -600`.
+    const { mixer, player } = setup(fixed(0));
+    player.playWipeColumn();
+    expect(mixer.calls).toEqual([
+      { name: SOUND_THEMES[0]!.flash, vol: -600, pan: -1, freq: 22500 },
+    ]);
   });
 
   it('plays a batch in order', () => {
     const { mixer, player } = setup();
-    player.play([{ kind: 'levelUp' }, { kind: 'gameOver' }, { kind: 'rotate', column: 9 }]);
+    player.play([{ kind: 'levelUp' }, { kind: 'lineClear', chain: 1 }, { kind: 'rotate', column: 9 }]);
     expect(mixer.calls.map((c) => c.name)).toEqual(['glissup', 'pwap2', 'tapdrip']);
   });
 

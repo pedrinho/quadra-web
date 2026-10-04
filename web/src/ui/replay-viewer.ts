@@ -79,6 +79,7 @@ export class ReplayViewer {
   private readonly muting: ReplayViewerOptions['muting'];
 
   private readonly audio: ReplayAudio;
+  private readonly sounds: () => SoundPlayer | null;
   private player: ReplaySource | null = null;
   /** How long the whole run lasts, in seconds, summed from its frames once when it opens. */
   private total = 0;
@@ -92,8 +93,8 @@ export class ReplayViewer {
     this.screen = opts.screen;
     this.onVisibility = opts.onVisibility;
     this.muting = opts.muting;
-    const sounds = opts.sounds;
-    this.audio = new ReplayAudio(sounds ?? (() => null));
+    this.sounds = opts.sounds ?? (() => null);
+    this.audio = new ReplayAudio(this.sounds);
 
     // Under the board, in the line the run's caption otherwise takes: a head that says what is
     // playing and how far it has got, and the transport under it. No hint line — the keys are on
@@ -241,6 +242,9 @@ export class ReplayViewer {
     // moving the same way. Without this, scrubbing forward fires every sound it skipped over.
     this.audio.reset();
     this.player.seek(frame);
+    // Scrubbed onto a dead board, it is grey already: the wipe plays only for a run played to
+    // its end, and silently skipping it is what a seek past anything else does too.
+    this.screen.sweep.jumpTo(this.player.game.canvas);
     this.draw();
   }
 
@@ -261,7 +265,8 @@ export class ReplayViewer {
 
     // Clamped for the same reason the game loop clamps: a tab that was hidden for a minute
     // should resume, not fast-forward through the run.
-    this.budget += Math.min(now - this.last, 250) * this.speed;
+    const elapsed = Math.min(now - this.last, 250) * this.speed;
+    this.budget += elapsed;
     this.last = now;
 
     let guard = 100_000;
@@ -275,9 +280,13 @@ export class ReplayViewer {
     // Here rather than in draw(), which seek() also calls: a seek is the one moment that must
     // stay silent, and it draws like any other frame.
     this.audio.follow(player.game);
+    const wiped = this.screen.sweep.follow(player.game.canvas, elapsed);
+    for (let i = 0; i < wiped; i++) this.sounds()?.playWipeColumn();
 
     this.draw();
-    if (player.done) this.pause();
+    // Not at the last frame but once the wipe has finished with it: a run ends in a death, and
+    // the death is the part of the run that still moves after the tape runs out.
+    if (player.done && this.screen.sweep.settled(player.game.canvas)) this.pause();
     else this.raf = requestAnimationFrame(this.tick);
   };
 
