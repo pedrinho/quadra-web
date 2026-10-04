@@ -17,14 +17,22 @@ concurrency:
 
 jobs:
   deploy:
+    # A push, not a pull request: CI runs on those too, and `branches: [main]` above matches the
+    # branch the run came from, so a fork's PR from a branch it calls `main` would pass that filter
+    # and, given the checkout below, have its own code deployed with this repository's secrets.
     if: >
       github.event_name == 'workflow_dispatch' ||
-      github.event.workflow_run.conclusion == 'success'
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push')
     runs-on: ubuntu-latest
     environment: production
 
     steps:
+      # The commit CI passed, not whatever main points at by now: after two quick pushes the first
+      # green run would otherwise ship the second commit while its own tests are still going.
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - uses: actions/setup-node@v4
         with:
@@ -46,8 +54,9 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
+      # The commit goes on the deployment so `wrangler deployments list` says what is live.
       - name: Deploy the Worker
-        run: npx wrangler deploy
+        run: npx wrangler deploy --message "$(git rev-parse --short HEAD)"
         working-directory: server
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
