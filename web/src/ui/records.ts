@@ -4,16 +4,16 @@
  * Licensed under the GNU LGPL v2.1 or later. See LICENSE at the repo root.
  *
  * A row is not a score. It is the recording of a run, and the number shown is what the *server*
- * reached when it played those inputs back — the client never got to say. So every row carries a
- * *verify* control: it fetches the recording, re-simulates it here, and reports the frames, the
- * milliseconds and the state hash it arrived at. That is the whole claim of this port, made
- * checkable in one press rather than asserted in a paragraph, and now it is checkable against
- * somebody else's run rather than only your own.
+ * reached when it played those inputs back — the client never got to say. So the one control a
+ * row carries is *watch*: it fetches the recording and hands it to the viewer, which re-simulates
+ * it on the board beside the list, through the engine the game is played with. That is the whole
+ * claim of this port, shown rather than asserted, and now against somebody else's run rather than
+ * only your own.
  */
 
 import { TICK_MS } from '../engine/game.js';
-import { verify } from '../replay/verify.js';
 import { apiMessage, isUnreachable, type Api, type BoardRun } from '../api.js';
+import { formatDuration } from './format.js';
 
 export interface RecordsOptions {
   list: HTMLElement;
@@ -67,65 +67,14 @@ export class Records {
       span('detail', detail(run)),
     );
 
-    const verdict = document.createElement('p');
-    verdict.className = 'verdict';
-    verdict.hidden = true;
-
+    // A span of its own for one button, because `margin-left: auto` on it is what holds the
+    // control against the right edge of the row.
     const actions = document.createElement('span');
     actions.className = 'row-actions';
-    actions.append(
-      button('Watch', () => this.opts.onWatch(run)),
-      button('Verify', (el) => void this.check(run, el, verdict)),
-    );
+    actions.append(button('Watch', () => this.opts.onWatch(run)));
 
-    li.append(actions, verdict);
+    li.append(actions);
     return li;
-  }
-
-  /** Fetch the row's recording and re-simulate it in front of whoever pressed it. */
-  private async check(
-    run: BoardRun,
-    trigger: HTMLButtonElement,
-    verdict: HTMLElement,
-  ): Promise<void> {
-    verdict.hidden = false;
-    verdict.dataset['state'] = '';
-    verdict.textContent = 'Fetching the recording…';
-    trigger.disabled = true;
-
-    const tape = await this.opts.api.tape(run.id);
-    if (!tape.ok) {
-      trigger.disabled = false;
-      verdict.dataset['state'] = 'bad';
-      verdict.textContent = `Could not fetch the recording: ${apiMessage(tape)}`;
-      return;
-    }
-
-    const started = performance.now();
-    const result = verify(tape.bytes);
-    const took = performance.now() - started;
-    trigger.disabled = false;
-
-    if (!result.ok) {
-      verdict.dataset['state'] = 'bad';
-      verdict.textContent = `Does not verify: ${result.code} at frame ${result.frame}.`;
-      return;
-    }
-    if (result.score !== run.score) {
-      // The tape is valid but this engine no longer reaches the score the board is showing —
-      // exactly the failure this design exists to catch, so it is reported rather than smoothed
-      // over. In practice it means the browser and the server are not running the same build.
-      verdict.dataset['state'] = 'bad';
-      verdict.textContent =
-        `Replays to ${result.score.toLocaleString()}, not ${run.score.toLocaleString()}. ` +
-        'This browser and the board do not agree on the engine.';
-      return;
-    }
-
-    verdict.dataset['state'] = 'ok';
-    verdict.textContent =
-      `Re-simulated ${result.frames.toLocaleString()} frames in ${took.toFixed(1)} ms · ` +
-      `${result.score.toLocaleString()} points · ${result.stateHash}`;
   }
 }
 
@@ -142,12 +91,6 @@ function detail(run: BoardRun): string {
   return parts.filter(Boolean).join(' · ');
 }
 
-export function formatDuration(seconds: number): string {
-  const m = Math.floor(seconds / 60);
-  const s = Math.floor(seconds % 60);
-  return `${m}:${String(s).padStart(2, '0')}`;
-}
-
 function span(className: string, text: string): HTMLElement {
   const el = document.createElement('span');
   el.className = className;
@@ -155,11 +98,11 @@ function span(className: string, text: string): HTMLElement {
   return el;
 }
 
-function button(label: string, onClick: (el: HTMLButtonElement) => void): HTMLButtonElement {
+function button(label: string, onClick: () => void): HTMLButtonElement {
   const el = document.createElement('button');
   el.type = 'button';
   el.className = 'link';
   el.textContent = label;
-  el.addEventListener('click', () => onClick(el));
+  el.addEventListener('click', onClick);
   return el;
 }

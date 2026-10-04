@@ -61,8 +61,13 @@ export class GameView {
     this.els.chain.textContent = String(this.bestChain);
   }
 
-  /** A word over the board — paused, or what happened to the run that just ended. */
-  setState(headline: string, detail = ''): void {
+  /**
+   * A word over the board — paused, or what happened to the run that just ended.
+   *
+   * `link` is how a finished run reaches the board it landed on: the records live on their own
+   * page now, so this is the one place that can carry someone there with the row in hand.
+   */
+  setState(headline: string, detail = '', link?: { href: string; text: string }): void {
     this.els.state.replaceChildren();
     const strong = document.createElement('strong');
     if (this.font) {
@@ -85,6 +90,13 @@ export class GameView {
       const span = document.createElement('span');
       span.textContent = detail;
       this.els.state.append(span);
+    }
+    if (link) {
+      const anchor = document.createElement('a');
+      anchor.className = 'link';
+      anchor.href = link.href;
+      anchor.textContent = link.text;
+      this.els.state.append(anchor);
     }
     this.els.state.hidden = false;
   }

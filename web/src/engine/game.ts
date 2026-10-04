@@ -8,7 +8,8 @@
 
 import { Executor, Overmind } from './modules.js';
 import { Canvas, groupsFromBindings, type Action, type InputSink } from './canvas.js';
-import { PlayerNormal, type PlayerEnv } from './player.js';
+import { PlayerNormal, type DemoInput, type PlayerEnv } from './player.js';
+import { CURRENT_NET_VERSION } from './net-version.js';
 import { DEFAULT_SENSITIVITY } from './sensitivity.js';
 import type { SoundEvent } from './sound-events.js';
 import type { Notice } from './notices.js';
@@ -93,6 +94,14 @@ export interface GameOptions {
   /** The grouping those bindings collapse to. What a recording carries, since the simulation
    *  never sees a key code. Applied after `keys` when both are given. */
   keyGroups?: readonly number[] | Uint8Array;
+  /** Protocol version to play by. Defaults to `CURRENT_NET_VERSION`; only a 1998 demo lowers it. */
+  netVersion?: number;
+  /**
+   * Take this frame's input from a recorded byte stream instead of the keyboard —
+   * `Player_process_key::playback_control`, source/player.cc:284-296. Set only when watching a
+   * 1998 `.rec`; a live game and a tape replay both leave it undefined and go through key state.
+   */
+  demo?: DemoInput;
 }
 
 /**
@@ -129,6 +138,8 @@ export class Game {
       continuous = true,
       keys,
       keyGroups,
+      netVersion = CURRENT_NET_VERSION,
+      demo,
     } = opts;
 
     this.canvas = new Canvas(seed);
@@ -149,6 +160,8 @@ export class Game {
       paused: false,
       sounds: [],
       notices: [],
+      netVersion,
+      ...(demo ? { demo } : {}),
     };
 
     // Read back rather than echo the arguments: the canvas has already normalised the seed to

@@ -13,14 +13,49 @@
  * is doing; on a 144 Hz screen a 60 fps recording still plays at the speed it was played.
  */
 
+import type { Game } from '../engine/game.js';
 import { TICK_MS } from '../engine/game.js';
 import { TapePlayer } from '../replay/playback.js';
 import type { Tape } from '../replay/tape.js';
 import type { Screen } from '../render/screen.js';
+import { ReplayAudio } from '../audio/replay-audio.js';
+import type { SoundPlayer } from '../audio/sound-player.js';
+
+/**
+ * Something the transport can drive: a game, a position in it, and a way to move.
+ *
+ * Both `TapePlayer` and `RecPlayer` are one. The viewer deliberately knows nothing about which
+ * it has — a tape and a 1998 `.rec` are different files recording different things, but by the
+ * time either reaches here it is a re-simulation being stepped, and there is nothing left for
+ * the scrubber, the speed control or the sound to tell apart.
+ */
+export interface ReplaySource {
+  readonly game: Game;
+  readonly index: number;
+  readonly length: number;
+  readonly done: boolean;
+  /** Cost of the frame at `index`, in 10 ms ticks — how long the viewer dwells on it. */
+  ticksAt(index: number): number;
+  step(): boolean;
+  seek(frame: number): void;
+}
 
 export interface ReplayViewerOptions {
   host: HTMLElement;
   screen: Screen;
+  /**
+   * The sound to play a watched run through, read lazily because the bank loads after the
+   * viewer is built. Omitted, a replay is silent and its queue is still drained.
+   */
+  sounds?: () => SoundPlayer | null;
+  /**
+   * Whether sound is currently off, and how to turn it on and off — the transport carries the
+   * control, the host owns the setting. Omitted, no control is shown.
+   */
+  muting?: {
+    isMuted: () => boolean;
+    toggle: () => void;
+  };
   /** Called when the viewer opens (true) and closes (false), so the host can pause and redraw. */
   onVisibility?: (open: boolean) => void;
 }
@@ -37,8 +72,11 @@ export class ReplayViewer {
   private readonly scrub: HTMLInputElement;
   private readonly readout: HTMLElement;
   private readonly speedButton: HTMLButtonElement;
+  private readonly muteButton: HTMLButtonElement | null;
+  private readonly muting: ReplayViewerOptions['muting'];
 
-  private player: TapePlayer | null = null;
+  private readonly audio: ReplayAudio;
+  private player: ReplaySource | null = null;
   private playing = false;
   private speed = 1;
   private budget = 0;
@@ -48,6 +86,9 @@ export class ReplayViewer {
   constructor(opts: ReplayViewerOptions) {
     this.screen = opts.screen;
     this.onVisibility = opts.onVisibility;
+    this.muting = opts.muting;
+    const sounds = opts.sounds;
+    this.audio = new ReplayAudio(sounds ?? (() => null));
 
     this.root = document.createElement('div');
     this.root.className = 'overlay replay';
@@ -79,9 +120,15 @@ export class ReplayViewer {
     const head = document.createElement('header');
     head.append(this.title, close);
 
+    // Sound that cannot be turned off from the page it is playing on is a defect, and the
+    // records page carries no settings panel — so the control lives with the transport.
+    this.muteButton = this.muting ? button('', () => this.toggleMute()) : null;
+    if (this.muteButton) this.muteButton.className = 'mute';
+
     const transport = document.createElement('div');
     transport.className = 'transport-row';
     transport.append(this.playButton, this.scrub, this.speedButton);
+    if (this.muteButton) transport.append(this.muteButton);
 
     const hint = document.createElement('div');
     hint.className = 'hint';
@@ -101,9 +148,26 @@ export class ReplayViewer {
     return !this.root.hidden;
   }
 
+  /** The level the watched run has reached, or 0 with nothing open. */
+  get level(): number {
+    return this.player?.game.canvas.level ?? 0;
+  }
+
   /** Show `tape`, described by `label`, from the beginning. */
   show(tape: Tape, label: string): void {
-    this.player = new TapePlayer(tape, { checkpoints: true });
+    this.showSource(new TapePlayer(tape, { checkpoints: true }), label);
+  }
+
+  /**
+   * Show anything steppable, described by `label`, from the beginning.
+   *
+   * The seam a 1998 `.rec` arrives through — it is not a tape and is never made into one, so it
+   * cannot come in above. See replay/rec.ts.
+   */
+  showSource(source: ReplaySource, label: string): void {
+    this.player = source;
+    // A fresh game arrives with the queue its construction filled, as a live one does.
+    this.audio.reset();
     this.title.textContent = label;
     this.scrub.max = String(this.player.length);
     this.scrub.value = '0';
@@ -156,8 +220,16 @@ export class ReplayViewer {
 
   seek(frame: number): void {
     if (!this.player) return;
+    // Said out loud, because a forward seek is indistinguishable from playing: same game, clock
+    // moving the same way. Without this, scrubbing forward fires every sound it skipped over.
+    this.audio.reset();
     this.player.seek(frame);
     this.draw();
+  }
+
+  private toggleMute(): void {
+    this.muting?.toggle();
+    this.render();
   }
 
   private cycleSpeed(): void {
@@ -177,11 +249,15 @@ export class ReplayViewer {
 
     let guard = 100_000;
     while (!player.done && guard-- > 0) {
-      const cost = (player.tape.frames[player.index]?.ticks ?? 0) * TICK_MS;
+      const cost = player.ticksAt(player.index) * TICK_MS;
       if (cost > this.budget) break;
       this.budget -= cost;
       player.step();
     }
+
+    // Here rather than in draw(), which seek() also calls: a seek is the one moment that must
+    // stay silent, and it draws like any other frame.
+    this.audio.follow(player.game);
 
     this.draw();
     if (player.done) this.pause();
@@ -200,6 +276,12 @@ export class ReplayViewer {
     if (!player) return;
     this.playButton.textContent = this.playing ? '❚❚' : '▶';
     this.speedButton.textContent = `${this.speed}×`;
+    if (this.muteButton && this.muting) {
+      const muted = this.muting.isMuted();
+      this.muteButton.textContent = muted ? '🔇' : '🔊';
+      this.muteButton.setAttribute('aria-label', muted ? 'Unmute' : 'Mute');
+      this.muteButton.setAttribute('aria-pressed', String(muted));
+    }
     this.scrub.value = String(player.index);
     const seconds = (player.game.ticks * TICK_MS) / 1000;
     this.readout.textContent =

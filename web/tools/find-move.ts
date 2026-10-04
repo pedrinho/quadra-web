@@ -15,6 +15,7 @@ import { boardToAscii, PLAY_LEFT, PLAY_TOP } from '../src/engine/board.js';
 import { parseDumps, applyDumpRows } from '../src/engine/dump.js';
 import { Executor, Overmind } from '../src/engine/modules.js';
 import { PlayerStamp, type PlayerEnv } from '../src/engine/player.js';
+import { CURRENT_NET_VERSION } from '../src/engine/net-version.js';
 import { PIECE_NAMES, PIECES } from '../src/engine/pieces.js';
 
 function load(path: string): Canvas {
@@ -46,7 +47,7 @@ function attempt(before: Canvas, piece: number, rot: number, col: number) {
   bloc.calcXY();
 
   const overmind = new Overmind();
-  const env: PlayerEnv = { overmind, videoFrame: 0, levelUp: true, paused: false, sounds: [], notices: [] };
+  const env: PlayerEnv = { overmind, videoFrame: 0, levelUp: true, paused: false, sounds: [], notices: [], netVersion: CURRENT_NET_VERSION };
   const ex = new Executor();
   ex.add(new PlayerStamp(c, env));
   overmind.start(ex);

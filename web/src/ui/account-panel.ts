@@ -106,8 +106,9 @@ export class AccountPanel {
   /**
    * Open straight onto a link that arrived by mail.
    *
-   * Both links land on the page as a query parameter rather than on a route of their own, so
-   * there is still exactly one document and the game is already loading behind the panel.
+   * Both links land on a page as a query parameter rather than on a route of their own, so no
+   * route has to exist for them and whatever that page shows is already loading behind the
+   * panel. They point at `/`, but either page can honour one — see `readMailLink`.
    */
   openFromLink(kind: 'verify' | 'reset', token: string): void {
     this.token = token;

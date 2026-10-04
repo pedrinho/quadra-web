@@ -30,5 +30,10 @@ export const TAPE_FORMAT_VERSION = 1;
  * DAS, the input gate, the RNG), bump `SIM_VERSION` too and decide what happens to stored
  * tapes. If it cannot (a comment, a rename, a type), leave `SIM_VERSION` alone. Either way,
  * paste the digest the test prints in here.
+ *
+ * Last answered for `.rec` playback (net_version 20): **no**. Every branch it added is behind
+ * `netVersion < MODERN_RULES_FROM` or a demo byte source, and both default to what this build
+ * already did — which `test/verify.test.ts` and `test/demo.test.ts` still agreeing is the
+ * evidence for. `SIM_VERSION` stayed 1 and no stored recording moved.
  */
-export const SIM_SOURCE_HASH = '208e21cb265fa324';
+export const SIM_SOURCE_HASH = '527e2f305723d419';

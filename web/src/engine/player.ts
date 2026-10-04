@@ -14,8 +14,22 @@ import { Bloc } from './bloc.js';
 import { COLS, PLAY_BOTTOM, ROWS, idx } from './board.js';
 import { clearFullLines, computeSupport, dropUnsupported } from './cascade.js';
 import { giveLine } from './rules.js';
+import { MODERN_RULES_FROM } from './net-version.js';
 import type { SoundEvent } from './sound-events.js';
 import type { Notice } from './notices.js';
+
+/**
+ * A recorded input stream standing in for the keyboard — `Playback::get_byte`,
+ * source/recording.cc:184-196.
+ *
+ * Deliberately a pull, not a queue the engine drains: the original consumes exactly one byte per
+ * `Player_process_key::step` and none on any other frame, so *when* a byte is taken is part of
+ * the simulation. Anything that hands out bytes on a different schedule replays a different game.
+ */
+export interface DemoInput {
+  /** The next byte, or 0 once the stream is spent — as `get_byte` returns past the end. */
+  nextByte(): number;
+}
 
 /** Shared environment for the player modules. */
 export interface PlayerEnv {
@@ -39,6 +53,14 @@ export interface PlayerEnv {
   videoFrame: number;
   levelUp: boolean;
   paused: boolean;
+  /**
+   * Protocol version the rules are read at — `Game::net_version`, source/game.cc:595-600.
+   * `CURRENT_NET_VERSION` for everything this port plays; 20 for a 1998 `.rec` demo, which
+   * changes the piece generator and three scoring terms. See `game.ts`.
+   */
+  netVersion: number;
+  /** Set only when replaying a 1998 demo: input comes from here instead of key state. */
+  demo?: DemoInput;
 }
 
 /** Base for every player module: shared movement helpers and the per-frame housekeeping. */
@@ -189,7 +211,12 @@ export class PlayerGetNext extends PlayerBase {
     c.next3 = c.next2;
     c.next2 = c.next;
     // Uniform mod 7. No bag, no history, no rerolls — four S pieces in a row is legal.
-    const theNext = c.rnd.rnd() % 7;
+    //
+    // Which generator, though, is a rule of the protocol version (source/player.cc:267-271):
+    // below 23 the draw came from `crap_rnd`, whose state is effectively 32-bit. The two produce
+    // entirely different piece streams, so a 1998 demo replayed with `rnd` diverges on its first
+    // piece. See engine/random.ts.
+    const theNext = (this.env.netVersion >= MODERN_RULES_FROM ? c.rnd.rnd() : c.rnd.crapRnd()) % 7;
     c.next = new Bloc(theNext, -1, 7, 10);
   }
 }
@@ -230,6 +257,26 @@ export class PlayerProcessKey extends PlayerBase {
       b.bx -= inc;
     }
     return false;
+  }
+
+  /**
+   * `Player_process_key::playback_control` — source/player.cc:284-296.
+   *
+   * One byte, five bits, applied straight to the movement helpers. None of the machinery below
+   * runs: no sticky key state, no DAS counters, no rotate-on-release, no wall kick, and no
+   * input-sampling gate. A 1998 demo is a list of moves that were *made*, not of keys that were
+   * held, which is the only reason it can be replayed exactly rather than approximated.
+   *
+   * The order is the original's and is load-bearing: a rotation is resolved against the column
+   * the piece is still in, and the drop happens before the sideways move.
+   */
+  private playbackControl(demo: DemoInput): void {
+    const r = demo.nextByte();
+    if (r & 8) this.rotateLeft();
+    if (r & 16) this.rotateRight();
+    if (r & 1) this.moveDown();
+    if (r & 2) this.moveLeft();
+    if (r & 4) this.moveRight();
   }
 
   private keyboardControl(): void {
@@ -329,7 +376,10 @@ export class PlayerProcessKey extends PlayerBase {
     if (!c.bloc) return;
 
     this.timeHeld++;
-    this.keyboardControl();
+    // source/player.cc:453-458. The branch is here, after `time_held`, so a demo frame costs the
+    // same as a played one.
+    if (this.env.demo) this.playbackControl(this.env.demo);
+    else this.keyboardControl();
 
     const b = c.bloc;
 
@@ -350,6 +400,25 @@ export class PlayerProcessKey extends PlayerBase {
     // Gravity. There is no lock delay: the moment the next step would collide, the piece
     // is stamped.
     if (c.collide(b.bx, this.calcBy(b.y + c.speed), b.rot)) {
+      // Before 23, placing a piece quickly was worth points on its own — source/player.cc:484-490,
+      // paid out in `Player_stamp` as `Packet_clientstampblock::score`. Version 23 dropped it, so
+      // this only ever fires under a 1998 demo.
+      //
+      // The original reads:
+      //
+      //     i = max(overmind.framecount - canvas->frame_start - 50, (unsigned int)0);
+      //     p.score = max(0, 100 - i) >> 1;
+      //
+      // and the first `max` does nothing at all. `framecount` and `frame_start` are both
+      // uint32_t (source/overmind.h:95, canvas.h:118), so a piece placed in under 50 frames
+      // wraps the subtraction to just under 2^32 — which is still greater than 0u — and then
+      // assigning it back to `int i` recovers the negative. What survives is `i = held - 50`,
+      // signed, and an award that peaks at 75 rather than the 50 the clamp appears to promise.
+      // Writing the "corrected" version instead costs ~1400 points over a four-minute run.
+      if (this.env.netVersion < MODERN_RULES_FROM) {
+        const held = this.env.overmind.framecount - c.frameStart;
+        c.score += Math.max(0, 150 - held) >> 1;
+      }
       this.exec(new PlayerStamp(c, this.env));
       return;
     }
@@ -427,6 +496,10 @@ export class PlayerCheckLine extends PlayerBase {
       c.complexity++;
       if (c.isClean()) {
         c.sendForClean = true;
+        // Before 23 the clean bonus was a flat 5000 paid right here, at the erase
+        // (source/player.cc:592-593); from 23 it scales with depth and is paid in `giveLine`
+        // instead. The two are mutually exclusive — see rules.ts.
+        if (this.env.netVersion < MODERN_RULES_FROM) c.score += 5000;
         // `check_clean` announces it here, at the erase — not with the score, which is still
         // a flash and a whole cascade away (source/player.cc:585-595).
         this.env.notices.push({ kind: 'clean' });
@@ -444,7 +517,7 @@ export class PlayerCheckLine extends PlayerBase {
       // Read before the call: give_line zeroes `depth` on its way out, and the award it
       // returns is the only place the full number for this move ever exists.
       const depth = c.depth;
-      const scoreAdd = giveLine(c, this.env.levelUp);
+      const scoreAdd = giveLine(c, this.env.levelUp, this.env.netVersion);
       // Two lines or more, as `i && enough` works out to in single player — see notices.ts.
       if (depth >= 2) this.env.notices.push({ kind: 'clear', depth, score: scoreAdd });
       if (c.level !== levelBefore) this.env.sounds.push({ kind: 'levelUp' });

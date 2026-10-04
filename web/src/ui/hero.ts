@@ -17,7 +17,7 @@ import type { Screen } from '../render/screen.js';
 import { TapePlayer } from '../replay/playback.js';
 import type { Tape } from '../replay/tape.js';
 import { verify } from '../replay/verify.js';
-import { formatDuration } from './records.js';
+import { formatDuration } from './format.js';
 
 export interface HeroElements {
   section: HTMLElement;
@@ -168,6 +168,13 @@ export class Hero {
       this.budget -= cost;
       player.step();
     }
+
+    // The attract loop is deliberately silent — it starts without a gesture, so the mixer would
+    // drop it anyway, and sound nobody asked for is hostile. But the queue is an output, and
+    // one nobody listens to grows for every tick of a loop that never ends. `verify.ts` drops
+    // it for the same reason.
+    player.game.drainSounds();
+
     this.draw();
     if (player.done) this.restingUntil = now + REST_MS;
   };

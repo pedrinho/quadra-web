@@ -24,6 +24,7 @@ import {
 } from '../src/engine/board.js';
 import { Executor, Overmind } from '../src/engine/modules.js';
 import { PlayerStamp, type PlayerEnv } from '../src/engine/player.js';
+import { CURRENT_NET_VERSION } from '../src/engine/net-version.js';
 import { assertWeldInvariant } from '../src/engine/cascade.js';
 import { PIECE_NAMES } from '../src/engine/pieces.js';
 import { formatDump } from '../src/engine/dump.js';
@@ -202,7 +203,7 @@ function run(scenario: Scenario, opts: Opts) {
     return;
   }
   const overmind = new Overmind();
-  const env: PlayerEnv = { overmind, videoFrame: 0, levelUp: true, paused: false, sounds: [], notices: [] };
+  const env: PlayerEnv = { overmind, videoFrame: 0, levelUp: true, paused: false, sounds: [], notices: [], netVersion: CURRENT_NET_VERSION };
 
   console.log('\nsetup');
   console.log(render(canvas, opts.height));

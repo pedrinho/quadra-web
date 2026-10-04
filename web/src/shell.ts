@@ -1,0 +1,300 @@
+/*
+ * The furniture both pages are built out of.
+ * Copyright (C) 2026 Quadra Web contributors
+ * Licensed under the GNU LGPL v2.1 or later. See LICENSE at the repo root.
+ *
+ * The site is two documents — the stage at `/` and the board at `/records` — and everything in
+ * here is what they have in common: the artwork in the masthead, the identity in its corner, the
+ * audio context, the settings, and the level backdrops a replay needs in order to be watched.
+ *
+ * Split out rather than shared by importing `main.ts`, because that entry hard-requires the
+ * stage's twenty-odd element ids and throws on the first one it cannot find. What belongs here is
+ * only what is true of any page; anything a single page needs stays in that page's entry.
+ */
+
+import { loadQimg, type QImage } from './render/qimg.js';
+import { cropPixels, isMenuInk, labelCanvas, toCanvas } from './render/lettering.js';
+import { Api, type Account } from './api.js';
+import { AccountPanel } from './ui/account-panel.js';
+import { APP_VERSION } from './version.js';
+import { createMixer, WebAudioMixer, type Mixer } from './audio/mixer.js';
+import { loadSoundBank, type SoundBuffer } from './audio/sound-bank.js';
+import { SoundPlayer } from './audio/sound-player.js';
+import { DEFAULT_VOLUME, type Settings } from './settings.js';
+
+/** Number of level backdrops. */
+export const LEVELS = 10;
+
+/* Coordinates in the menu artwork. The logo crop is measured off `debuto.qimg`; the label
+ * positions are the ones the original blits them at (source/menu.cc:1481-1519), which is what
+ * makes it possible to subtract the background from behind the lettering. */
+const WORDMARK = { x: 36, y: 6, width: 568, height: 92 };
+const PLAY_LABEL = { x: 160, y: 99 };
+/* The fourth item down the menu. The board has a page by the same name, so it uses the
+ * original's own word for it (source/menu.cc:1484). */
+const HIGHSCORES_LABEL = { x: 235, y: 225 };
+const SIGNATURE = { x: 0, y: 390 };
+
+/** An element a page cannot do without. Throws, so a broken document fails loudly. */
+export const el = <T extends HTMLElement>(id: string): T => {
+  const found = document.getElementById(id);
+  if (!found) throw new Error(`missing element #${id}`);
+  return found as T;
+};
+
+/** An element only some pages carry. */
+export const maybeEl = <T extends HTMLElement>(id: string): T | null =>
+  document.getElementById(id) as T | null;
+
+/** A cache of decoded artwork, so two callers asking for the same image fetch it once. */
+export function createImages(): (name: string) => Promise<QImage> {
+  const images = new Map<string, Promise<QImage>>();
+  return (name: string) => {
+    let pending = images.get(name);
+    if (!pending) {
+      pending = loadQimg(`assets/${name}.qimg`);
+      images.set(name, pending);
+    }
+    return pending;
+  };
+}
+
+/**
+ * A photograph from the game, laid in behind a section as texture.
+ *
+ * `rect` takes a part of it. The highscore screen has its own headings painted into the
+ * photograph, and a ground that says "Local highscores" behind a heading that already says
+ * Highscores reads as a mistake — so that section takes the fireworks below the lettering.
+ */
+export function paintGround(
+  canvas: HTMLCanvasElement,
+  art: QImage,
+  rect = { x: 0, y: 0, width: art.width, height: art.height },
+): void {
+  canvas.width = rect.width;
+  canvas.height = rect.height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  const pixels = cropPixels(art, rect.x, rect.y, rect.width, rect.height);
+  const image = ctx.createImageData(rect.width, rect.height);
+  image.data.set(pixels.rgba);
+  ctx.putImageData(image, 0, 0);
+}
+
+/**
+ * The lettering: the wordmark, the signature, and any label the page happens to carry.
+ *
+ * Every target is looked up optionally, so the same call serves both documents — the stage has
+ * play buttons and no heading, the board has a heading and no play buttons.
+ */
+export function paintLettering(image: (name: string) => Promise<QImage>): Promise<void> {
+  const version = maybeEl('version');
+  if (version) version.textContent = `port ${APP_VERSION}`;
+
+  return Promise.all([image('debuto'), image('debut0'), image('debut3'), image('debut8')]).then(
+    ([menu, play, highscores, mark]) => {
+      const wordmark = toCanvas(
+        cropPixels(menu, WORDMARK.x, WORDMARK.y, WORDMARK.width, WORDMARK.height),
+      );
+      // Airbrushed, not pixel art: let the browser scale it smoothly.
+      wordmark.style.imageRendering = 'auto';
+      document.querySelector('[data-crop="wordmark"]')?.prepend(wordmark);
+
+      // One canvas each: cloning a canvas element copies its size and not a pixel of its bitmap.
+      for (const button of document.querySelectorAll('button.play')) {
+        const label = labelCanvas(play, menu, PLAY_LABEL.x, PLAY_LABEL.y, isMenuInk);
+        label.className = 'sprite-art';
+        button.prepend(label);
+      }
+
+      const heading = document.querySelector('[data-sprite="highscores"]');
+      if (heading) {
+        const cut = labelCanvas(
+          highscores,
+          menu,
+          HIGHSCORES_LABEL.x,
+          HIGHSCORES_LABEL.y,
+          isMenuInk,
+        );
+        cut.className = 'sprite-art';
+        heading.prepend(cut);
+      }
+
+      const signature = labelCanvas(mark, menu, SIGNATURE.x, SIGNATURE.y);
+      signature.className = 'sprite-art';
+      document.querySelector('[data-sprite="signature"]')?.prepend(signature);
+    },
+  );
+}
+
+export interface Audio {
+  mixer: Mixer;
+  /** The context, so a caller can ask whether it has been allowed to start. Null without one. */
+  ctx: BaseAudioContext | null;
+  /** Read lazily: the bank loads asynchronously, so a value taken now would be null for good. */
+  sounds: () => SoundPlayer | null;
+  ready: Promise<void>;
+  /** Push the saved volume into the master gain. The only volume there is. */
+  applyVolume(settings: Settings): void;
+}
+
+/**
+ * Audio is optional: a browser without Web Audio, or a checkout where the bank has not been
+ * generated, must still leave the game fully playable and the replays watchable.
+ *
+ * Browsers will not start an audio context without a gesture, so one is listened for here. Until
+ * it arrives the mixer drops what it is asked to play rather than queueing it, which is also why
+ * the attract loop is silent whatever anyone wires to it.
+ */
+export function createAudio(): Audio {
+  const { mixer, ctx } = createMixer();
+  let player: SoundPlayer | null = null;
+
+  const ready = (async () => {
+    let bank: ReadonlyMap<string, SoundBuffer> = new Map();
+    if (ctx) {
+      try {
+        bank = await loadSoundBank('assets/sounds.qsnd', ctx);
+      } catch (err) {
+        console.warn('sound disabled:', err);
+      }
+    }
+    player = new SoundPlayer(bank, mixer);
+  })();
+
+  const unlock = () => {
+    if (mixer instanceof WebAudioMixer) void mixer.resume();
+  };
+  window.addEventListener('keydown', unlock);
+  window.addEventListener('pointerdown', unlock);
+
+  return {
+    mixer,
+    ctx,
+    sounds: () => player,
+    ready,
+    applyVolume(settings) {
+      if (mixer instanceof WebAudioMixer) mixer.setVolume(settings.volume);
+    },
+  };
+}
+
+/**
+ * The replay transport's sound control, over the one volume setting there is.
+ *
+ * A toggle rather than a second slider, and over the *saved* setting rather than a mute of its
+ * own, so a replay silenced here is still silent in the next game and on the other page.
+ */
+export function createMuting(
+  settings: Settings,
+  apply: () => void,
+): { isMuted: () => boolean; toggle: () => void } {
+  // Where the slider was, so unmuting returns there rather than to a default. Seeded from the
+  // setting so a page loaded at zero still unmutes to something audible.
+  let before = settings.volume || DEFAULT_VOLUME;
+  return {
+    isMuted: () => settings.volume === 0,
+    toggle: () => {
+      if (settings.volume === 0) {
+        settings.volume = before;
+      } else {
+        before = settings.volume;
+        settings.volume = 0;
+      }
+      apply();
+    },
+  };
+}
+
+/**
+ * The ten level backdrops are 307 KB each — raw palette indices, one byte a pixel — and waiting
+ * for all of them puts 3 MB in front of the first piece. Only the first level's is needed to
+ * start, so that is the only one anything waits for; the rest arrive while the game is being
+ * played or the replay watched, and `Screen.background` already falls back to the first while one
+ * is still in flight.
+ *
+ * The fallback is silent, though, and `Screen` caches the level it last drew — so a backdrop that
+ * lands after its level has begun needs someone to ask for a repaint. `onLate` is that someone.
+ */
+export function loadBackgrounds(
+  image: (name: string) => Promise<QImage>,
+  onLate: (level: number) => void,
+): { backgrounds: (QImage | undefined)[]; ready: Promise<void> } {
+  const backgrounds: (QImage | undefined)[] = new Array<QImage | undefined>(LEVELS);
+  const ready = image('fond0').then((img) => {
+    backgrounds[0] = img;
+  });
+  for (let i = 1; i < LEVELS; i++) {
+    void image(`fond${i}`).then((img) => {
+      backgrounds[i] = img;
+      onLate(i + 1);
+    });
+  }
+  return { backgrounds, ready };
+}
+
+export interface Identity {
+  account: AccountPanel;
+  paint(who: Account | null): void;
+}
+
+/** The Sign in button and the panel behind it, in the masthead of both pages. */
+export function createIdentity(opts: {
+  api: Api;
+  onAccount: (who: Account | null) => void;
+  onVisibility?: (open: boolean) => void;
+}): Identity {
+  const button = el<HTMLButtonElement>('account');
+
+  const paint = (who: Account | null): void => {
+    button.textContent = who ? who.displayName : 'Sign in';
+    button.dataset['state'] = who ? (who.verified ? 'verified' : 'unverified') : 'out';
+    document.body.classList.toggle('is-signed-in', who !== null);
+  };
+
+  const account = new AccountPanel({
+    host: document.body,
+    api: opts.api,
+    onAccount: (who) => {
+      paint(who);
+      opts.onAccount(who);
+    },
+    ...(opts.onVisibility ? { onVisibility: opts.onVisibility } : {}),
+  });
+
+  button.addEventListener('click', () => account.show());
+  return { account, paint };
+}
+
+/**
+ * Both mailed links land on a page as a query parameter rather than on a route of their own, so
+ * there is no route to add and the page is already loading behind the panel. The parameter is
+ * stripped once read: a confirmation link is single-use, and leaving it in the address bar would
+ * put it in history and in whatever gets shared from there.
+ */
+export function readMailLink(account: AccountPanel): void {
+  const params = new URLSearchParams(location.search);
+  for (const kind of ['verify', 'reset'] as const) {
+    const token = params.get(kind);
+    if (!token) continue;
+    params.delete(kind);
+    history.replaceState(null, '', location.pathname + stripped(params));
+    account.openFromLink(kind, token);
+    return;
+  }
+}
+
+/** Read a query parameter and take it back out of the address bar, as the mail links do. */
+export function takeParam(name: string): string | null {
+  const params = new URLSearchParams(location.search);
+  const value = params.get(name);
+  if (value === null) return null;
+  params.delete(name);
+  history.replaceState(null, '', location.pathname + stripped(params));
+  return value;
+}
+
+function stripped(params: URLSearchParams): string {
+  const rest = params.toString();
+  return rest ? `?${rest}` : '';
+}

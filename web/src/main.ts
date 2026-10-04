@@ -11,42 +11,29 @@
 import './styles.css';
 
 import { Game } from './engine/game.js';
-import { loadQimg, type QImage } from './render/qimg.js';
+import type { QImage } from './render/qimg.js';
 import { loadQfnt } from './render/font.js';
 import { Screen, PLAYFIELD_VIEW } from './render/screen.js';
-import { cropPixels, isMenuInk, labelCanvas, toCanvas } from './render/lettering.js';
 import { Keyboard } from './input/keyboard.js';
 import { loadSettings, saveSettings } from './settings.js';
 import { SettingsPanel, bindingsHelp } from './ui/settings-panel.js';
 import { ReplayViewer } from './ui/replay-viewer.js';
-import { Records } from './ui/records.js';
 import { Hero } from './ui/hero.js';
 import { GameView } from './ui/game-view.js';
-import { AccountPanel } from './ui/account-panel.js';
-import { Api, apiMessage, isUnreachable, type Account, type BoardRun } from './api.js';
+import { Api, apiMessage, isUnreachable } from './api.js';
 import { decodeTape } from './replay/tape.js';
 import { record, type TapeRecorder } from './replay/recorder.js';
-import { APP_VERSION } from './version.js';
-import { createMixer, WebAudioMixer } from './audio/mixer.js';
-import { loadSoundBank, type SoundBuffer } from './audio/sound-bank.js';
-import { SoundPlayer } from './audio/sound-player.js';
-
-const el = <T extends HTMLElement>(id: string): T => {
-  const found = document.getElementById(id);
-  if (!found) throw new Error(`missing element #${id}`);
-  return found as T;
-};
-
-const LEVELS = 10;
-/* Coordinates in the menu artwork. The logo crop is measured off `debuto.qimg`; the label
- * positions are the ones the original blits them at (source/menu.cc:1481-1519), which is what
- * makes it possible to subtract the background from behind the lettering. */
-const WORDMARK = { x: 36, y: 6, width: 568, height: 92 };
-const PLAY_LABEL = { x: 160, y: 99 };
-/* The fourth item down the menu. The page has a section by the same name, so it uses the
- * original's own word for it (source/menu.cc:1484). */
-const HIGHSCORES_LABEL = { x: 235, y: 225 };
-const SIGNATURE = { x: 0, y: 390 };
+import {
+  createAudio,
+  createIdentity,
+  createImages,
+  createMuting,
+  el,
+  loadBackgrounds,
+  paintGround,
+  paintLettering,
+  readMailLink,
+} from './shell.js';
 
 async function main(): Promise<void> {
   const boardEl = el<HTMLCanvasElement>('screen');
@@ -56,105 +43,23 @@ async function main(): Promise<void> {
   if (!ctx) throw new Error('could not get a 2d context');
   ctx.imageSmoothingEnabled = false;
 
-  const images = new Map<string, Promise<QImage>>();
-  const image = (name: string): Promise<QImage> => {
-    let pending = images.get(name);
-    if (!pending) {
-      pending = loadQimg(`assets/${name}.qimg`);
-      images.set(name, pending);
-    }
-    return pending;
-  };
-
-  el('version').textContent = `port ${APP_VERSION}`;
+  const image = createImages();
 
   /* Type first. The page is already painted by the time this runs; what these add is the
    * lettering, which is the one thing that cannot be done with a web font. */
   const font = await loadQfnt('assets/font.qfnt');
 
-  void Promise.all([
-    image('debuto'),
-    image('debut0'),
-    image('debut3'),
-    image('debut8'),
-  ]).then(([menu, play, highscores, mark]) => {
-    const wordmark = toCanvas(
-      cropPixels(menu, WORDMARK.x, WORDMARK.y, WORDMARK.width, WORDMARK.height),
-    );
-    // Airbrushed, not pixel art: let the browser scale it smoothly.
-    wordmark.style.imageRendering = 'auto';
-    document.querySelector('[data-crop="wordmark"]')?.prepend(wordmark);
-
-    // One canvas each: cloning a canvas element copies its size and not a pixel of its bitmap.
-    for (const button of document.querySelectorAll('button.play')) {
-      const label = labelCanvas(play, menu, PLAY_LABEL.x, PLAY_LABEL.y, isMenuInk);
-      label.className = 'sprite-art';
-      button.prepend(label);
-    }
-
-    const heading = labelCanvas(
-      highscores,
-      menu,
-      HIGHSCORES_LABEL.x,
-      HIGHSCORES_LABEL.y,
-      isMenuInk,
-    );
-    heading.className = 'sprite-art';
-    document.querySelector('[data-sprite="highscores"]')?.prepend(heading);
-
-    const signature = labelCanvas(mark, menu, SIGNATURE.x, SIGNATURE.y);
-    signature.className = 'sprite-art';
-    document.querySelector('[data-sprite="signature"]')?.prepend(signature);
-  });
+  void paintLettering(image);
   void image('multi').then((art) => paintGround(el<HTMLCanvasElement>('ground'), art));
-  /* Its two headings are painted in at y 15-30 and y 225-240; everything below is fireworks. */
-  void image('hscore').then((art) =>
-    paintGround(el<HTMLCanvasElement>('records-ground'), art, {
-      x: 0,
-      y: 270,
-      width: 640,
-      height: 210,
-    }),
-  );
 
-  /*
-   * The ten level backdrops are 307 KB each — raw palette indices, one byte a pixel — and waiting
-   * for all of them put 3 MB in front of the first piece. Only the first level's is needed to
-   * start, so that is the only one anything waits for; the rest arrive while the game is being
-   * played, and `Screen.background` already falls back to the first while one is still in flight.
-   *
-   * The fallback is silent, though, and `Screen` caches the level it last drew — so a backdrop
-   * that lands after its level has begun needs someone to ask for a repaint, or the player
-   * finishes level 4 looking at level 1.
-   */
-  const backgrounds: (QImage | undefined)[] = new Array<QImage | undefined>(LEVELS);
-  const backgroundsReady = image('fond0').then((img) => {
-    backgrounds[0] = img;
+  const { backgrounds, ready: backgroundsReady } = loadBackgrounds(image, (level) => {
+    if (game && game.canvas.level === level) screen.invalidate();
   });
-  for (let i = 1; i < LEVELS; i++) {
-    void image(`fond${i}`).then((img) => {
-      backgrounds[i] = img;
-      if (game && game.canvas.level - 1 === i) screen.invalidate();
-    });
-  }
   let pauseBadge: QImage | null = null;
   void image('gamepaus').then((img) => (pauseBadge = img));
 
-  // Audio is optional: a browser without Web Audio, or a checkout where the bank has not been
-  // generated, must still leave the game fully playable.
-  const { mixer, ctx: audioCtx } = createMixer();
-  let sounds: SoundPlayer | null = null;
-  const soundsReady = (async () => {
-    let bank: ReadonlyMap<string, SoundBuffer> = new Map();
-    if (audioCtx) {
-      try {
-        bank = await loadSoundBank('assets/sounds.qsnd', audioCtx);
-      } catch (err) {
-        console.warn('sound disabled:', err);
-      }
-    }
-    sounds = new SoundPlayer(bank, mixer);
-  })();
+  const audio = createAudio();
+  const { sounds } = audio;
 
   const screen = new Screen(ctx, backgrounds, font);
   const settings = loadSettings();
@@ -225,30 +130,20 @@ async function main(): Promise<void> {
     onVisibility: onOverlay,
   });
 
-  const account = new AccountPanel({
-    host: document.body,
+  const identity = createIdentity({
     api,
-    onAccount: (who) => {
-      paintAccount(who);
-      void records.refresh();
+    onAccount: () => {
       // "The record to beat" is somebody's now, so who is looking changes what is highlighted.
       if (!playing) void startAttract();
     },
     onVisibility: onOverlay,
   });
 
-  const accountButton = el<HTMLButtonElement>('account');
-  accountButton.addEventListener('click', () => account.show());
-
-  function paintAccount(who: Account | null): void {
-    accountButton.textContent = who ? who.displayName : 'Sign in';
-    accountButton.dataset['state'] = who ? (who.verified ? 'verified' : 'unverified') : 'out';
-    document.body.classList.toggle('is-signed-in', who !== null);
-  }
-
   const viewer = new ReplayViewer({
     host: document.body,
     screen,
+    sounds,
+    muting: createMuting(settings, applySettings),
     onVisibility: (open) => {
       document.body.classList.toggle('is-watching', open);
       onOverlay(open);
@@ -273,24 +168,12 @@ async function main(): Promise<void> {
     }
   };
 
-  const records = new Records({
-    list: el('records-list'),
-    empty: el('records-empty'),
-    api,
-    onWatch: (run: BoardRun) => {
-      void api.tape(run.id).then((res) => {
-        if (res.ok) watch(res.bytes, `${run.player} · ${run.score.toLocaleString()}`);
-      });
-    },
-  });
-  void records.refresh();
-
   function applySettings(): void {
     saveSettings(settings);
     game?.setSensitivity(settings.hSensitivity, settings.vSensitivity, settings.continuous);
     // Order matters: Keyboard pushes the bindings into the canvas, so its grouping wins.
     keyboard.setBindings(settings.keys);
-    if (mixer instanceof WebAudioMixer) mixer.setVolume(settings.volume);
+    audio.applyVolume(settings);
     el('keys').textContent = bindingsHelp(settings);
   }
   applySettings();
@@ -332,33 +215,44 @@ async function main(): Promise<void> {
     hero.show({ ...demo, bundled: true });
   };
 
-  /*
-   * Both mailed links land on the page as a query parameter rather than on a route of their own,
-   * so there is still exactly one document and the game is already loading behind the panel. The
-   * parameter is stripped once read: a confirmation link is single-use, and leaving it in the
-   * address bar would put it in history and in whatever gets shared from there.
-   */
-  const readMailLink = () => {
-    const params = new URLSearchParams(location.search);
-    for (const kind of ['verify', 'reset'] as const) {
-      const token = params.get(kind);
-      if (!token) continue;
-      params.delete(kind);
-      const rest = params.toString();
-      history.replaceState(null, '', location.pathname + (rest ? `?${rest}` : ''));
-      account.openFromLink(kind, token);
-      return;
-    }
-  };
-
   void api.refresh().then((who) => {
-    paintAccount(who);
-    readMailLink();
+    identity.paint(who);
+    readMailLink(identity.account);
   });
+
+  /*
+   * `?tape=<path>` opens a recording straight in the viewer, with the scrubber and the speed
+   * control the leaderboard rows get. Until this existed the only watchable tape was one the
+   * board was already serving, which made a recording that had not been submitted — a fresh one
+   * from tools/, a blob attached to a bug report — impossible to look at without editing code.
+   *
+   * Same-origin only, and deliberately so: the parameter is in a URL, which means anyone can
+   * hand you one, and resolving it against another host would turn the page into a fetcher for
+   * whoever wrote the link. A tape is also not trusted input once fetched — it goes through
+   * `watch`, which decodes inside a try and re-simulates rather than believing anything it says.
+   */
+  const watchTapeParam = async (): Promise<boolean> => {
+    const param = new URLSearchParams(location.search).get('tape');
+    if (!param) return false;
+    const url = new URL(param, location.href);
+    if (url.origin !== location.origin) {
+      console.warn('?tape= only opens recordings from this origin, not', url.origin);
+      return false;
+    }
+    const res = await fetch(url);
+    if (!res.ok) {
+      console.warn(`no recording at ${url.pathname}: ${res.status}`);
+      return false;
+    }
+    watch(new Uint8Array(await res.arrayBuffer()), url.pathname.split('/').pop() ?? 'a recording');
+    return true;
+  };
 
   const startAttract = async () => {
     await backgroundsReady;
     await showBestRun();
+    // The attract loop would be playing behind the viewer, which is work nobody can see.
+    if (await watchTapeParam()) return;
     if (!playing && !matchMedia('(prefers-reduced-motion: reduce)').matches) hero.start();
   };
   void startAttract();
@@ -372,7 +266,7 @@ async function main(): Promise<void> {
 
   const startGame = async () => {
     await backgroundsReady;
-    await soundsReady;
+    await audio.ready;
     hero.stop();
 
     // Ask for a seed if this run can count. If it cannot — signed out, unconfirmed, or the
@@ -416,7 +310,7 @@ async function main(): Promise<void> {
     // Discard anything queued during construction.
     fresh.drainSounds();
     fresh.drainNotices();
-    sounds?.playStart();
+    sounds()?.playStart();
     el('stage').scrollIntoView({ block: 'nearest' });
   };
 
@@ -459,11 +353,16 @@ async function main(): Promise<void> {
     grant = null;
 
     if (result.ok) {
+      // The board is its own page now, so the run cannot be shown landing on it from here.
+      // It is carried over instead: `?fresh=` is what highlights the row once there.
       view.setState(
         result.run.score.toLocaleString(),
         `verified · number ${result.rank} on the board · press R to play again`,
+        {
+          href: `/records?fresh=${encodeURIComponent(result.run.id)}`,
+          text: 'See it on the board',
+        },
       );
-      void records.refresh(result.run.id);
       return;
     }
 
@@ -488,10 +387,11 @@ async function main(): Promise<void> {
     if (!game.isOver) game.advance(delta);
     else if (!submitted) void submitRun();
 
-    if (sounds) {
+    const player = sounds();
+    if (player) {
       // The level picks the sample theme, as Canvas::change_level does in the original.
-      sounds.level = game.canvas.level;
-      sounds.play(game.drainSounds());
+      player.level = game.canvas.level;
+      player.play(game.drainSounds());
     }
 
     screen.scrollers?.follow(game);
@@ -514,8 +414,7 @@ async function main(): Promise<void> {
   el('hud-leave').addEventListener('click', leaveGame);
 
   window.addEventListener('keydown', (e) => {
-    if (mixer instanceof WebAudioMixer) void mixer.resume();
-    if (viewer.isOpen || account.isOpen) return;
+    if (viewer.isOpen || identity.account.isOpen) return;
     if (panel.isOpen) {
       if (e.code === 'Escape') {
         e.preventDefault();
@@ -537,12 +436,8 @@ async function main(): Promise<void> {
       game.paused = !game.paused;
       if (game.paused) view.setState('Paused', 'press P to carry on');
       else view.clearState();
-      sounds?.playPause();
+      sounds()?.playPause();
     }
-  });
-
-  window.addEventListener('pointerdown', () => {
-    if (mixer instanceof WebAudioMixer) void mixer.resume();
   });
 
   /* Dev hook: requestAnimationFrame is throttled to a stop in a background tab, so automated
@@ -559,14 +454,13 @@ async function main(): Promise<void> {
         return playing;
       },
       hero,
-      records,
       start: () => startGame(),
       leave: leaveGame,
       step(frames = 1) {
         if (!game) return null;
         for (let i = 0; i < frames; i++) game.stepFrame(1);
         if (game.isOver && !submitted) submitRun();
-        sounds?.play(game.drainSounds());
+        sounds()?.play(game.drainSounds());
         screen.scrollers?.follow(game);
         screen.draw(game.canvas);
         view.update(game);
@@ -581,28 +475,6 @@ async function main(): Promise<void> {
       release: (action: number) => game?.input(action, false),
     };
   }
-}
-
-/**
- * A photograph from the game, laid in behind a section as texture.
- *
- * `rect` takes a part of it. The highscore screen has its own headings painted into the
- * photograph, and a ground that says "Local highscores" behind a heading that already says
- * Highscores reads as a mistake — so that section takes the fireworks below the lettering.
- */
-function paintGround(
-  canvas: HTMLCanvasElement,
-  art: QImage,
-  rect = { x: 0, y: 0, width: art.width, height: art.height },
-): void {
-  canvas.width = rect.width;
-  canvas.height = rect.height;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return;
-  const pixels = cropPixels(art, rect.x, rect.y, rect.width, rect.height);
-  const image = ctx.createImageData(rect.width, rect.height);
-  image.data.set(pixels.rgba);
-  ctx.putImageData(image, 0, 0);
 }
 
 main().catch((err: unknown) => {

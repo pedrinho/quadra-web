@@ -77,6 +77,17 @@ export class TapePlayer {
     return this.index >= this.tape.frames.length;
   }
 
+  /**
+   * How many 10 ms ticks the frame at `index` runs, which is what it costs to play.
+   *
+   * A method rather than the viewer reaching into `tape.frames[i].ticks` itself, because a
+   * 1998 `.rec` has no per-frame schedule to reach into — see replay/rec-playback.ts. This is
+   * the one thing the two kinds of recording disagree about.
+   */
+  ticksAt(index: number): number {
+    return this.tape.frames[index]?.ticks ?? 0;
+  }
+
   /** Play one frame. Returns false at the end of the tape. */
   step(): boolean {
     const frame = this.tape.frames[this.index];

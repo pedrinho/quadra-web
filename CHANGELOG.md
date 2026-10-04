@@ -27,8 +27,8 @@ Quadra is online. The solo game is unchanged; what is new is everywhere it now g
   HttpOnly cookie, stored only as their digest, so signing out takes effect at once.
 - **A leaderboard that cannot be lied to.** Nothing submits a score: a finished game submits its
   recording, and the server derives the score by re-simulating it with the client's own engine —
-  imported, not reimplemented. Every row is therefore watchable, and the *Verify* control beside
-  it re-runs the recording in your browser and reports what it got.
+  imported, not reimplemented. Every row is therefore watchable: pressing *Watch* replays the
+  recording on the board beside the list, through the engine the game is played with.
 - **Server-issued seeds.** A ranked run asks for its seed first, bound to one player and one
   game. Restarting until the pieces fall kindly, submitting a run twice, and submitting somebody
   else's all stop working.
@@ -37,6 +37,27 @@ Quadra is online. The solo game is unchanged; what is new is everywhere it now g
   rising two pixels per tick up the well.
 - **A dev-server proxy** so `/v1` is same-origin in development too, and a deploy workflow gated
   behind CI.
+- **Watching the 1998 game's own recordings.** The board page opens a `.rec` — the format the
+  original wrote — and replays it. It is not converted into a tape and can never reach the
+  leaderboard: a tape is this simulation's proof of a score, and one minted from somebody else's
+  1998 file would be a claim this engine never made. It is only ever watched.
+
+  `Buk14clean.rec`, which ships with Quadra, replays here to **362179 points, 149 lines and
+  level 10** — the numbers written in its own trailer, recomputed from nothing but the seed and
+  27832 frames of keystrokes. That is a stronger statement than the oracle tests can make: it is
+  a stranger's run, recorded in 2000 by a program none of us has run, and the port reaches it
+  exactly. `web/test/rec.test.ts` pins it.
+
+  Playing one needs the rules the original gated on `net_version` below 23 (`web/src/engine/
+  net-version.ts`): the piece stream is drawn with `crap_rnd`, the cascade bonus is linear, the
+  clean bonus is a flat 5000 paid at the erase, and placing a piece quickly is worth up to 75
+  points — including the unsigned-underflow in `player.cc:484-490` that makes the cap 75 rather
+  than the 50 the code appears to promise. All of it is behind the version check, so `SIM_VERSION`
+  did not move and no stored recording did either.
+
+  Only the older single-player form plays. Seventeen of the eighteen demos upstream are in the
+  netcode packet format later versions recorded everything through — including solo runs, so the
+  refusal says "packet format", not "multiplayer".
 
 ### Changed
 
@@ -52,8 +73,30 @@ Quadra is online. The solo game is unchanged; what is new is everywhere it now g
 - **The local leaderboard.** Scores lived in `localStorage` under `quadra.runs.v1`; there is one
   board now and it is the online one. A guest can still play, and nothing is kept when they do.
 
+### Changed
+
+- **The board is its own page**, at `/records`, instead of a section you scroll past on the way
+  down the stage. A board is a thing you link someone to, and a section could not be linked,
+  reloaded into, or opened without the game loading behind it. The site is two documents now, so
+  a path matching no asset is a 404 rather than the home page with a 200. What both pages share —
+  the masthead artwork, the identity, the audio, the settings, the backdrops — is in `web/src/
+  shell.ts`; a finished run reaches its row through `/records?fresh=<id>`.
+- **The playfield is part of that page**, held on the left while the rows scroll past it on the
+  right, with the transport under it. Watching a run used to take the whole window: the board
+  appeared in a dimmed, blurred layer over the list it came from, so the row being watched, and
+  every row near it, was unreadable while it played. Narrow enough and the two stack, with the
+  board pinned under the masthead instead.
+
 ### Fixed
 
+- **Sound when a run is watched.** A replay queues sound exactly as live play does — it is the
+  same simulation — but neither the viewer nor the attract loop ever drained the queue, so every
+  recording on the board played silently, and the queue grew for every tick nobody listened to.
+  The viewer now has sound and a mute control beside the speed, over the one volume setting there
+  is. Seeking stays silent: `TapePlayer.seek` re-simulates, so the queue after a scrub holds
+  every event it passed over, and playing that fires a whole run at one instant. The attract loop
+  stays silent by choice — it starts before anyone has touched the page — but no longer
+  accumulates.
 - **The line-clear flash.** The port had the sixteen frames the original spends flashing a cleared
   row, and the sound that goes with them, but drew nothing in them — so a clear read as the rows
   vanishing, a pause with the stack hanging in mid-air, and then the fall. `Canvas` now carries

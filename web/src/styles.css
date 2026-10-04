@@ -471,6 +471,12 @@ button.link:hover {
 
 /* --- records -------------------------------------------------------------- */
 
+/* On its own document there is no stage above it, so the board carries the whole page. Without
+   a floor an empty board would leave the colophon riding up under the masthead. */
+.records.is-page {
+  min-height: calc(100vh - 220px);
+}
+
 .records,
 .how {
   max-width: var(--measure);
@@ -481,10 +487,12 @@ button.link:hover {
 /* The stage has a photograph behind it and everything below it had nothing, which is where the
    page used to fall apart. This is the highscore screen's own ground, treated exactly like
    `.stage-ground` so the two read as the same device. */
+/* `clip` rather than `hidden`: both clip the ground, but `hidden` makes this a scroll container,
+   and a sticky child of a container whose height is its own content never sticks to anything. */
 .records {
   position: relative;
   max-width: none;
-  overflow: hidden;
+  overflow: clip;
 }
 .section-ground {
   position: absolute;
@@ -500,6 +508,193 @@ button.link:hover {
   position: relative;
   max-width: var(--measure);
   margin-inline: auto;
+}
+
+/*
+ * The board page: playfield held on the left, rows scrolling past it on the right.
+ *
+ * Everything here is scoped to the document, because `.board`, `.overlay` and `.replay` are the
+ * stage's too and the stage still watches a replay the other way — full screen, dimmed, transport
+ * at the foot of the window.
+ *
+ * Sticky rather than fixed: it holds just as still, but it holds a column of its own, so no row
+ * can pass under it and no offset has to be measured by hand to keep them apart.
+ */
+/* A section's worth of air above the board would put the transport under the fold on a laptop the
+   first time a run is watched, before anything has been scrolled. */
+.page-records .records {
+  padding-top: var(--s-6);
+}
+
+/* Flex rather than a grid: in a grid the rail would have to span every row, and a spanning item
+   hands its height out to the rows it spans — which pushes the lede and the list apart by the
+   height of the board. */
+.page-records .section-inner {
+  display: flex;
+  align-items: flex-start;
+  gap: clamp(24px, 4vw, 56px);
+  /* A sticky child can only hold inside its own container, and here the rail is one of the two
+     things that set that container's height — so with a short list there is nothing for it to
+     hold *through*, and it scrolls away with the rows still on screen. A screenful of floor
+     gives it somewhere to be. */
+  min-height: 100vh;
+  /* Wider than `--measure`, which was sized for a text column standing alone. */
+  max-width: var(--frame);
+}
+.page-records .records-col {
+  flex: 1 1 auto;
+  /* Or a long name in a row would push the column wider than its share instead of folding. */
+  min-width: 0;
+}
+.page-records .rail {
+  flex: 0 0 auto;
+  /* Fixed, and only a little wider than the board at 1:1 (209px): left to itself the transport
+     is the widest thing in the rail and the list gets shoved right by a row of buttons, while a
+     column cut to the board exactly folds the transport into a tower six lines tall. The board
+     stays flush left inside it, on the same margin as the wordmark above it. */
+  width: 264px;
+  align-items: flex-start;
+  position: sticky;
+  /* Clear of the sticky masthead: 40px of wordmark inside var(--s-3) above and below it. */
+  top: calc(40px + var(--s-3) * 2 + var(--s-4));
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+/* Whole multiples only, for the reason `.board canvas#screen` gives — but the ceiling is lower
+   here, because the transport is under the board rather than at the foot of the window. */
+.page-records .rail canvas#screen {
+  height: 405px;
+}
+@media (min-height: 1100px) {
+  .page-records .rail {
+    width: 418px;
+  }
+  .page-records .rail canvas#screen {
+    height: 810px;
+  }
+}
+/* Under this even 1:1 and the transport together do not fit, and then fitting wins. */
+@media (max-height: 700px) {
+  .page-records .rail canvas#screen {
+    height: auto;
+    max-height: calc(100vh - 300px);
+  }
+}
+.page-records .rail-hint {
+  margin: 0;
+  color: var(--ink-quiet);
+  font: 400 var(--t-small) / 1.6 var(--mono);
+}
+/* While a run plays the transport carries its own hint, and two would be one too many. */
+.page-records .rail.is-playing .rail-hint {
+  display: none;
+}
+
+/* Opening a 1998 .rec. Below the hint, quiet: it is a side door, not what the page is for. */
+.page-records .rec-open {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s-2);
+}
+/* A label, not a button — it is the file input's, and clicking it is what opens the picker.
+   Styled to match `.overlay button` so the rail has one kind of control in it. */
+.page-records .rec-button {
+  font: 400 var(--t-detail) / 1.4 var(--sans);
+  color: var(--ink);
+  background: #ffffff0d;
+  border: 1px solid var(--rule);
+  padding: 5px 10px;
+  cursor: pointer;
+}
+.page-records .rec-button:hover {
+  background: #ffffff1a;
+  color: var(--chrome);
+}
+/* Keyboard reaches the input, not the label, so the ring has to be drawn from there. */
+.page-records #rec-file:focus-visible + .rec-button,
+.page-records .rec-button:focus-visible {
+  outline: 2px solid var(--glow-lit);
+  outline-offset: 2px;
+}
+.page-records .rec-note {
+  margin: 0;
+  color: var(--ink-quiet);
+  font: 400 var(--t-micro) / 1.5 var(--mono);
+}
+/* A refusal has to read as one — the note is otherwise the same grey as the invitation. */
+.page-records .rec-note.is-error {
+  color: var(--amber);
+}
+/* While a run plays the rail is the transport's, as with `.rail-hint` above. */
+.page-records .rail.is-playing .rec-open {
+  display: none;
+}
+/* Dragging a file anywhere over the page arms the whole document, so the rail says so. */
+.page-records.is-dropping .rec-open {
+  outline: 1px dashed var(--glow-lit);
+  outline-offset: var(--s-2);
+}
+
+/* The transport is not an overlay on this page: it is the rail's second row. */
+.page-records .rail .overlay.replay {
+  position: static;
+  display: block;
+  padding: 0;
+  overflow: visible;
+  pointer-events: auto;
+  z-index: auto;
+}
+.page-records .rail .overlay.replay[hidden] {
+  display: none;
+}
+.page-records .rail .replay .panel {
+  width: 100%;
+  padding: var(--s-3);
+  gap: var(--s-2);
+  background: var(--void-lift);
+  backdrop-filter: none;
+}
+/* A column as narrow as the board cannot hold the scrubber and four controls on one line, so the
+   scrubber takes a line of its own above them. */
+.page-records .rail .transport-row {
+  flex-wrap: wrap;
+}
+.page-records .rail .transport-row input[type='range'] {
+  order: -1;
+  flex: 1 1 100%;
+  min-width: 0;
+}
+.page-records .rail .overlay header {
+  flex-wrap: wrap;
+}
+
+/* Two columns cannot hold at phone width. Stacked, the board stays sticky at the top rather than
+   scrolling away — otherwise pressing Watch would play a run nobody can see. */
+@media (max-width: 880px) {
+  .page-records .section-inner {
+    flex-direction: column;
+    /* Cross axis is the width now, and `flex-start` on it would shrink both columns to their
+       content instead of letting the list have the page. */
+    align-items: stretch;
+  }
+  .page-records .rail {
+    width: auto;
+    top: calc(40px + var(--s-3) * 2);
+    margin-bottom: var(--s-6);
+    align-items: center;
+    /* Stacked, the rows pass *behind* the rail rather than beside it, so it needs a ground of
+       its own — the same one the masthead it hangs from is drawn on. */
+    padding-block: var(--s-3);
+    background: color-mix(in srgb, var(--void) 88%, transparent);
+    backdrop-filter: blur(8px);
+  }
+  /* The second place a fractional scale is allowed, and for the same reason as the first. */
+  .page-records .rail canvas#screen {
+    height: auto;
+    max-height: min(405px, 42vh);
+  }
 }
 
 /* "Highscores" is the original's own menu label, cut out of the artwork — 209x40, so 40px is 1:1
@@ -579,24 +774,6 @@ button.link:hover {
   margin-left: auto;
   gap: var(--s-4);
   align-items: center;
-}
-
-/* The verdict a row gives when it has re-simulated itself. */
-.record .verdict {
-  flex: 1 0 100%;
-  margin: 0;
-  padding-left: 2.2rem;
-  font: 400 var(--t-small) / 1.6 var(--mono);
-  color: var(--ink-quiet);
-}
-.record .verdict[data-state='ok'] {
-  color: var(--amber);
-}
-.record .verdict[data-state='bad'] {
-  color: var(--alarm);
-}
-.record .verdict[hidden] {
-  display: none;
 }
 
 .empty {
@@ -829,6 +1006,11 @@ button.link:hover {
 }
 .replay button.transport {
   min-width: 3em;
+}
+/* Square, so the glyph swapping between speaker and crossed speaker does not shift the row. */
+.replay button.mute {
+  min-width: 2.75em;
+  line-height: 1;
 }
 
 /* While a replay is up the page behind it should not compete. */

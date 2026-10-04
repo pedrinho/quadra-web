@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Records — Quadra, ported and provable</title>
+    <meta
+      name="description"
+      content="The Quadra leaderboard. Every row is a recording, verifiable in your own browser."
+    />
+
+    <!-- The two faces above the fold. The other weights can wait for the stylesheet.
+         crossorigin is required on font preloads even same-origin, or the fetch is made twice. -->
+    <link
+      rel="preload"
+      href="/assets/fonts/IBMPlexSans-Regular.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      href="/assets/fonts/IBMPlexMono-Regular.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+  </head>
+  <body class="page-records">
+    <header class="masthead">
+      <a class="wordmark" href="/" data-crop="wordmark"><span class="vh">Quadra</span></a>
+      <nav class="nav">
+        <a href="/">Play</a>
+        <a href="/records" aria-current="page">Records</a>
+        <a href="/#how">How it works</a>
+        <a href="https://github.com/pedrinho/quadra-web" rel="noreferrer">Source</a>
+        <button type="button" class="account" id="account" data-state="out">Sign in</button>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="records is-page" id="records">
+        <canvas class="section-ground" id="records-ground" aria-hidden="true"></canvas>
+
+        <div class="section-inner">
+          <!-- The playfield holds still on the left while the rows scroll past it, because a run
+               being watched and the row it came from are the same object seen twice. -->
+          <aside class="rail" id="rail">
+            <div class="board">
+              <canvas id="screen" width="209" height="405" aria-label="Quadra playfield"></canvas>
+            </div>
+            <p class="rail-hint" id="rail-hint">Pick a run and it plays here.</p>
+            <!-- The 1998 game recorded .rec files, and a lot of them survive. They are not tapes
+                 and never become tapes — nothing here can reach the board — but the engine can
+                 replay one, so the page lets you drop one on it and watch. -->
+            <div class="rec-open" id="rec-open">
+              <!-- Input before label, so the focus ring can be drawn from `:focus-visible +`. -->
+              <input type="file" id="rec-file" accept=".rec" class="vh" />
+              <label class="rec-button" for="rec-file">Open a 1998 .rec demo</label>
+              <p class="rec-note" id="rec-note">Or drop one on this page. Old single-player form only.</p>
+            </div>
+          </aside>
+
+          <div class="records-col">
+            <h2 class="label" data-sprite="highscores"><span class="vh">Highscores</span></h2>
+            <p class="lede">
+              Every row here is the recording of a run, and the score beside it is what the server
+              reached when it played those inputs back — the game you played never got to say.
+              Press Watch and the board on the left replays it, through the same engine that
+              played it.
+            </p>
+            <ol class="records-list" id="records-list"></ol>
+            <p class="empty" id="records-empty">Loading the board…</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="colophon">
+      <a
+        class="signature"
+        href="https://github.com/quadra-game/quadra"
+        rel="noreferrer"
+        data-sprite="signature"
+        ><span class="vh">Ludus Design</span></a
+      >
+      <p>
+        <strong>Quadra was made by Ludus Design</strong>, © 1998–2000, and released as free
+        software. The rules, the artwork, the lettering and the sound on this page are theirs.
+        This is a translation of their work, not an original game, and it is not affiliated with
+        or endorsed by them.
+      </p>
+      <p class="facts">
+        LGPL-2.1-or-later ·
+        <a href="https://github.com/quadra-game/quadra" rel="noreferrer">upstream source</a> ·
+        <a href="https://github.com/pedrinho/quadra-web" rel="noreferrer">this port</a> ·
+        <span id="version"></span>
+      </p>
+    </footer>
+
+    <script type="module" src="/src/records.ts"></script>
+  </body>
+</html>

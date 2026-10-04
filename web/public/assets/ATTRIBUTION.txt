@@ -29,6 +29,14 @@ original pixels, arranged for a web page rather than for a 640x480 application w
 demo.qtape is not artwork. It is a recording of this port playing itself, produced by
 tools/record-demo.ts, and it is the property of this project.
 
+web/test/fixtures/Buk14clean.rec is neither. It is one of the demo recordings that ship with
+the upstream distribution, in the original game's own .rec format -- a run by a player calling
+themselves "BuK LaO", finishing on 362179 points and 149 lines. It is committed as a test
+fixture because replaying it is how this port proves it still plays the 1998 game: the file
+carries the score its player finished on, and test/rec.test.ts recomputes that score from
+nothing but the seed and the keystrokes. It is redistributed under the same LGPL-2.1-or-later
+licence as the rest of the distribution and is not altered in any way.
+
 They are redistributed under the same LGPL-2.1-or-later licence as the original. The full
 licence text ships with this project as LICENSE.
 

@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 import { createLogger, defineConfig, type ProxyOptions } from 'vite';
 
 const API = 'http://localhost:8787';
@@ -59,8 +60,23 @@ logger.error = (msg, options) => {
   inherited(msg, options);
 };
 
+/*
+ * Two documents, not one: the stage at `/` and the board at `/records`. A board is a thing you
+ * link someone to, and a section of a scrolling page cannot be linked, reloaded into, or served
+ * without the game loading behind it.
+ *
+ * Workers Assets serves `records.html` at `/records` on its own, so this is the only place the
+ * second page needs declaring.
+ */
+const page = (name: string) => fileURLToPath(new URL(name, import.meta.url));
+
 export default defineConfig({
   customLogger: logger,
   server: { port: 5173, proxy: { '/v1': api } },
-  build: { outDir: 'dist', emptyOutDir: true, target: 'es2022' },
+  build: {
+    outDir: 'dist',
+    emptyOutDir: true,
+    target: 'es2022',
+    rollupOptions: { input: { main: page('index.html'), records: page('records.html') } },
+  },
 });

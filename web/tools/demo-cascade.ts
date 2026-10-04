@@ -13,6 +13,7 @@ import { Canvas } from '../src/engine/canvas.js';
 import { boardFromAscii, boardToAscii, PLAY_HEIGHT } from '../src/engine/board.js';
 import { Executor, Overmind } from '../src/engine/modules.js';
 import { PlayerCheckLine, type PlayerEnv } from '../src/engine/player.js';
+import { CURRENT_NET_VERSION } from '../src/engine/net-version.js';
 import { assertWeldInvariant } from '../src/engine/cascade.js';
 
 function canvasFromAscii(rows: string[]): Canvas {
@@ -44,7 +45,7 @@ const canvas = canvasFromAscii(FIXTURE);
 console.log(render(canvas));
 
 const overmind = new Overmind();
-const env: PlayerEnv = { overmind, videoFrame: 0, levelUp: true, paused: false, sounds: [], notices: [] };
+const env: PlayerEnv = { overmind, videoFrame: 0, levelUp: true, paused: false, sounds: [], notices: [], netVersion: CURRENT_NET_VERSION };
 const executor = new Executor();
 executor.add(new PlayerCheckLine(canvas, env));
 overmind.start(executor);
