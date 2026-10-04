@@ -72,6 +72,26 @@ const submit = (cookie: string, grant: string, bytes: Uint8Array) =>
     headers: { 'content-type': 'application/octet-stream', 'x-quadra-grant': grant },
   });
 
+/**
+ * A run written straight into the table, for tests about the board rather than about submission.
+ * `hash` only has to differ between one player's runs: the same end state in the same number of
+ * frames is the same run, and the table refuses it twice.
+ */
+async function insertRun(playerEmail: string, score: number, frames: number, hash: string) {
+  await env.DB.prepare(
+    `INSERT INTO runs (id, player_id, grant_id, score, lines, level, frames, ticks,
+                       paused_ticks, sim_version, seed, state_hash, board_hash, started_at,
+                       verified_at, over, tape_key)
+     SELECT ?, id, NULL, ?, 9, 1, ?, 1, 0, 1, '1', ?, 'b', 0, ?, 1, 'k'
+       FROM players WHERE email_key = ?`,
+  )
+    .bind(newId(), score, frames, hash, Date.now(), playerEmail.toLowerCase())
+    .run();
+}
+
+const board = async (query = '') =>
+  (await call('GET', `/v1/leaderboard${query}`)).body['runs'] as Record<string, unknown>[];
+
 describe('the two spellings of a seed', () => {
   /*
    * A seed is an unsigned 64-bit quantity, and JavaScript has no unsigned 64-bit type. The
@@ -179,6 +199,8 @@ describe('submitting a run', () => {
     expect(run['frames']).toBe(DEMO_FRAMES);
     expect(run['over']).toBe(true);
     expect(res.body['rank']).toBe(1);
+    expect(res.body['best']).toBe(true);
+    expect(res.body['runRank']).toBe(1);
 
     // And what was stored is the same number, not the one anybody sent.
     const row = await env.DB.prepare('SELECT score, tape_key FROM runs').first<{
@@ -296,37 +318,67 @@ describe('submitting a run', () => {
 describe('reading the board', () => {
   it('ranks best first, and the shorter game when two scores tie', async () => {
     const ada = await registerVerified('ada@example.com', 'Ada');
+    const bob = await registerVerified('bob@example.com', 'Bob');
     await submit(ada, await grantFor('ada@example.com', tapeSeed()), tape());
+    await submit(bob, await grantFor('bob@example.com', tapeSeed()), tape());
+    await insertRun('bob@example.com', 9000, 500, 'h1');
+    await insertRun('ada@example.com', 9000, 400, 'h2');
 
-    // Two more rows, written straight in: this is about the ordering, not about submission.
-    await env.DB.prepare(
-      `INSERT INTO runs (id, player_id, grant_id, score, lines, level, frames, ticks,
-                         paused_ticks, sim_version, seed, state_hash, board_hash, started_at,
-                         verified_at, over, tape_key)
-       SELECT ?, id, NULL, ?, 9, 1, ?, 1, 0, 1, '1', ?, 'b', 0, ?, 1, 'k'
-         FROM players WHERE email_key = 'ada@example.com'`,
-    )
-      .bind(newId(), 9000, 500, 'h1', Date.now())
-      .run();
-    await env.DB.prepare(
-      `INSERT INTO runs (id, player_id, grant_id, score, lines, level, frames, ticks,
-                         paused_ticks, sim_version, seed, state_hash, board_hash, started_at,
-                         verified_at, over, tape_key)
-       SELECT ?, id, NULL, ?, 9, 1, ?, 1, 0, 1, '1', ?, 'b', 0, ?, 1, 'k'
-         FROM players WHERE email_key = 'ada@example.com'`,
-    )
-      .bind(newId(), 9000, 400, 'h2', Date.now())
-      .run();
-
-    const res = await call('GET', '/v1/leaderboard');
-    const runs = res.body['runs'] as Record<string, unknown>[];
-    expect(runs.map((r) => [r['score'], r['frames']])).toEqual([
-      [9000, 400],
-      [9000, 500],
-      [DEMO_SCORE, DEMO_FRAMES],
+    const runs = await board();
+    expect(runs.map((r) => [r['player'], r['score'], r['frames']])).toEqual([
+      ['Ada', 9000, 400],
+      ['Bob', 9000, 500],
     ]);
-    expect(runs[0]!['rank']).toBe(1);
-    expect(runs[0]!['player']).toBe('Ada');
+    expect(runs.map((r) => r['rank'])).toEqual([1, 2]);
+  });
+
+  it('keeps one row per player, and it is their best run', async () => {
+    const ada = await registerVerified('ada@example.com', 'Ada');
+    await registerVerified('bob@example.com', 'Bob');
+    await submit(ada, await grantFor('ada@example.com', tapeSeed()), tape());
+    await insertRun('ada@example.com', 9000, 500, 'h1');
+    await insertRun('ada@example.com', 9000, 400, 'h2');
+    await insertRun('bob@example.com', 5000, 400, 'h3');
+
+    const runs = await board();
+    expect(runs.map((r) => [r['player'], r['score'], r['frames']])).toEqual([
+      ['Ada', 9000, 400],
+      ['Bob', 5000, 400],
+    ]);
+  });
+
+  it('lists every run, every player\'s, on the board of every run', async () => {
+    const ada = await registerVerified('ada@example.com', 'Ada');
+    await registerVerified('bob@example.com', 'Bob');
+    await submit(ada, await grantFor('ada@example.com', tapeSeed()), tape());
+    await insertRun('ada@example.com', 9000, 500, 'h1');
+    await insertRun('ada@example.com', 9000, 400, 'h2');
+    await insertRun('bob@example.com', 5000, 400, 'h3');
+
+    const runs = await board('?each=run');
+    expect(runs.map((r) => [r['player'], r['score'], r['frames']])).toEqual([
+      ['Ada', 9000, 400],
+      ['Ada', 9000, 500],
+      ['Bob', 5000, 400],
+      ['Ada', DEMO_SCORE, DEMO_FRAMES],
+    ]);
+    expect(runs.map((r) => r['rank'])).toEqual([1, 2, 3, 4]);
+  });
+
+  it('says where a run that was not its player\'s best can be found', async () => {
+    const ada = await registerVerified('ada@example.com', 'Ada');
+    await registerVerified('bob@example.com', 'Bob');
+    await insertRun('bob@example.com', 9000, 400, 'h1');
+    await insertRun('bob@example.com', 8000, 400, 'h2');
+    await insertRun('ada@example.com', 5000, 400, 'h3');
+
+    const res = await submit(ada, await grantFor('ada@example.com', tapeSeed()), tape());
+    expect(res.status).toBe(201);
+    // Ada's row is her 5000, behind Bob's one row however many runs he has above it — and this
+    // run, which is not on the board, is fourth of every run.
+    expect(res.body['best']).toBe(false);
+    expect(res.body['rank']).toBe(2);
+    expect(res.body['runRank']).toBe(4);
   });
 
   it('is public, and cached briefly enough that a new record shows up', async () => {
@@ -360,11 +412,24 @@ describe('reading the board', () => {
     await submit(cookie, await grantFor('ada@example.com', tapeSeed()), tape());
     await call('DELETE', '/v1/auth/me', { cookie, body: { password: 'a-perfectly-fine-password' } });
 
-    const res = await call('GET', '/v1/leaderboard');
-    const runs = res.body['runs'] as Record<string, unknown>[];
+    const runs = await board();
     // Deleting the run would rewrite the history of everyone ranked against it.
     expect(runs).toHaveLength(1);
     expect(runs[0]!['score']).toBe(DEMO_SCORE);
     expect(runs[0]!['player']).toBe('a departed player');
+  });
+
+  it('gives each run of a closed account a row of its own', async () => {
+    const cookie = await registerVerified('ada@example.com', 'Ada');
+    await insertRun('ada@example.com', 9000, 400, 'h1');
+    await insertRun('ada@example.com', 5000, 400, 'h2');
+    await call('DELETE', '/v1/auth/me', { cookie, body: { password: 'a-perfectly-fine-password' } });
+
+    // Nothing left says those two runs were one person's, so the board cannot fold them into one.
+    const runs = await board();
+    expect(runs.map((r) => [r['player'], r['score']])).toEqual([
+      ['a departed player', 9000],
+      ['a departed player', 5000],
+    ]);
   });
 });

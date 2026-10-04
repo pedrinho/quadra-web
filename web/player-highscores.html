@@ -3,10 +3,10 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Records — Quadra, ported and provable</title>
+    <title>Player highscores — Quadra, ported and provable</title>
     <meta
       name="description"
-      content="The Quadra leaderboard. Every row is a recording, verifiable in your own browser."
+      content="Every Quadra run on the board, not just each player's best. Every row is a recording you can watch."
     />
 
     <!-- The two faces above the fold. The other weights can wait for the stylesheet.
@@ -31,8 +31,8 @@
       <a class="wordmark" href="/" data-crop="wordmark"><span class="vh">Quadra</span></a>
       <nav class="nav">
         <a href="/">Play</a>
-        <a href="/records" aria-current="page">Records</a>
-        <a href="/player-highscores">Player highscores</a>
+        <a href="/records">Records</a>
+        <a href="/player-highscores" aria-current="page">Player highscores</a>
         <a href="/#how">How it works</a>
         <a href="https://github.com/pedrinho/quadra-web" rel="noreferrer">Source</a>
         <button type="button" class="account" id="account" data-state="out">Sign in</button>
@@ -51,30 +51,21 @@
               <canvas id="screen" width="209" height="405" aria-label="Quadra playfield"></canvas>
             </div>
             <p class="rail-hint" id="rail-hint">Pick a run and it plays here.</p>
-            <!-- The 1998 game recorded .rec files, and a lot of them survive. They are not tapes
-                 and never become tapes — nothing here can reach the board — but the engine can
-                 replay one, so the page lets you drop one on it and watch. -->
-            <div class="rec-open" id="rec-open">
-              <!-- Input before label, so the focus ring can be drawn from `:focus-visible +`. -->
-              <input type="file" id="rec-file" accept=".rec" class="vh" />
-              <label class="rec-button" for="rec-file">Open a 1998 .rec demo</label>
-              <p class="rec-note" id="rec-note">Or drop one on this page. Old single-player form only.</p>
-            </div>
           </aside>
 
           <div class="records-col">
-            <h2 class="label" data-sprite="highscores"><span class="vh">Highscores</span></h2>
+            <!-- The original never had this page, so it does not get the original's lettering:
+                 the heading is set in the port's own face. See `.label` in styles.css. -->
+            <h2 class="board-title">Player highscores</h2>
             <p class="lede">
-              Every row here is the recording of a run, and the score beside it is what the server
-              reached when it played those inputs back — the game you played never got to say.
-              Press Watch and the board on the left replays it, through the same engine that
-              played it.
+              Every run anyone has played, best first — not only each player's best. Each row is
+              a recording: press Watch and the board on the left replays it, through the same
+              engine that played it.
             </p>
             <p class="lede-aside">
-              One row per player: their best run. Every run anyone has played is on
-              <a href="/player-highscores">Player highscores</a>.
+              Each player's best alone is on <a href="/records">Highscores</a>.
             </p>
-            <ol class="records-list" id="records-list"></ol>
+            <ol class="records-list" id="records-list" data-each="run"></ol>
             <p class="empty" id="records-empty">Loading the board…</p>
           </div>
         </div>

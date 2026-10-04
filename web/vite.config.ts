@@ -61,12 +61,12 @@ logger.error = (msg, options) => {
 };
 
 /*
- * Two documents, not one: the stage at `/` and the board at `/records`. A board is a thing you
- * link someone to, and a section of a scrolling page cannot be linked, reloaded into, or served
- * without the game loading behind it.
+ * Three documents, not one: the stage at `/`, the board at `/records` and every run at
+ * `/player-highscores`. A board is a thing you link someone to, and a section of a scrolling page
+ * cannot be linked, reloaded into, or served without the game loading behind it.
  *
- * Workers Assets serves `records.html` at `/records` on its own, so this is the only place the
- * second page needs declaring.
+ * Workers Assets serves `records.html` at `/records` on its own, and the same for the others, so
+ * this is the only place a page needs declaring.
  */
 const page = (name: string) => fileURLToPath(new URL(name, import.meta.url));
 
@@ -77,6 +77,12 @@ export default defineConfig({
     outDir: 'dist',
     emptyOutDir: true,
     target: 'es2022',
-    rollupOptions: { input: { main: page('index.html'), records: page('records.html') } },
+    rollupOptions: {
+      input: {
+        main: page('index.html'),
+        records: page('records.html'),
+        playerHighscores: page('player-highscores.html'),
+      },
+    },
   },
 });

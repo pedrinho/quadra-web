@@ -8,10 +8,11 @@ compatibility_date = "2026-03-10"
 [assets]
 directory = "../web/dist"
 binding = "ASSETS"
-# The site is two documents now — the stage at `/` and the board at `/records` — and neither
-# routes itself, so a path matching no asset is simply a wrong path. Falling back to the index
-# would answer a typo with the home page and a 200, which is worse than saying no. `/records`
-# itself needs nothing here: Workers Assets serves `records.html` at that path on its own.
+# The site is several documents now — the stage at `/`, the board at `/records`, every run at
+# `/player-highscores` — and none routes itself, so a path matching no asset is simply a wrong
+# path. Falling back to the index would answer a typo with the home page and a 200, which is worse
+# than saying no. The pages themselves need nothing here: Workers Assets serves `records.html` at
+# `/records` on its own, and likewise the rest.
 not_found_handling = "none"
 # The API must reach the Worker rather than being answered out of the asset bucket.
 run_worker_first = ["/v1/*"]

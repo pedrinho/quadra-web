@@ -3,8 +3,8 @@
  * Copyright (C) 2026 Quadra Web contributors
  * Licensed under the GNU LGPL v2.1 or later. See LICENSE at the repo root.
  *
- * The site is two documents — the stage at `/` and the board at `/records` — and everything in
- * here is what they have in common: the artwork in the masthead, the identity in its corner, the
+ * The site is a few documents — the stage at `/`, the board at `/records`, every run at
+ * `/player-highscores` — and everything in here is what they have in common: the artwork in the masthead, the identity in its corner, the
  * audio context, the settings, and the level backdrops a replay needs in order to be watched.
  *
  * Split out rather than shared by importing `main.ts`, because that entry hard-requires the

@@ -1,5 +1,5 @@
 /*
- * Browser entry point for the board of records.
+ * Browser entry point for the board of records, and for the list of every run.
  * Copyright (C) 2026 Quadra Web contributors
  * Licensed under the GNU LGPL v2.1 or later. See LICENSE at the repo root.
  *
@@ -8,6 +8,9 @@
  * watched, and it is watched through the same `Screen`, the same `ReplayViewer` and the same
  * engine the game is played with. A page that could show a board the engine cannot produce would
  * be worth nothing, which is the whole reason the viewer draws through shared code.
+ *
+ * `/records` is the board, one row per player; `/player-highscores` is every run, the board as it
+ * was before a name could only appear on it once. Same rail, same rows, a different question.
  */
 
 import './styles.css';
@@ -29,6 +32,7 @@ import {
   createMuting,
   el,
   loadBackgrounds,
+  maybeEl,
   paintGround,
   paintLettering,
   readSignInLink,
@@ -102,10 +106,14 @@ async function main(): Promise<void> {
     },
   });
 
+  // Two documents share this entry: the board, a row per player, and the list of every run.
+  // The list says which it is.
+  const list = el('records-list');
   const records = new Records({
-    list: el('records-list'),
+    list,
     empty: el('records-empty'),
     api,
+    each: list.dataset['each'] === 'run' ? 'run' : 'player',
     onWatch: (run: BoardRun) => {
       void api.tape(run.id).then((res) => {
         if (!res.ok) return;
@@ -120,15 +128,47 @@ async function main(): Promise<void> {
     },
   });
 
-  /* --- 1998 recordings ------------------------------------------------------
-   *
-   * A `.rec` is what the original game wrote, and it plays here for the same reason the rows
-   * above do: it is a seed and a list of moves, and the board is recomputed from them. It is
-   * never turned into a tape and can never reach the leaderboard — see replay/rec.ts. What it
-   * can do is show whether this engine still plays the game the 1998 one played, which is a
-   * question only somebody else's recording can answer.
+  // Only the board offers it. The list of every run is about this game's runs, not 1998's.
+  const recFile = maybeEl<HTMLInputElement>('rec-file');
+  if (recFile) openRecDemos(recFile, el('rec-note'), viewer);
+
+  const identity = createIdentity({
+    api,
+    // Who is looking decides which row is theirs, so the board is rebuilt when that changes.
+    onAccount: () => void records.refresh(),
+  });
+
+  /*
+   * `?fresh=<id>` is how a run just played reaches the board it landed on: the game is on the
+   * other document now, so it cannot highlight the row itself. Read and stripped in one go, as
+   * the mailed links are — a highlight that survived a reload would be lying about which run
+   * was just played.
    */
-  const note = el('rec-note');
+  const fresh = takeParam('fresh');
+
+  // Before the first refresh rather than alongside it: the rows read `api.account` to decide
+  // which one is yours, so a board built first would paint that wrong and never correct it.
+  const who = await api.refresh();
+  identity.paint(who);
+  readSignInLink(identity.account);
+  await records.refresh(fresh);
+
+  /* Dev hook, as the stage has: audio is invisible from outside, and whether a replay is
+   * actually sounding is otherwise only answerable by listening to it. */
+  if (import.meta.env.DEV) {
+    (window as unknown as Record<string, unknown>).__quadra = { records, viewer, audio, settings };
+  }
+}
+
+/* --- 1998 recordings ------------------------------------------------------
+ *
+ * A `.rec` is what the original game wrote, and it plays here for the same reason a row does:
+ * it is a seed and a list of moves, and the board is recomputed from them. It is never turned
+ * into a tape and can never reach the leaderboard — see replay/rec.ts. What it can do is show
+ * whether this engine still plays the game the 1998 one played, which is a question only
+ * somebody else's recording can answer.
+ */
+function openRecDemos(input: HTMLInputElement, note: HTMLElement, viewer: ReplayViewer): void {
   const say = (text: string, bad = false): void => {
     note.textContent = text;
     note.classList.toggle('is-error', bad);
@@ -160,7 +200,7 @@ async function main(): Promise<void> {
     }
   };
 
-  el<HTMLInputElement>('rec-file').addEventListener('change', function () {
+  input.addEventListener('change', function () {
     const file = this.files?.[0];
     // Cleared, so picking the same file twice in a row still fires `change` the second time.
     this.value = '';
@@ -187,33 +227,6 @@ async function main(): Promise<void> {
     document.body.classList.remove('is-dropping');
     void openRec(file);
   });
-
-  const identity = createIdentity({
-    api,
-    // Who is looking decides which row is theirs, so the board is rebuilt when that changes.
-    onAccount: () => void records.refresh(),
-  });
-
-  /*
-   * `?fresh=<id>` is how a run just played reaches the board it landed on: the game is on the
-   * other document now, so it cannot highlight the row itself. Read and stripped in one go, as
-   * the mailed links are — a highlight that survived a reload would be lying about which run
-   * was just played.
-   */
-  const fresh = takeParam('fresh');
-
-  // Before the first refresh rather than alongside it: the rows read `api.account` to decide
-  // which one is yours, so a board built first would paint that wrong and never correct it.
-  const who = await api.refresh();
-  identity.paint(who);
-  readSignInLink(identity.account);
-  await records.refresh(fresh);
-
-  /* Dev hook, as the stage has: audio is invisible from outside, and whether a replay is
-   * actually sounding is otherwise only answerable by listening to it. */
-  if (import.meta.env.DEV) {
-    (window as unknown as Record<string, unknown>).__quadra = { records, viewer, audio, settings };
-  }
 }
 
 main().catch((err: unknown) => {

@@ -18,6 +18,7 @@
 import { ByteReader, TapeError, decodeHeader } from 'quadra-web/replay/tape';
 import { SIM_VERSION } from 'quadra-web/replay/version';
 
+import { standing } from './board.js';
 import type { Env } from './env.js';
 import { fail, json } from './http.js';
 import { newId } from './ids.js';
@@ -195,7 +196,12 @@ export async function submitRun(env: Env, request: Request, now: number): Promis
         ticks: result.ticks,
         over: result.over,
       },
-      rank: await rankOf(env, result.header.simVersion, result.score, result.frames),
+      ...(await standing(env, player.id, {
+        id,
+        score: result.score,
+        frames: result.frames,
+        simVersion: result.header.simVersion,
+      })),
     },
     201,
   );
@@ -215,20 +221,4 @@ export function seedsMatch(fromTape: bigint, granted: string): boolean {
   } catch {
     return false;
   }
-}
-
-/** Where a score sits on the board: one more than the number of runs that beat it. */
-async function rankOf(
-  env: Env,
-  simVersion: number,
-  score: number,
-  frames: number,
-): Promise<number> {
-  const row = await env.DB.prepare(
-    `SELECT count(*) AS n FROM runs
-      WHERE sim_version = ? AND (score > ? OR (score = ? AND frames < ?))`,
-  )
-    .bind(simVersion, score, score, frames)
-    .first<{ n: number }>();
-  return (row?.n ?? 0) + 1;
 }

@@ -708,6 +708,22 @@ button.link:hover {
   height: 40px;
   width: auto;
 }
+/* A page the original never had, so its heading is the port's: `.how h2`'s face, at a size that
+   tops out at the 40px the sprite stands at on the board. */
+.board-title {
+  margin: 0 0 var(--s-5);
+  font: 600 var(--t-display) / 1 var(--sans);
+  letter-spacing: -0.02em;
+  color: var(--chrome);
+}
+
+/* The line that points from one board to the other. Under the lede, quieter than it. */
+.lede-aside {
+  margin: var(--s-3) 0 0;
+  max-width: 62ch;
+  font-size: var(--t-ui);
+  color: var(--ink-quiet);
+}
 
 .records-list {
   list-style: none;

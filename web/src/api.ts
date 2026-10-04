@@ -66,6 +66,20 @@ export interface BoardRun {
   simVersion: number;
 }
 
+/** What a board row stands for: a player's best run, or any run. */
+export type BoardEach = 'player' | 'run';
+
+/** Where a submitted run landed. */
+export interface Submitted {
+  run: BoardRun;
+  /** The player's place on the board — the place of their best run, which may be an older one. */
+  rank: number;
+  /** Whether this run is that best, and so the row on the board. */
+  best: boolean;
+  /** This run's own place among every run: the only list it is on when it is not the best. */
+  runRank: number;
+}
+
 export interface Grant {
   grant: string;
   /** Decimal: a seed is 64 bits, which a JSON number cannot hold. */
@@ -152,14 +166,17 @@ export class Api {
    * megabyte, and base64 would make that a third larger on the one request where size matters.
    */
   submitRun(grant: string, tape: Uint8Array) {
-    return this.send<{ run: BoardRun; rank: number }>('POST', '/runs', {
+    return this.send<Submitted>('POST', '/runs', {
       body: tape,
       headers: { 'content-type': 'application/octet-stream', 'x-quadra-grant': grant },
     });
   }
 
-  leaderboard(board: 'all' | 'daily' = 'all', limit = 20) {
-    return this.get<{ runs: BoardRun[] }>(`/leaderboard?board=${board}&limit=${limit}`);
+  /** One row per player, their best run — or, with `each: 'run'`, every run there is. */
+  leaderboard(board: 'all' | 'daily' = 'all', limit = 20, each: BoardEach = 'player') {
+    return this.get<{ runs: BoardRun[] }>(
+      `/leaderboard?board=${board}&limit=${limit}&each=${each}`,
+    );
   }
 
   run(id: string) {

@@ -94,6 +94,13 @@ Quadra is online. The solo game is unchanged; what is new is everywhere it now g
   a path matching no asset is a 404 rather than the home page with a 200. What both pages share —
   the masthead artwork, the identity, the audio, the settings, the backdrops — is in `web/src/
   shell.ts`; a finished run reaches its row through `/records?fresh=<id>`.
+- **One row per player on the board.** `/records` shows each player's best run, so a name is on
+  it once however often its owner plays. Every run — the board as it used to be — has a page of
+  its own, **Player highscores**, at `/player-highscores`. `GET /v1/leaderboard` takes
+  `each=player`, the default, or `each=run`. A finished run is told where it landed: its player's
+  place on the board when it is their new best, and otherwise its place among every run, with the
+  link going to the page the row is actually on. A closed account's runs keep a row each, because
+  nothing left says they were one person's.
 - **The playfield is part of that page**, held on the left while the rows scroll past it on the
   right, with the transport under it. Watching a run used to take the whole window: the board
   appeared in a dimmed, blurred layer over the list it came from, so the row being watched, and

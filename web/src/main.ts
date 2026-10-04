@@ -354,14 +354,18 @@ async function main(): Promise<void> {
 
     if (result.ok) {
       // The board is its own page now, so the run cannot be shown landing on it from here.
-      // It is carried over instead: `?fresh=` is what highlights the row once there.
+      // It is carried over instead: `?fresh=` is what highlights the row once there. The board
+      // holds each player's best, so a run that was not one is only on the list of every run,
+      // and the link goes where the row is rather than to a board it is missing from.
+      const fresh = encodeURIComponent(result.run.id);
       view.setState(
         result.run.score.toLocaleString(),
-        `verified · number ${result.rank} on the board · press R to play again`,
-        {
-          href: `/records?fresh=${encodeURIComponent(result.run.id)}`,
-          text: 'See it on the board',
-        },
+        result.best
+          ? `verified · number ${result.rank} on the board · press R to play again`
+          : `verified · number ${result.runRank} of every run · your best still stands · press R to play again`,
+        result.best
+          ? { href: `/records?fresh=${fresh}`, text: 'See it on the board' }
+          : { href: `/player-highscores?fresh=${fresh}`, text: 'See it among every run' },
       );
       return;
     }

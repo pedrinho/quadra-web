@@ -12,13 +12,22 @@
  */
 
 import { TICK_MS } from '../engine/game.js';
-import { apiMessage, isUnreachable, type Api, type BoardRun } from '../api.js';
+import { apiMessage, isUnreachable, type Api, type BoardEach, type BoardRun } from '../api.js';
 import { formatDuration } from './format.js';
+
+/*
+ * The board is one row per player, so twenty rows is twenty names. Every run is a longer list by
+ * nature — one player's evening can be twenty rows on its own — so it takes as many as the
+ * service will hand out.
+ */
+const LIMIT: Record<BoardEach, number> = { player: 20, run: 100 };
 
 export interface RecordsOptions {
   list: HTMLElement;
   empty: HTMLElement;
   api: Api;
+  /** `player` for the board, a row per name; `run` for every run there is. */
+  each: BoardEach;
   onWatch: (run: BoardRun) => void;
 }
 
@@ -36,7 +45,8 @@ export class Records {
     this.opts.empty.hidden = false;
     this.opts.empty.textContent = 'Loading the board…';
 
-    const result = await this.opts.api.leaderboard('all', 20);
+    const { each } = this.opts;
+    const result = await this.opts.api.leaderboard('all', LIMIT[each], each);
     if (mine !== this.generation) return;
 
     if (!result.ok) {
