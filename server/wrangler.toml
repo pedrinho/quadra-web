@@ -17,13 +17,21 @@ not_found_handling = "none"
 run_worker_first = ["/v1/*"]
 
 [vars]
-# Overridden per environment. The origin the mailed links point at.
-PUBLIC_ORIGIN = "http://localhost:8787"
+# This deployment's own address: Google's redirect back is built from it, and so are mailed links.
+# `npm run dev` overrides it with localhost.
+PUBLIC_ORIGIN = "https://quadra.pedrinho-rep51.workers.dev"
+# The OAuth client from the Google console. Public: it is in every sign-in URL. Google sign-in is
+# on once this and the GOOGLE_CLIENT_SECRET secret are both set, and off while either is empty.
+GOOGLE_CLIENT_ID = "580964332237-ac9qf7n294f7jtci878u9o9n01nfqtqr.apps.googleusercontent.com"
+# PASSWORD_LOGIN is deliberately absent, which leaves e-mail and password accounts off: this
+# deployment sends no mail, so a registration could never be confirmed, and the free plan's 10 ms
+# a request cannot afford the hashing. Set it to "on" (and RESEND_API_KEY and MAIL_FROM) where
+# both are true — or in .dev.vars, where the mailer prints its links to the console instead.
 
 [[d1_databases]]
 binding = "DB"
 database_name = "quadra"
-database_id = "REPLACE_WITH_YOUR_D1_ID"
+database_id = "58c1dbcc-add1-4ef8-9861-7b9e1b2b027a"
 migrations_dir = "migrations"
 
 # Tapes are blobs and the leaderboard never selects one, so they live out of the database. It also
@@ -32,6 +40,24 @@ migrations_dir = "migrations"
 binding = "TAPES"
 bucket_name = "quadra-tapes"
 
-# Secrets, set with `wrangler secret put`:
-#   RESEND_API_KEY   absent in development, and then the mailer prints the link instead
-#   MAIL_FROM        e.g. "Quadra <no-reply@example.com>"
+# Submitted runs are replayed here instead of in the request: on the free plan a request gets 10 ms
+# of CPU and a Durable Object gets 30 s. SQLite-backed, because that is the kind the free plan has
+# — though it never stores anything. See src/verifier.ts.
+[[durable_objects.bindings]]
+name = "VERIFIER"
+class_name = "Verifier"
+
+# Declaring a class is permanent: renaming or dropping it later takes a new entry here, not an edit.
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Verifier"]
+
+# Secrets, set with `wrangler secret put` (and in server/.dev.vars for `npm run dev`):
+#   GOOGLE_CLIENT_SECRET   from the same Google console client as GOOGLE_CLIENT_ID
+#   RESEND_API_KEY         absent in development, and then the mailer prints the link instead
+#   MAIL_FROM              e.g. "Quadra <no-reply@example.com>"
+
+# Workers Logs: what the Worker prints, kept for a few days, with the CPU time of every request.
+# Free, and the only way to see why a request failed for somebody else.
+[observability]
+enabled = true

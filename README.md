@@ -133,18 +133,58 @@ npm run dev -w quadra-server    # the API, at localhost:8787
 That applies the migrations to the local database before starting, so a fresh checkout works
 without a setup step.
 
+Signing in needs one of two things in `server/.dev.vars` (gitignored):
+
+```sh
+# Google, with a client of your own whose redirect URIs include
+# http://localhost:8787/v1/auth/google/callback and http://localhost:5173/v1/auth/google/callback
+GOOGLE_CLIENT_ID=….apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=…
+
+# and/or e-mail and password, which needs no account anywhere
+PASSWORD_LOGIN=on
+```
+
 With no mail provider configured the confirmation and reset links are **printed to the Worker's
-console** instead of being sent, so registering end to end needs no mailbox and no account
-anywhere. Without the Worker running at all, every request fails as unreachable and the game
-still starts, plays and finishes — unranked, and it says so.
+console** instead of being sent, so registering end to end needs no mailbox. Without the Worker
+running at all, every request fails as unreachable and the game still starts, plays and finishes —
+unranked, and it says so.
 
 ### Deploying it
 
-One Worker serves the built site and the API from the same origin. You will need a Cloudflare
-account, a D1 database and an R2 bucket named as in `server/wrangler.toml` (put the real database
-id there), and — for mail to leave the building — `RESEND_API_KEY` and `MAIL_FROM` set with
-`wrangler secret put`. Then `npm run deploy`, or push to `main` and let
-`.github/workflows/deploy.yml` do it.
+One Worker serves the built site and the API from the same origin, and it fits Cloudflare's free
+plan. Two things make that true, and both are easy to undo by accident:
+
+- **Runs are replayed in a Durable Object, not in the request.** A free-plan request gets 10 ms of
+  CPU and replaying a ten-minute run costs about thirty; a Durable Object gets 30 s. See
+  `server/src/verifier.ts`.
+- **Players sign in with Google.** E-mail and password accounts are off (`PASSWORD_LOGIN` is
+  unset) because there is no mail to confirm them with, and because a password hash costs more
+  than the request has. Production Workers also refuse PBKDF2 above 100,000 iterations, which
+  the local runtime does not enforce — `server/test/password.test.ts` is what notices.
+
+Once, by hand:
+
+1. A Cloudflare account, with a `workers.dev` subdomain chosen. R2 asks for a payment method even
+   on the free tier; nothing is charged within it. Then `npx wrangler login`.
+2. `npx wrangler d1 create quadra` — put the id in `server/wrangler.toml` — and
+   `npx wrangler r2 bucket create quadra-tapes`.
+3. A Google OAuth client, at [console.cloud.google.com](https://console.cloud.google.com), in a
+   project of its own (no billing needed):
+   - *Branding*: a name and the two contact addresses. **No logo** — a logo sends the app to
+     Google for review.
+   - *Data access*: `openid`, `email`, `profile` and nothing else. With only those, Google does
+     not review the app and shows no warning.
+   - *Audience*: External, then **Publish app**. Until then only listed test users can sign in.
+   - *Clients*: a Web application, with `https://quadra.<subdomain>.workers.dev/v1/auth/google/callback`
+     as a redirect URI (and the two localhost ones above, for development).
+   - Its client id goes in `server/wrangler.toml` as `GOOGLE_CLIENT_ID`, along with the real
+     `PUBLIC_ORIGIN`. The secret goes in with `npx wrangler secret put GOOGLE_CLIENT_SECRET`.
+4. `npx wrangler d1 migrations apply quadra --remote`, from `server/`.
+
+Then `npm run deploy`, or push to `main` and let `.github/workflows/deploy.yml` do it.
+Workers Logs is on (`[observability]`), and is where to look when a request fails for someone
+else: what the Worker printed, and how much CPU each request took.
 
 ## Layout
 

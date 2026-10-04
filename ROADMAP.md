@@ -26,8 +26,10 @@ one piece of work pays for three features.
 - Tape format, recorder, playback, and a verifier written for hostile input
 - A guard that fails the build when `src/engine/` changes without someone deciding what that
   means for stored recordings
-- One Cloudflare Worker serving both the site and the API, on D1 and R2
-- Registration by e-mail and password; **a guest can play, and nothing is kept**
+- One Cloudflare Worker serving both the site and the API, on D1 and R2, within the free plan —
+  runs are replayed in a Durable Object, which has the CPU a request does not
+- Sign in with Google, or by e-mail and password where the deployment can send mail; **a guest
+  can play, and nothing is kept**
 - Server-issued seeds, so a ranked run cannot be restarted until the pieces fall kindly
 - Every row on the board watchable, and verifiable in the browser against the server's score
 

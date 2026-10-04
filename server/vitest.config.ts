@@ -25,7 +25,16 @@ export default defineWorkersConfig({
         singleWorker: true,
         wrangler: { configPath: './wrangler.toml' },
         miniflare: {
-          bindings: { TEST_MIGRATIONS: migrations, TEST_DEMO_TAPE: demoTape },
+          bindings: {
+            TEST_MIGRATIONS: migrations,
+            TEST_DEMO_TAPE: demoTape,
+            // Both ways of signing in are on under test, whatever wrangler.toml says a
+            // deployment offers: the password routes have tests of their own, and the one that
+            // checks they disappear when switched off passes its own env to say so.
+            PASSWORD_LOGIN: 'on',
+            GOOGLE_CLIENT_ID: 'quadra-test.apps.googleusercontent.com',
+            GOOGLE_CLIENT_SECRET: 'not-a-secret',
+          },
         },
       },
     },

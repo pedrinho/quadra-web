@@ -12,3 +12,8 @@
 /assets/*
   Cache-Control: public, max-age=86400
   X-Content-Type-Options: nosniff
+
+# The alpha is unlisted: anyone with the address may play, and nothing should help anyone else
+# find it. This and robots.txt both come out the day the site is announced.
+/*
+  X-Robots-Tag: noindex, nofollow

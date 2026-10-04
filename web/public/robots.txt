@@ -1,0 +1,3 @@
+# The alpha is unlisted. Remove this, and the X-Robots-Tag rule in _headers, at launch.
+User-agent: *
+Disallow: /

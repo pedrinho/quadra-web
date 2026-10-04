@@ -6,21 +6,38 @@
  * PBKDF2-HMAC-SHA256, because it is the only password KDF the Workers runtime implements
  * natively. Argon2id and scrypt are both better at resisting a GPU, and both would mean shipping
  * a WASM blob into a service whose entire dependency list is currently empty — a trade this is
- * not worth making at this size. The iteration count is OWASP's current figure for this
- * construction, and it is stored *in* the hash so it can be raised later without invalidating
- * everyone's password: `needsRehash` says when a stored hash is behind, and login is the place
- * that upgrades it.
+ * not worth making at this size. The iteration count is stored *in* the hash so it can be raised
+ * later without invalidating everyone's password: `needsRehash` says when a stored hash is
+ * behind, and login is the place that upgrades it.
  *
  * Format: `pbkdf2$sha256$<iterations>$<salt b64url>$<derived b64url>`.
  */
 
-import { base64url, timingSafeEqual } from './ids.js';
+import { base64url, fromBase64url, timingSafeEqual } from './ids.js';
 
-/** OWASP's recommendation for PBKDF2-HMAC-SHA256. Raise it, never lower it. */
-export const ITERATIONS = 600_000;
+/**
+ * The most the production Workers runtime will derive: above this `deriveBits` throws "iteration
+ * counts above 100000 are not supported". The local runtime the tests run in does not enforce it,
+ * so nothing but this constant stands between a higher count and every sign-in failing only once
+ * it is deployed.
+ */
+export const MAX_ITERATIONS = 100_000;
+
+/**
+ * As many as the runtime allows. OWASP asks for 600,000 for this construction, which Workers
+ * cannot do; the gap is the price of a KDF that ships with the platform. Raise it, never lower
+ * it, and never past `MAX_ITERATIONS`.
+ */
+export const ITERATIONS = MAX_ITERATIONS;
 const SALT_BYTES = 16;
 const KEY_BITS = 256;
 const PREFIX = 'pbkdf2$sha256';
+
+/**
+ * What an account that signs in some other way holds instead of a hash. Malformed on purpose:
+ * `verifyPassword` refuses anything that does not parse, so nothing can ever match it.
+ */
+export const NO_PASSWORD = 'none';
 
 const encoder = new TextEncoder();
 
@@ -41,7 +58,11 @@ export async function verifyPassword(password: string, stored: string): Promise<
   const parts = stored.split('$');
   if (parts.length !== 5 || `${parts[0]}$${parts[1]}` !== PREFIX) return false;
   const iterations = Number(parts[2]);
-  if (!Number.isInteger(iterations) || iterations < 1 || iterations > 10_000_000) return false;
+  // Above the runtime's ceiling the derivation would throw, and a hash this build cannot check
+  // is a failed sign-in, not a 500.
+  if (!Number.isInteger(iterations) || iterations < 1 || iterations > MAX_ITERATIONS) {
+    return false;
+  }
 
   let salt: Uint8Array;
   try {
@@ -71,12 +92,4 @@ async function derive(password: string, salt: Uint8Array, iterations: number): P
     KEY_BITS,
   );
   return new Uint8Array(bits);
-}
-
-function fromBase64url(text: string): Uint8Array {
-  const padded = text.replace(/-/g, '+').replace(/_/g, '/');
-  const binary = atob(padded + '='.repeat((4 - (padded.length % 4)) % 4));
-  const out = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) out[i] = binary.charCodeAt(i);
-  return out;
 }

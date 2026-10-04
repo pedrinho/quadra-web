@@ -30,6 +30,8 @@ export const LIMITS = {
   /** Anything that puts a message in somebody's inbox, keyed by that inbox. */
   mailPerAddress: { bucket: 'mail-address', limit: 4, windowMs: 60 * 60 * 1000 },
   mailPerIp: { bucket: 'mail-ip', limit: 10, windowMs: 60 * 60 * 1000 },
+  /** Starting a Google sign-in. Each one is a round trip to Google that we pay for. */
+  oauthPerIp: { bucket: 'oauth-ip', limit: 30, windowMs: 15 * 60 * 1000 },
   /** A seed grant per player. Generous: restarting a game is normal, farming grants is not. */
   grantPerPlayer: { bucket: 'grant-player', limit: 120, windowMs: 60 * 60 * 1000 },
   submitPerPlayer: { bucket: 'submit-player', limit: 60, windowMs: 60 * 60 * 1000 },

@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Quadra — privacy</title>
+    <meta name="description" content="What Quadra Web keeps about the people who play it, and why." />
+    <!--
+      A static page, outside the build: it has no script and needs none. The colours are the
+      site's own tokens from src/styles.css, copied rather than imported, because this page must
+      still read correctly on the day the stylesheet's hashed name changes.
+    -->
+    <style>
+      @font-face {
+        font-family: 'IBM Plex Sans';
+        font-weight: 400;
+        font-display: swap;
+        src: url('/assets/fonts/IBMPlexSans-Regular.woff2') format('woff2');
+      }
+      @font-face {
+        font-family: 'IBM Plex Sans';
+        font-weight: 600;
+        font-display: swap;
+        src: url('/assets/fonts/IBMPlexSans-SemiBold.woff2') format('woff2');
+      }
+      :root {
+        color-scheme: dark;
+        --void: #000810;
+        --chrome: #eeeef6;
+        --ink: #b6bfcb;
+        --ink-quiet: #6f7b8a;
+        --glow-lit: #33b4d8;
+        --rule: #ffffff14;
+      }
+      body {
+        margin: 0;
+        background: var(--void);
+        color: var(--ink);
+        font: 16px/1.6 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      }
+      main {
+        max-width: 40rem;
+        margin: 0 auto;
+        padding: 48px 16px 64px;
+      }
+      h1,
+      h2 {
+        color: var(--chrome);
+        font-weight: 600;
+        line-height: 1.25;
+      }
+      h1 {
+        font-size: 1.75rem;
+        margin: 0 0 8px;
+      }
+      h2 {
+        font-size: 1.125rem;
+        margin: 32px 0 8px;
+        padding-top: 24px;
+        border-top: 1px solid var(--rule);
+      }
+      a {
+        color: var(--glow-lit);
+      }
+      strong {
+        color: var(--chrome);
+        font-weight: 600;
+      }
+      ul {
+        padding-left: 1.25rem;
+      }
+      li + li {
+        margin-top: 4px;
+      }
+      .quiet {
+        color: var(--ink-quiet);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p><a href="/">← Quadra</a></p>
+      <h1>Privacy</h1>
+      <p class="quiet">Last changed 4 October 2026.</p>
+
+      <p>
+        Quadra Web is a hobby project: a browser port of a 1998 puzzle game, with a leaderboard.
+        It keeps as little about you as a leaderboard can work with, it shows no ads, and it runs
+        no analytics or tracking of any kind.
+      </p>
+
+      <h2>Playing as a guest</h2>
+      <p>
+        Nothing is kept. Your settings stay in your own browser, and a run you play without
+        signing in is gone when it ends.
+      </p>
+
+      <h2>Signing in with Google</h2>
+      <p>Google tells us three things, and we keep two of them:</p>
+      <ul>
+        <li>
+          <strong>Your Google account's identifier</strong>, so we know it is you next time.
+        </li>
+        <li>
+          <strong>Your e-mail address</strong>, which Google has confirmed. It is never shown on
+          the board, never given to anyone, and this site sends no e-mail.
+        </li>
+        <li>
+          Your name, which we <strong>do not keep</strong>. You choose the name that appears on the
+          board yourself, and it need not be your real one.
+        </li>
+      </ul>
+      <p>We do not see your Google password, and we cannot read anything else in your account.</p>
+
+      <h2>What is public</h2>
+      <p>
+        A run you finish while signed in goes on the public board with the name you chose: its
+        score, lines, level and when it was played, and the <strong>recording</strong> of it —
+        the keys you pressed and when — so that anyone can watch it and check the score. That is
+        the point of the board.
+      </p>
+
+      <h2>Cookies</h2>
+      <p>
+        One, to keep you signed in, for thirty days. It holds a random token and nothing else, and
+        no script on the page can read it. A second, short-lived one carries you through Google's
+        sign-in and is deleted at the end of it.
+      </p>
+
+      <h2>Your address</h2>
+      <p>
+        Your IP address is used to limit how often a sign-in can be started from one place, and
+        is held only for as long as that limit lasts — at most an hour. The hosting provider keeps
+        request logs for a few days so that failures can be investigated.
+      </p>
+
+      <h2>Who else is involved</h2>
+      <ul>
+        <li><strong>Cloudflare</strong> hosts the site, its database and the recordings.</li>
+        <li><strong>Google</strong> handles signing in, and nothing else.</li>
+      </ul>
+
+      <h2>Leaving</h2>
+      <p>
+        <em>Close this account</em>, in the account panel, removes your address, your link to
+        Google, and every session at once. Your runs stay on the board without a name on them:
+        removing them would rewrite the standings of everyone who was ranked against you, and
+        without your name they are only a score and a recording of a game.
+      </p>
+
+      <h2>Questions</h2>
+      <p>
+        Open an issue at
+        <a href="https://github.com/pedrinho/quadra-web/issues" rel="noreferrer"
+          >github.com/pedrinho/quadra-web</a
+        >.
+      </p>
+    </main>
+  </body>
+</html>

@@ -345,6 +345,25 @@ describe('closing an account', () => {
   });
 });
 
+describe('the ways in', () => {
+  it('says which sign-in methods this deployment offers', async () => {
+    const me = await call('GET', '/v1/auth/me');
+    expect(me.body['methods']).toEqual({ google: true, password: true });
+  });
+
+  it('has no password routes at all where password sign-in is switched off', async () => {
+    const off = { env: { PASSWORD_LOGIN: '' } };
+    const body = { email: 'ada@example.com', password: GOOD_PASSWORD, displayName: 'Ada' };
+    for (const path of ['register', 'verify', 'resend', 'login', 'forgot', 'reset']) {
+      const res = await call('POST', `/v1/auth/${path}`, { ...off, body });
+      expect(res.status, path).toBe(404);
+    }
+    expect(mailbox).toHaveLength(0);
+    const me = await call('GET', '/v1/auth/me', off);
+    expect(me.body['methods']).toEqual({ google: true, password: false });
+  });
+});
+
 describe('the shape of the API', () => {
   it('answers a health check with what engine it is running', async () => {
     const res = await call('GET', '/v1/health');

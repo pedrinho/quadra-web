@@ -20,11 +20,24 @@ Quadra is online. The solo game is unchanged; what is new is everywhere it now g
   game?* — is answered out loud rather than skipped. It also refuses any reference to the DOM
   there, which is what lets the server run the same code.
 - **The service.** One Cloudflare Worker serving both the site and the API from the same origin,
-  on D1 and R2. `server/`.
+  on D1 and R2. `server/`. It fits the free plan: a submitted run is replayed in a Durable Object
+  (`server/src/verifier.ts`), which is allowed 30 s of CPU where the request is allowed 10 ms —
+  and a ten-minute run costs about thirty.
+- **An unlisted alpha.** `robots.txt` and an `X-Robots-Tag` header keep it out of search engines
+  until it is announced.
+- **Sign in with Google.** No password and no mail: Google has already confirmed the address,
+  and a first sign-in asks only for the name that goes on the board — never the real one Google
+  knows. The authorization-code flow with PKCE, by hand, in `server/src/google.ts`. An existing
+  password account with the same address is joined rather than duplicated; if it never confirmed
+  that address, its password is removed on the way, so registering somebody else's address and
+  waiting for them is not a way into their account.
 - **Accounts**, by e-mail and password: registration with a confirmation link, sign in, password
-  reset, and closing an account. Passwords are PBKDF2-HMAC-SHA256 at OWASP's iteration count, and
-  the count is stored in the hash so it can be raised later. Sessions are opaque tokens in an
-  HttpOnly cookie, stored only as their digest, so signing out takes effect at once.
+  reset, and closing an account. Off unless `PASSWORD_LOGIN` is `on`, because a deployment with no
+  mail could never confirm one; the page offers whichever ways in the server says it has.
+  Passwords are PBKDF2-HMAC-SHA256 at 100,000 iterations — the most production Workers will
+  derive, and a ceiling the local runtime does not enforce, so a test pins it — with the count
+  stored in the hash so it can be raised later. Sessions are opaque tokens in an HttpOnly cookie,
+  stored only as their digest, so signing out takes effect at once.
 - **A leaderboard that cannot be lied to.** Nothing submits a score: a finished game submits its
   recording, and the server derives the score by re-simulating it with the client's own engine —
   imported, not reimplemented. Every row is therefore watchable: pressing *Watch* replays the

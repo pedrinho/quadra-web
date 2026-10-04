@@ -14,7 +14,7 @@
 
 import { SIM_VERSION, TAPE_FORMAT_VERSION } from 'quadra-web/replay/version';
 
-import type { Env } from './env.js';
+import { signInMethods, type Env } from './env.js';
 import { fail, json } from './http.js';
 import {
   deleteAccount,
@@ -28,7 +28,11 @@ import {
   verifyEmail,
 } from './auth.js';
 import { getRun, getTape, leaderboard } from './board.js';
+import { googleCallback, googleFinish, googleStart } from './google.js';
 import { startRun, submitRun } from './runs.js';
+
+// The runtime finds a Durable Object class by its export from the entry module.
+export { Verifier } from './verifier.js';
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -60,24 +64,19 @@ async function api(request: Request, env: Env, url: URL): Promise<Response> {
         tapeFormatVersion: TAPE_FORMAT_VERSION,
       });
 
-    case 'POST /v1/auth/register':
-      return register(env, request, now);
-    case 'POST /v1/auth/verify':
-      return verifyEmail(env, request, now);
-    case 'POST /v1/auth/resend':
-      return resendVerification(env, request, now);
-    case 'POST /v1/auth/login':
-      return login(env, request, now);
     case 'POST /v1/auth/logout':
       return logout(env, request);
     case 'GET /v1/auth/me':
       return me(env, request, now);
     case 'DELETE /v1/auth/me':
       return deleteAccount(env, request, now);
-    case 'POST /v1/auth/forgot':
-      return forgot(env, request, now);
-    case 'POST /v1/auth/reset':
-      return reset(env, request, now);
+
+    case 'GET /v1/auth/google/start':
+      return googleStart(env, request, url, now);
+    case 'GET /v1/auth/google/callback':
+      return googleCallback(env, request, url, now);
+    case 'POST /v1/auth/google/finish':
+      return googleFinish(env, request, now);
 
     case 'POST /v1/runs/start':
       return startRun(env, request, now);
@@ -85,6 +84,25 @@ async function api(request: Request, env: Env, url: URL): Promise<Response> {
       return submitRun(env, request, now);
     case 'GET /v1/leaderboard':
       return leaderboard(env, url, now);
+  }
+
+  // E-mail and password, where this deployment offers them. Where it does not, the routes do
+  // not exist: a register that answers "sent" for a mail that never leaves would be a lie.
+  if (signInMethods(env).password) {
+    switch (route) {
+      case 'POST /v1/auth/register':
+        return register(env, request, now);
+      case 'POST /v1/auth/verify':
+        return verifyEmail(env, request, now);
+      case 'POST /v1/auth/resend':
+        return resendVerification(env, request, now);
+      case 'POST /v1/auth/login':
+        return login(env, request, now);
+      case 'POST /v1/auth/forgot':
+        return forgot(env, request, now);
+      case 'POST /v1/auth/reset':
+        return reset(env, request, now);
+    }
   }
 
   // The two that carry an id in the path. Everything else is a fixed route, so this stays a

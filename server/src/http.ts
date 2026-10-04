@@ -78,10 +78,10 @@ export function cookies(request: Request): Map<string, string> {
  * Strict cookie would not be sent on that first navigation, so following the link would land the
  * player on a page that does not know who they are.
  */
-export function setCookie(name: string, value: string, maxAgeSeconds: number): string {
+export function setCookie(name: string, value: string, maxAgeSeconds: number, path = '/'): string {
   const parts = [
     `${name}=${value}`,
-    'Path=/',
+    `Path=${path}`,
     'HttpOnly',
     'Secure',
     'SameSite=Lax',
@@ -90,8 +90,21 @@ export function setCookie(name: string, value: string, maxAgeSeconds: number): s
   return parts.join('; ');
 }
 
-export function clearCookie(name: string): string {
-  return `${name}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`;
+export function clearCookie(name: string, path = '/'): string {
+  return `${name}=; Path=${path}; HttpOnly; Secure; SameSite=Lax; Max-Age=0`;
+}
+
+/**
+ * A redirect to a path on this site, setting any number of cookies on the way.
+ *
+ * Relative on purpose: the page that follows it is whichever origin the browser is already on,
+ * which is the deployment in production and the dev server in development, without either
+ * having to be told.
+ */
+export function redirect(location: string, ...setCookies: string[]): Response {
+  const headers = new Headers({ location, 'cache-control': 'no-store' });
+  for (const cookie of setCookies) headers.append('set-cookie', cookie);
+  return new Response(null, { status: 302, headers });
 }
 
 /** The caller's address, for rate limiting. Cloudflare sets this and strips any client copy. */

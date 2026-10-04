@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { hashPassword, verifyPassword, needsRehash, ITERATIONS } from '../src/password.js';
+import {
+  hashPassword,
+  verifyPassword,
+  needsRehash,
+  ITERATIONS,
+  MAX_ITERATIONS,
+} from '../src/password.js';
 import { timingSafeEqual, newToken, newId, digest } from '../src/ids.js';
 
 describe('password hashing', () => {
@@ -28,6 +34,20 @@ describe('password hashing', () => {
     // A hash from a weaker era still verifies, and asks to be upgraded.
     const weak = `pbkdf2$sha256$1000$${stored.split('$')[3]}$${stored.split('$')[4]}`;
     expect(needsRehash(weak)).toBe(true);
+  });
+
+  it('stays inside what the production runtime will derive', () => {
+    // Deployed Workers refuse PBKDF2 above 100,000 iterations; the runtime these tests run in
+    // does not, so a higher count passes here and fails every sign-in in production. This line
+    // is the only thing that notices.
+    expect(MAX_ITERATIONS).toBe(100_000);
+    expect(ITERATIONS).toBeLessThanOrEqual(MAX_ITERATIONS);
+  });
+
+  it('refuses a hash it could not check in production, rather than throwing', async () => {
+    const stored = await hashPassword('hunter2');
+    const [, , , salt, derived] = stored.split('$');
+    expect(await verifyPassword('hunter2', `pbkdf2$sha256$600000$${salt}$${derived}`)).toBe(false);
   });
 
   it('treats a mangled hash as a failed login rather than a crash', async () => {

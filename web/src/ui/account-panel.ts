@@ -1,5 +1,5 @@
 /*
- * The account overlay: signing in, registering, and the two links that arrive by mail.
+ * The account overlay: signing in, choosing a name, registering, and the links that land here.
  * Copyright (C) 2026 Quadra Web contributors
  * Licensed under the GNU LGPL v2.1 or later. See LICENSE at the repo root.
  *
@@ -13,7 +13,7 @@
 
 import { apiMessage, type Account, type Api } from '../api.js';
 
-type Mode = 'signin' | 'register' | 'forgot' | 'reset' | 'account';
+type Mode = 'signin' | 'welcome' | 'register' | 'forgot' | 'reset' | 'account';
 
 export interface AccountPanelOptions {
   host: HTMLElement;
@@ -104,16 +104,17 @@ export class AccountPanel {
   }
 
   /**
-   * Open straight onto a link that arrived by mail.
+   * Open straight onto a link: one that arrived by mail, or Google's way back with a first
+   * sign-in still waiting for a name.
    *
-   * Both links land on a page as a query parameter rather than on a route of their own, so no
-   * route has to exist for them and whatever that page shows is already loading behind the
-   * panel. They point at `/`, but either page can honour one — see `readMailLink`.
+   * They land on a page as a query parameter rather than on a route of their own, so no route has
+   * to exist for them and whatever that page shows is already loading behind the panel. Either
+   * page can honour one — see `readSignInLink`.
    */
-  openFromLink(kind: 'verify' | 'reset', token: string): void {
+  openFromLink(kind: 'verify' | 'reset' | 'welcome', token: string): void {
     this.token = token;
-    if (kind === 'reset') {
-      this.show('reset');
+    if (kind !== 'verify') {
+      this.show(kind);
       return;
     }
     this.show('signin');
@@ -127,6 +128,12 @@ export class AccountPanel {
     });
   }
 
+  /** Back from Google without a sign-in: cancelled there, or refused here. */
+  signInFailed(): void {
+    this.show('signin');
+    this.say('Signing in with Google did not complete. Nothing was changed — try again?', 'bad');
+  }
+
   /* --- screens ----------------------------------------------------------- */
 
   private render(): void {
@@ -137,6 +144,8 @@ export class AccountPanel {
     switch (this.mode) {
       case 'signin':
         return this.renderSignIn();
+      case 'welcome':
+        return this.renderWelcome();
       case 'register':
         return this.renderRegister();
       case 'forgot':
@@ -150,21 +159,72 @@ export class AccountPanel {
 
   private renderSignIn(): void {
     this.title.textContent = 'Sign in';
-    const email = field('E-mail', 'email', 'username');
-    const password = field('Password', 'password', 'current-password');
-    const form = this.form([email, password], 'Sign in', async () => {
-      const res = await this.opts.api.login(email.input.value, password.input.value);
-      if (!res.ok) return apiMessage(res);
+    const { google, password } = this.opts.api.methods;
+
+    if (google) {
+      // A navigation, not a request: Google's pages come next, and then this page again.
+      const go = action('Sign in with Google', () =>
+        location.assign(this.opts.api.googleSignInUrl(location.pathname)),
+      );
+      go.className = 'play';
+      this.body.append(
+        go,
+        note(
+          'Google tells the board your address and nothing else it keeps. The name that goes ' +
+            'on the board is one you choose.',
+        ),
+      );
+    }
+
+    if (password) {
+      const email = field('E-mail', 'email', 'username');
+      const secret = field('Password', 'password', 'current-password');
+      const form = this.form([email, secret], 'Sign in', async () => {
+        const res = await this.opts.api.login(email.input.value, secret.input.value);
+        if (!res.ok) return apiMessage(res);
+        this.settle(res.player);
+        this.hide();
+        return null;
+      });
+      this.body.append(form);
+      this.switcher.append(
+        text('No account yet? '),
+        link('Register', () => this.show('register')),
+        text(' · '),
+        link('Forgotten your password?', () => this.show('forgot')),
+      );
+    }
+
+    if (!google && !password) {
+      // Either the board is down, or it is up with no way in configured — a development server
+      // with no Google client and passwords off. Only the first is the player's business.
+      const why = this.opts.api.reachable
+        ? 'This server has no way of signing in set up.'
+        : 'The board cannot be reached just now, so there is nothing to sign in to.';
+      this.body.append(note(`${why} The game plays without it — runs simply will not count.`));
+    }
+  }
+
+  /** A first Google sign-in: the player exists once they have a name, and not before. */
+  private renderWelcome(): void {
+    this.title.textContent = 'Choose your name';
+    const name = field('Name on the board', 'text', 'nickname');
+    const form = this.form([name], 'Start playing', async () => {
+      const res = await this.opts.api.finishGoogle(this.token, name.input.value);
+      if (!res.ok) {
+        if (res.code !== 'bad-token') return apiMessage(res);
+        this.switcher.replaceChildren(link('Sign in again', () => this.show('signin')));
+        return 'That sign-in has expired. Signing in again takes a moment.';
+      }
       this.settle(res.player);
-      this.hide();
+      this.say(`Welcome, ${res.player.displayName}. Your runs count from now on.`, 'ok');
+      setTimeout(() => this.hide(), 1800);
       return null;
     });
     this.body.append(form);
     this.switcher.append(
-      text('No account yet? '),
-      link('Register', () => this.show('register')),
-      text(' · '),
-      link('Forgotten your password?', () => this.show('forgot')),
+      text('It goes on the public board, so it need not be your real one. '),
+      text('3 to 20 characters.'),
     );
   }
 
@@ -239,12 +299,15 @@ export class AccountPanel {
     this.title.textContent = account.displayName;
     const lines = document.createElement('div');
     lines.className = 'readout';
-    lines.textContent = account.verified
-      ? `${account.email} · confirmed · your runs count`
-      : `${account.email} · not confirmed yet`;
+    lines.textContent = !account.verified
+      ? `${account.email} · not confirmed yet`
+      : account.password
+        ? `${account.email} · confirmed · your runs count`
+        : `${account.email} · signed in with Google · your runs count`;
     this.body.append(lines);
 
-    if (!account.verified) {
+    // Only where there is mail to send it with.
+    if (!account.verified && this.opts.api.methods.password) {
       this.body.append(
         action('Send the confirmation link again', () =>
           this.run(async () => {
@@ -271,14 +334,25 @@ export class AccountPanel {
     this.switcher.replaceChildren(
       link('Close this account', () => {
         this.title.textContent = 'Close this account';
-        const password = field('Password, to be sure', 'password', 'current-password');
+        // A password account proves it with the password. A Google one has none to ask for, so
+        // typing the name stands in: the session already says who this is, and what is being
+        // checked is that whoever is at the keyboard means it.
+        const proof = account.password
+          ? field('Password, to be sure', 'password', 'current-password')
+          : field('Your name on the board, to be sure', 'text', 'off');
+        const going = account.password
+          ? 'Your address and password go.'
+          : 'Your address goes, and the link to your Google account.';
         this.body.replaceChildren(
           note(
-            'Your address and password go. Your runs stay on the board without a name on them — ' +
-              'removing them would rewrite the standings of everyone who was ranked against you.',
+            `${going} Your runs stay on the board without a name on them — removing them ` +
+              'would rewrite the standings of everyone who was ranked against you.',
           ),
-          this.form([password], 'Close it for good', async () => {
-            const res = await this.opts.api.deleteAccount(password.input.value);
+          this.form([proof], 'Close it for good', async () => {
+            const value = proof.input.value;
+            const res = await this.opts.api.deleteAccount(
+              account.password ? { password: value } : { confirm: value },
+            );
             if (!res.ok) return apiMessage(res);
             this.settle(null);
             this.hide();

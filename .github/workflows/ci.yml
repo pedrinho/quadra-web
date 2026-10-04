@@ -24,6 +24,11 @@ jobs:
 
       - run: npm run typecheck
 
+      # Before the tests, not after: the server's tests load wrangler.toml, whose assets
+      # directory is web/dist, and on a fresh checkout that does not exist until the site is
+      # built. Locally it always happens to be there, which is how this went unnoticed.
+      - run: npm run build
+
       # The sound tests read web/public/assets/sounds.qsnd. That works here only because the
       # converted assets are committed rather than generated at build time -- the upstream
       # tree they come from is not vendored. See docs/FIDELITY.md.
@@ -32,7 +37,5 @@ jobs:
       # the migrations.
       - run: npm test
 
-      # The site has to build for the Worker to have anything to serve, and the bundle step is
-      # what proves the Worker can still link against the engine.
-      - run: npm run build
+      # The bundle step is what proves the Worker can still link against the engine.
       - run: npm run bundle --workspace quadra-server

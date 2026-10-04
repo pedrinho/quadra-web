@@ -15,7 +15,6 @@
  * and submitting somebody else's.
  */
 
-import { verify } from 'quadra-web/replay/verify';
 import { ByteReader, TapeError, decodeHeader } from 'quadra-web/replay/tape';
 import { SIM_VERSION } from 'quadra-web/replay/version';
 
@@ -123,7 +122,11 @@ export async function submitRun(env: Env, request: Request, now: number): Promis
   const wrongRules = unranked(header);
   if (wrongRules) return fail(wrongRules, 400);
 
-  const result = verify(bytes, { limits: { maxBytes: MAX_TAPE_BYTES } });
+  // Replayed in a Durable Object rather than here: this handler has 10 ms of CPU on the free
+  // plan and a long run needs several times that. One object per player, so two people
+  // submitting at once are not queued behind each other. See `verifier.ts`.
+  const verifier = env.VERIFIER.get(env.VERIFIER.idFromName(player.id));
+  const result = await verifier.check(bytes, MAX_TAPE_BYTES);
   if (!result.ok) return fail('unverifiable', 400, `${result.code} at frame ${result.frame}`);
   if (result.header.simVersion !== SIM_VERSION) return fail('unverifiable', 400, 'sim-version');
 

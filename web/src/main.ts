@@ -32,7 +32,7 @@ import {
   loadBackgrounds,
   paintGround,
   paintLettering,
-  readMailLink,
+  readSignInLink,
 } from './shell.js';
 
 async function main(): Promise<void> {
@@ -217,7 +217,7 @@ async function main(): Promise<void> {
 
   void api.refresh().then((who) => {
     identity.paint(who);
-    readMailLink(identity.account);
+    readSignInLink(identity.account);
   });
 
   /*

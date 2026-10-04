@@ -267,18 +267,21 @@ export function createIdentity(opts: {
 }
 
 /**
- * Both mailed links land on a page as a query parameter rather than on a route of their own, so
- * there is no route to add and the page is already loading behind the panel. The parameter is
- * stripped once read: a confirmation link is single-use, and leaving it in the address bar would
- * put it in history and in whatever gets shared from there.
+ * The links that land a player on a page mid-way through signing in: the two that arrive by mail,
+ * and Google's way back — `?welcome=` for a first sign-in that still needs a name, and
+ * `?signin=failed` for one that did not complete. All of them are a query parameter rather than a
+ * route of their own, so there is no route to add and the page is already loading behind the
+ * panel. The parameter is stripped once read: the tokens are single-use, and leaving one in the
+ * address bar would put it in history and in whatever gets shared from there.
  */
-export function readMailLink(account: AccountPanel): void {
-  const params = new URLSearchParams(location.search);
-  for (const kind of ['verify', 'reset'] as const) {
-    const token = params.get(kind);
+export function readSignInLink(account: AccountPanel): void {
+  if (takeParam('signin') === 'failed') {
+    account.signInFailed();
+    return;
+  }
+  for (const kind of ['verify', 'reset', 'welcome'] as const) {
+    const token = takeParam(kind);
     if (!token) continue;
-    params.delete(kind);
-    history.replaceState(null, '', location.pathname + stripped(params));
     account.openFromLink(kind, token);
     return;
   }

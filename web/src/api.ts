@@ -39,6 +39,14 @@ export interface Account {
   email: string;
   verified: boolean;
   createdAt: number;
+  /** False for an account that only signs in with Google: closing it asks for the name instead. */
+  password: boolean;
+}
+
+/** The ways in this deployment offers. A deployment that cannot send mail has no passwords. */
+export interface SignInMethods {
+  google: boolean;
+  password: boolean;
 }
 
 /** A row on the board. The score is what the server's replay of the tape produced. */
@@ -75,11 +83,27 @@ export class Api {
   account: Account | null = null;
   /** False once a request fails to land at all — the page says so rather than looking broken. */
   reachable = true;
+  /** Nothing until `/auth/me` has said otherwise: an unreachable board offers no way in. */
+  methods: SignInMethods = { google: false, password: false };
 
   async refresh(): Promise<Account | null> {
-    const res = await this.get<{ player: Account | null }>('/auth/me');
+    const res = await this.get<{ player: Account | null; methods?: SignInMethods }>('/auth/me');
     this.account = res.ok ? res.player : null;
+    if (res.ok && res.methods) this.methods = res.methods;
     return this.account;
+  }
+
+  /**
+   * Where to send the browser to sign in with Google. A navigation rather than a request: the
+   * flow goes through Google's own pages and comes back to `returnTo`.
+   */
+  googleSignInUrl(returnTo: string): string {
+    return `${BASE}/auth/google/start?return=${encodeURIComponent(returnTo)}`;
+  }
+
+  /** A first Google sign-in, completed by choosing the name that goes on the board. */
+  finishGoogle(token: string, displayName: string) {
+    return this.player('/auth/google/finish', { token, displayName });
   }
 
   register(email: string, password: string, displayName: string) {
@@ -111,8 +135,9 @@ export class Api {
     this.account = null;
   }
 
-  deleteAccount(password: string) {
-    return this.send<{ ok: true }>('DELETE', '/auth/me', { body: { password } });
+  /** A password account confirms with its password; a Google one with its board name. */
+  deleteAccount(proof: { password: string } | { confirm: string }) {
+    return this.send<{ ok: true }>('DELETE', '/auth/me', { body: proof });
   }
 
   /** A seed for a run that is going to count. */
@@ -249,6 +274,8 @@ export function apiMessage(failure: ApiFailure): string {
       return 'Pick something less guessable.';
     case 'bad-token':
       return 'That link has expired or has already been used.';
+    case 'bad-confirm':
+      return 'That is not the name on this account.';
     default:
       return failure.message ?? 'Something went wrong.';
   }

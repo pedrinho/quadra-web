@@ -31,7 +31,7 @@ import {
   loadBackgrounds,
   paintGround,
   paintLettering,
-  readMailLink,
+  readSignInLink,
   takeParam,
 } from './shell.js';
 
@@ -206,7 +206,7 @@ async function main(): Promise<void> {
   // which one is yours, so a board built first would paint that wrong and never correct it.
   const who = await api.refresh();
   identity.paint(who);
-  readMailLink(identity.account);
+  readSignInLink(identity.account);
   await records.refresh(fresh);
 
   /* Dev hook, as the stage has: audio is invisible from outside, and whether a replay is

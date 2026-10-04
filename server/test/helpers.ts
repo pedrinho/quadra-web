@@ -37,6 +37,8 @@ export async function reset(): Promise<void> {
     env.DB.prepare('DELETE FROM grants'),
     env.DB.prepare('DELETE FROM email_tokens'),
     env.DB.prepare('DELETE FROM sessions'),
+    env.DB.prepare('DELETE FROM identities'),
+    env.DB.prepare('DELETE FROM signups'),
     env.DB.prepare('DELETE FROM players'),
     env.DB.prepare('DELETE FROM rate_limits'),
   ]);
@@ -49,6 +51,8 @@ export interface CallOptions {
   ip?: string;
   raw?: BodyInit;
   headers?: Record<string, string>;
+  /** Bindings to change for this one request, e.g. to switch a sign-in method off. */
+  env?: Partial<typeof env>;
 }
 
 export interface Call {
@@ -75,7 +79,10 @@ export async function call(
   if (opts.raw !== undefined) init.body = opts.raw;
   else if (opts.body !== undefined) init.body = JSON.stringify(opts.body);
 
-  const response = await worker.fetch(new Request(`${ORIGIN}${path}`, init), env);
+  const response = await worker.fetch(
+    new Request(`${ORIGIN}${path}`, init),
+    opts.env ? { ...env, ...opts.env } : env,
+  );
 
   // Only JSON gets parsed. A tape comes back as bytes, and reading those as text would both
   // corrupt them and make the runtime say so at length.
@@ -94,10 +101,18 @@ export async function call(
 
 /** The session token out of a `Set-Cookie`, if the response set one. */
 export function tokenFrom(response: Response): string | null {
-  const header = response.headers.get('set-cookie');
-  if (!header || !header.startsWith(`${COOKIE}=`)) return null;
-  const value = header.slice(COOKIE.length + 1, header.indexOf(';'));
-  return value.length > 0 ? value : null;
+  return cookieFrom(response, COOKIE);
+}
+
+/** A cookie's value out of the response's `Set-Cookie`s, which may be several. */
+export function cookieFrom(response: Response, name: string): string | null {
+  // Workers' own `getAll`, which exists for exactly this header: `get` would join them with commas.
+  for (const header of response.headers.getAll('set-cookie')) {
+    if (!header.startsWith(`${name}=`)) continue;
+    const value = header.slice(name.length + 1, header.indexOf(';'));
+    return value.length > 0 ? value : null;
+  }
+  return null;
 }
 
 export const GOOD_PASSWORD = 'a-perfectly-fine-password';

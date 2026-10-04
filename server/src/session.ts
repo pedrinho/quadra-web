@@ -11,6 +11,7 @@
 import type { Env } from './env.js';
 import { cookies, clearCookie, setCookie } from './http.js';
 import { digest, newToken } from './ids.js';
+import { NO_PASSWORD } from './password.js';
 
 export const COOKIE = 'quadra_session';
 /** Thirty days. Long enough that a player who comes back next month is still themselves. */
@@ -24,6 +25,8 @@ export interface Player {
   displayName: string;
   verifiedAt: number | null;
   createdAt: number;
+  /** False for an account that only ever signed in with Google. */
+  hasPassword: boolean;
 }
 
 /** Mint a session and return the `Set-Cookie` that carries it. */
@@ -56,11 +59,12 @@ export async function currentPlayer(
   const row = await env.DB.prepare(
     `SELECT s.expires_at AS expires_at, s.last_seen_at AS last_seen_at,
             p.id AS id, p.email AS email, p.display_name AS display_name,
-            p.verified_at AS verified_at, p.created_at AS created_at
+            p.verified_at AS verified_at, p.created_at AS created_at,
+            p.password_hash <> ? AS has_password
        FROM sessions s JOIN players p ON p.id = s.player_id
       WHERE s.id = ?`,
   )
-    .bind(id)
+    .bind(NO_PASSWORD, id)
     .first<{
       expires_at: number;
       last_seen_at: number;
@@ -69,6 +73,7 @@ export async function currentPlayer(
       display_name: string;
       verified_at: number | null;
       created_at: number;
+      has_password: number;
     }>();
 
   if (!row) return null;
@@ -87,6 +92,7 @@ export async function currentPlayer(
     displayName: row.display_name,
     verifiedAt: row.verified_at,
     createdAt: row.created_at,
+    hasPassword: row.has_password === 1,
   };
 }
 

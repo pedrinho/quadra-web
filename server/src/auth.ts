@@ -13,11 +13,17 @@
  * reported plainly. There is nothing to protect.
  */
 
-import type { Env } from './env.js';
+import { signInMethods, type Env } from './env.js';
 import { clearCookie, clientIp, fail, json, readJson, str } from './http.js';
 import { digest, newId, newToken } from './ids.js';
 import { resetMail, send, verifyMail } from './mail.js';
-import { hashPassword, needsRehash, verifyPassword } from './password.js';
+import {
+  ITERATIONS,
+  NO_PASSWORD,
+  hashPassword,
+  needsRehash,
+  verifyPassword,
+} from './password.js';
 import { LIMITS, allow, sweep } from './rate-limit.js';
 import {
   COOKIE,
@@ -44,15 +50,16 @@ const SENT = { sent: true };
 
 /**
  * A hash of a password nobody knows, so that signing in to an address with no account spends the
- * same 600,000 iterations as signing in to one that exists. Without it, "no such address" answers
- * in a millisecond and "wrong password" in a few hundred, and the difference is a working probe.
+ * same `ITERATIONS` as signing in to one that exists. Without it, "no such address" answers in a
+ * millisecond and "wrong password" in many more, and the difference is a working probe.
  *
- * Checked in rather than generated at startup: deriving it would cost every cold start the same
- * 600,000 iterations, and there is nothing to hide here — knowing the salt of a password that was
- * never chosen gets an attacker nowhere. What matters is only that the work happens.
+ * Built from the constant rather than spelled out, so raising the count raises this with it. The
+ * salt and the derived half are fixed and need not be real: nothing can match them, and knowing
+ * the salt of a password that was never chosen gets an attacker nowhere. What matters is only
+ * that the work happens.
  */
 const NO_SUCH_ACCOUNT =
-  'pbkdf2$sha256$600000$fZ8kQq3rW1nXvTgYbHcJdA$Kx7pQmZ2vLnR8sT4wYhE6bNcF1jUgA0oPzXdVeMlSrI';
+  `pbkdf2$sha256$${ITERATIONS}$fZ8kQq3rW1nXvTgYbHcJdA$Kx7pQmZ2vLnR8sT4wYhE6bNcF1jUgA0oPzXdVeMlSrI`;
 
 export function publicPlayer(player: Player): Record<string, unknown> {
   return {
@@ -61,6 +68,8 @@ export function publicPlayer(player: Player): Record<string, unknown> {
     email: player.email,
     verified: player.verifiedAt !== null,
     createdAt: player.createdAt,
+    /** Whether closing the account asks for a password or for the board name. */
+    password: player.hasPassword,
   };
 }
 
@@ -231,7 +240,7 @@ export async function logout(env: Env, request: Request): Promise<Response> {
 
 export async function me(env: Env, request: Request, now: number): Promise<Response> {
   const player = await currentPlayer(env, request, now);
-  return json({ player: player ? publicPlayer(player) : null });
+  return json({ player: player ? publicPlayer(player) : null, methods: signInMethods(env) });
 }
 
 export async function forgot(env: Env, request: Request, now: number): Promise<Response> {
@@ -303,13 +312,21 @@ export async function deleteAccount(env: Env, request: Request, now: number): Pr
 
   const body = await readJson(request);
   if (!body.ok) return body.response;
-  const password = typeof body.value['password'] === 'string' ? body.value['password'] : '';
 
-  const row = await env.DB.prepare('SELECT password_hash FROM players WHERE id = ?')
-    .bind(player.id)
-    .first<{ password_hash: string }>();
-  if (!row || !(await verifyPassword(password, row.password_hash))) {
-    return fail('bad-credentials', 401);
+  if (player.hasPassword) {
+    const password = typeof body.value['password'] === 'string' ? body.value['password'] : '';
+    const row = await env.DB.prepare('SELECT password_hash FROM players WHERE id = ?')
+      .bind(player.id)
+      .first<{ password_hash: string }>();
+    if (!row || !(await verifyPassword(password, row.password_hash))) {
+      return fail('bad-credentials', 401);
+    }
+  } else {
+    // With no password to ask for, the board name stands in for it. The session already says
+    // who this is; what is being checked is that the person at the keyboard means it, and that
+    // the request was not the stray click of something else.
+    const typed = normalizeName(str(body.value, 'confirm', MAX_NAME * 4) ?? '');
+    if (!typed || nameKey(typed) !== nameKey(player.displayName)) return fail('bad-confirm', 401);
   }
 
   await env.DB.batch([
@@ -317,6 +334,7 @@ export async function deleteAccount(env: Env, request: Request, now: number): Pr
     env.DB.prepare('DELETE FROM sessions WHERE player_id = ?').bind(player.id),
     env.DB.prepare('DELETE FROM email_tokens WHERE player_id = ?').bind(player.id),
     env.DB.prepare('DELETE FROM grants WHERE player_id = ?').bind(player.id),
+    env.DB.prepare('DELETE FROM identities WHERE player_id = ?').bind(player.id),
     env.DB.prepare('DELETE FROM players WHERE id = ?').bind(player.id),
   ]);
 
@@ -378,17 +396,19 @@ async function consumeToken(
   return { player_id: row.player_id };
 }
 
-async function loadPlayer(env: Env, id: string): Promise<Player | null> {
+export async function loadPlayer(env: Env, id: string): Promise<Player | null> {
   const row = await env.DB.prepare(
-    'SELECT id, email, display_name, verified_at, created_at FROM players WHERE id = ?',
+    `SELECT id, email, display_name, verified_at, created_at, password_hash <> ? AS has_password
+       FROM players WHERE id = ?`,
   )
-    .bind(id)
+    .bind(NO_PASSWORD, id)
     .first<{
       id: string;
       email: string;
       display_name: string;
       verified_at: number | null;
       created_at: number;
+      has_password: number;
     }>();
   if (!row) return null;
   return {
@@ -397,5 +417,6 @@ async function loadPlayer(env: Env, id: string): Promise<Player | null> {
     displayName: row.display_name,
     verifiedAt: row.verified_at,
     createdAt: row.created_at,
+    hasPassword: row.has_password === 1,
   };
 }
