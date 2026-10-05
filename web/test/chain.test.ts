@@ -20,7 +20,7 @@ import { SIM_VERSION } from '../src/replay/version.js';
  * `npx vite-node tools/record-chain.ts`.
  */
 describe('the nine-step chain', () => {
-  const bytes = new Uint8Array(readFileSync(new URL('../public/assets/chain9.qtape', import.meta.url)));
+  const bytes = new Uint8Array(readFileSync(new URL('./fixtures/chain9.qtape', import.meta.url)));
 
   it('still verifies against this engine', () => {
     const result = verify(bytes);

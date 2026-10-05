@@ -48,33 +48,14 @@ const SRC = process.env.QUADRA_SRC ?? process.argv[2];
 
 /*
  * fond0-9 are the per-level playfield backdrops, and each carries the palette the blocks are
- * shaded from.
+ * shaded from. `gamepaus` is the badge laid over a paused board.
  *
- * The rest is what the page is built out of. `debuto` is the main menu screen exactly as it
- * shipped, and the page takes two things from it: the chrome QUADRA logo across the top, and
- * the background that `debut0` — the yellow "SINGLE-PLAYER GAME" lettering — was composed over,
- * which is what makes it possible to cut that lettering out (see render/lettering.ts). `debut8`
- * is the Ludus Design signature. `gamepaus` is the badge laid over a paused board, and `multi`
- * is a photograph with nothing painted on it, used as texture behind the stage.
- *
- * `debut3` is the menu's "Highscores" label, blitted at (235, 225) — the page has a section by
- * that name, so it gets to use the original's own word for it rather than setting the heading
- * in a face the original never printed it in. `hscore` is the highscore screen's photograph,
- * used as ground behind that section the way `multi` is used behind the stage.
- *
- * Only what is used is converted. The remaining menu labels and screens belong to menus this
- * port does not reproduce, and are left where they are.
+ * Only what is used is converted. The menu screens and their lettering belong to menus this
+ * port does not reproduce — the page is its own — and are left where they are.
  */
 const WANTED = [
   ...Array.from({ length: 10 }, (_, i) => `images/fond${i}.png`),
-  'images/black.png',
-  'images/debuto.png',
-  'images/debut0.png',
-  'images/debut3.png',
-  'images/debut8.png',
   'images/gamepaus.png',
-  'images/hscore.png',
-  'images/multi.png',
 ];
 
 /* A missing upstream checkout has to be fatal. The per-file skips below are fine for one
@@ -109,13 +90,10 @@ for (const rel of WANTED) {
   console.log(`  ${name.padEnd(10)} ${img.width}x${img.height}  ${(bytes.length / 1024) | 0} KB`);
 }
 
-/* The two interface faces (source/fonts.cc:26-35). `shrink` is how much each glyph overlaps
- * the next: 2 for the proportional face the interface writes in, 1 for the monospaced one the
- * original reserves for numbers, so a column of scores lines up. */
-for (const [name, shrink] of [
-  ['font', 2],
-  ['courrier', 1],
-] as const) {
+/* The proportional interface face (source/fonts.cc:26-35), which the board's rising score text
+ * is set in. `shrink` is how much each glyph overlaps the next. The original's monospaced
+ * `courrier` face is for menus this port does not reproduce. */
+for (const [name, shrink] of [['font', 2]] as const) {
   const fntSrc = join(SRC, 'fonts', `${name}.fnt`);
   if (!existsSync(fntSrc)) {
     console.warn(`  skip fonts/${name}.fnt (missing)`);

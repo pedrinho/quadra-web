@@ -55,7 +55,7 @@ const solution = searchSeed(SEED, { beam: KNOWN.beam, pieces: KNOWN.pieces });
 if (!solution) throw new Error(`seed ${SEED} does not chain`);
 
 const CHAIN = solution.cascade.steps;
-const OUT = new URL(`../public/assets/chain${CHAIN}.qtape`, import.meta.url).pathname;
+const OUT = new URL(`../test/fixtures/chain${CHAIN}.qtape`, import.meta.url).pathname;
 
 const game = new Game({ seed: SEED, shadow: true });
 const recorder = record(game, { startedAt: 0, checkpointInterval: 500 });
@@ -151,7 +151,7 @@ if (result.lines !== solution.cascade.lines) {
 }
 
 writeFileSync(OUT, bytes);
-console.log(`\nwrote ${bytes.length} bytes to public/assets/chain${CHAIN}.qtape`);
+console.log(`\nwrote ${bytes.length} bytes to test/fixtures/chain${CHAIN}.qtape`);
 console.log(
   `  seed ${SEED}, beam ${KNOWN.beam}, ${solution.build.length} pieces then the trigger\n` +
     `  chain ${bestChain}, ${result.lines} lines in one move, score ${result.score}, ` +

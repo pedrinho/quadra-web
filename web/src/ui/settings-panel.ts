@@ -4,8 +4,8 @@
  * Licensed under the GNU LGPL v2.1 or later. See LICENSE at the repo root.
  *
  * Stands in for `Menu_setup` (source/menu.cc:1025-1230), which draws the same settings into
- * the game's own framebuffer over images/setup.png. This port has no widget system yet, so
- * the panel is plain DOM over the canvas. The rebinding flow still follows the original:
+ * the game's own framebuffer over images/setup.png. Here it is a plain DOM dialog. The
+ * rebinding flow still follows the original:
  * a slot is armed, the next key pressed takes it, Escape cancels (menu.cc:1210-1230), and
  * "set all keys" walks the slots in the original's order (menu.cc:1177).
  */
@@ -157,10 +157,6 @@ export class SettingsPanel {
     return this.open;
   }
 
-  get isCapturing(): boolean {
-    return this.queue.length > 0;
-  }
-
   show(): void {
     if (this.open) return;
     this.open = true;
@@ -175,16 +171,6 @@ export class SettingsPanel {
     this.open = false;
     this.root.hidden = true;
     this.onVisibility?.(false);
-  }
-
-  toggle(): void {
-    if (this.open) this.hide();
-    else this.show();
-  }
-
-  dispose(): void {
-    window.removeEventListener('keydown', this.onKeyDown, true);
-    this.root.remove();
   }
 
   private capture(slots: Action[]): void {
@@ -271,7 +257,6 @@ export class SettingsPanel {
   }
 }
 
-/** One line describing the current bindings, for the help text under the canvas. */
 /** The controls as action and key pairs: the bound game actions, then the page's own keys. */
 export function bindingsList(settings: Settings): Array<[action: string, code: string]> {
   return [

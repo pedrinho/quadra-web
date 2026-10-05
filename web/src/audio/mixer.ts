@@ -72,11 +72,6 @@ export class WebAudioMixer implements Mixer {
     this.master.gain.value = HEADROOM * this.volume;
   }
 
-  /** Voices currently sounding — exposed so the voice cap can be observed. */
-  get activeVoices(): number {
-    return this.voices;
-  }
-
   /**
    * Browsers start an AudioContext suspended until a user gesture. Safe to call repeatedly.
    */

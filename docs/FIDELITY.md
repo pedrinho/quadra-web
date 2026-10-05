@@ -93,7 +93,7 @@ QUADRA_SRC=../../quadra-upstream npm run assets
 
 Output is byte-reproducible; if `git status` is dirty afterwards, something changed.
 
-Both conversions happen at build time for the same underlying reason — the browser's own decoders
+The image and sound conversions happen at build time for the same underlying reason — the browser's own decoders
 throw away exactly what the port needs:
 
 - **Images.** Browsers decode paletted PNGs straight to RGBA and discard the indices, but the
@@ -118,7 +118,7 @@ QUADRA_DUMP=1 QUADRADIR=. ./quadra
 ```
 
 The patch adds `dump_board_for_port()`, which prints the settled board as raw `block[]` bytes —
-high nibble colour, low nibble exposed-edge mask. `web/src/engine/dump.ts` parses that encoding
+high nibble colour, low nibble exposed-edge mask. `web/test/dump.ts` parses that encoding
 and `web/tools/import-dump.ts` replays a dumped position.
 
 A screenshot is not a substitute: it shows colours but not which cells are welded to which, and

@@ -7,8 +7,9 @@
 #
 # They are not compressed. Cloudflare compresses a known list of content types and raw palette
 # indices are not on it, so a backdrop is 307 KB on the wire. Only the first level's is on the
-# critical path (see main.ts), which is what made that acceptable rather than urgent; shipping
-# them pre-gzipped and inflating with DecompressionStream is the fix when it stops being.
+# critical path (see `loadBackgrounds` in src/shell.ts), which is what made that acceptable
+# rather than urgent; shipping them pre-gzipped and inflating with DecompressionStream is the
+# fix when it stops being.
 /assets/*
   Cache-Control: public, max-age=86400
   X-Content-Type-Options: nosniff

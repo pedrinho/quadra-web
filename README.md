@@ -98,8 +98,8 @@ imported rather than reimplemented, and the number that comes out of that is the
 leaderboard ever stores.
 
 Which means every row on the board is a replay, because it is literally the same artifact — and
-the *Verify* control beside each row will fetch it and re-run it in your browser, in front of you,
-and tell you what it got. If your machine and the server ever disagree, it says so.
+the *Watch* control beside each row fetches it and re-simulates it in your browser, in front of
+you. The score you watch it reach is your own machine's answer, not the server's word for it.
 
 Two things this deliberately does **not** claim. Verification proves that *these inputs, on this
 seed, produce this score* — not that a human produced the inputs. And the seed is issued by the

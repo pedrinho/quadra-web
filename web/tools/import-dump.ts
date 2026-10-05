@@ -21,7 +21,7 @@ import { readFileSync } from 'node:fs';
 import { Canvas } from '../src/engine/canvas.js';
 import { Bloc } from '../src/engine/bloc.js';
 import { boardToAscii, PLAY_LEFT, PLAY_TOP } from '../src/engine/board.js';
-import { parseDumps, applyDumpRows } from '../src/engine/dump.js';
+import { parseDumps, applyDumpRows } from '../test/dump.js';
 import { Executor, Overmind } from '../src/engine/modules.js';
 import { PlayerStamp, type PlayerEnv } from '../src/engine/player.js';
 import { CURRENT_NET_VERSION } from '../src/engine/net-version.js';

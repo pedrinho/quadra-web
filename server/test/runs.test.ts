@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { env } from 'cloudflare:test';
-import { fromBase64 } from 'quadra-web/replay/codec';
 import {
   ByteReader,
   decodeHeader,
@@ -19,7 +18,7 @@ import { seedsMatch } from '../src/runs.js';
  * browser's own test suite, and it is the only artifact in this repository that both engines
  * have an opinion about.
  */
-const tape = () => fromBase64(env.TEST_DEMO_TAPE);
+const tape = () => Uint8Array.from(atob(env.TEST_DEMO_TAPE), (c) => c.charCodeAt(0));
 const tapeSeed = () => decodeHeader(new ByteReader(tape())).header.seed.toString();
 
 /**

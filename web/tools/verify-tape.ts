@@ -4,14 +4,13 @@
  *   npx vite-node tools/verify-tape.ts run.qtape
  *   npx vite-node tools/verify-tape.ts run.txt --json     # machine-readable, exit 1 if invalid
  *
- * The file may be raw tape bytes or the base64 the browser keeps in localStorage — paste a
- * `tape` field straight out of `quadra.runs.v1` and this will read it. Which is the point of
- * having this at all: when a run is disputed, the answer is not an opinion, it is this command.
+ * The file may be raw tape bytes — `GET /v1/runs/<id>/tape` serves exactly that — or the same
+ * bytes as base64 text, for a recording pasted into a bug report. Which is the point of having
+ * this at all: when a run is disputed, the answer is not an opinion, it is this command.
  */
 
 import { readFileSync } from 'node:fs';
 import { TICK_MS } from '../src/engine/game.js';
-import { fromBase64 } from '../src/replay/codec.js';
 import { verify } from '../src/replay/verify.js';
 import { TapePlayer } from '../src/replay/playback.js';
 import { decodeTape, EventOp } from '../src/replay/tape.js';
@@ -35,7 +34,7 @@ if (!path) {
 }
 
 const raw = readFileSync(path);
-const bytes = looksBinary(raw) ? new Uint8Array(raw) : fromBase64(raw.toString('utf8').trim());
+const bytes = looksBinary(raw) ? new Uint8Array(raw) : new Uint8Array(Buffer.from(raw.toString('utf8').trim(), 'base64'));
 
 const started = performance.now();
 const result = verify(bytes);

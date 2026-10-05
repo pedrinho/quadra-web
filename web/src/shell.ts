@@ -27,10 +27,6 @@ export const el = <T extends HTMLElement>(id: string): T => {
   return found as T;
 };
 
-/** An element only some pages carry. */
-export const maybeEl = <T extends HTMLElement>(id: string): T | null =>
-  document.getElementById(id) as T | null;
-
 /** A cache of decoded artwork, so two callers asking for the same image fetch it once. */
 export function createImages(): (name: string) => Promise<QImage> {
   const images = new Map<string, Promise<QImage>>();
@@ -44,10 +40,9 @@ export function createImages(): (name: string) => Promise<QImage> {
   };
 }
 
-/** The build's version, in the colophon of whichever page carries one. */
+/** The build's version, in the About panel's colophon. */
 export function paintVersion(): void {
-  const version = maybeEl('version');
-  if (version) version.textContent = `port ${APP_VERSION}`;
+  el('version').textContent = `port ${APP_VERSION}`;
 }
 
 export interface Audio {
@@ -106,7 +101,7 @@ export function createAudio(): Audio {
  * The replay transport's sound control, over the one volume setting there is.
  *
  * A toggle rather than a second slider, and over the *saved* setting rather than a mute of its
- * own, so a replay silenced here is still silent in the next game and on the other page.
+ * own, so a replay silenced here is still silent in the next game and in every other view.
  */
 export function createMuting(
   settings: Settings,
@@ -161,7 +156,7 @@ export interface Identity {
   paint(who: Account | null): void;
 }
 
-/** The Sign in button and the panel behind it, in the masthead of both pages. */
+/** The Sign in button in the menu, and the panel behind it. */
 export function createIdentity(opts: {
   api: Api;
   onAccount: (who: Account | null) => void;

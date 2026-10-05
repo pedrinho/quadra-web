@@ -5,9 +5,9 @@
  * Licensed under the GNU LGPL v2.1 or later. See LICENSE at the repo root.
  *
  * Quadra draws into an 8-bit paletted surface and pushes a 256-colour palette alongside
- * it. Reproducing that rather than drawing RGBA sprites keeps Color::shade, palette
- * swapping per level, fades and index-0 transparency working exactly as they do in the
- * original — all of which are palette tricks that RGBA rendering would have to fake.
+ * it. Reproducing that rather than drawing RGBA sprites keeps Color::shade, the per-level
+ * palette swap, the line-clear flash and index-0 transparency working exactly as they do in
+ * the original — all of which are palette tricks that RGBA rendering would have to fake.
  */
 
 export const SCREEN_WIDTH = 640;
