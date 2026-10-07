@@ -80,14 +80,6 @@ Quadra is online. The solo game is unchanged; what is new is everywhere it now g
 - The backdrops load lazily. Only the first level's is on the critical path, instead of 3 MB of
   them in front of the first piece.
 - Both test suites pin the same score for the same committed recording, from opposite sides.
-
-### Removed
-
-- **The local leaderboard.** Scores lived in `localStorage` under `quadra.runs.v1`; there is one
-  board now and it is the online one. A guest can still play, and nothing is kept when they do.
-
-### Changed
-
 - **The board is its own page**, at `/records`, instead of a section you scroll past on the way
   down the stage. A board is a thing you link someone to, and a section could not be linked,
   reloaded into, or opened without the game loading behind it. The site is two documents now, so
@@ -129,6 +121,17 @@ Quadra is online. The solo game is unchanged; what is new is everywhere it now g
   A verdict that comes back after another game has started is no longer shown over that one, and
   no longer takes away its ranking either: the grant was cleared only once the answer arrived,
   by which time it could be the new game's.
+
+### Removed
+
+- **The local leaderboard.** Scores lived in `localStorage` under `quadra.runs.v1`; there is one
+  board now and it is the online one. A guest can still play, and nothing is kept when they do.
+- **Artwork nothing draws any more**: the menu screens, lettering and photographs the page was
+  once cut out of (`black`, `debuto`, `debut0/3/8`, `hscore`, `multi`), and the `courrier` face —
+  1.3 MB of every deployment. They are still regenerable from upstream.
+- The recordings only the tests read (`chain9`, `clean8/10/12`) moved to `web/test/fixtures/`,
+  and the C++ board-dump parser moved out of `src/engine/` into the tests, the only place it is
+  used. `replay/codec.ts` (base64 for a tape) went with the last thing that sent one as text.
 
 ### Fixed
 

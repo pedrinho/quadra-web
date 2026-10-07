@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { boardFromAscii, boardToAscii, Board } from '../src/engine/board.js';
-import { formatDump, parseDumps, applyDumpRows, DUMP_START, DUMP_END } from '../src/engine/dump.js';
+import { formatDump, parseDumps, applyDumpRows, DUMP_START, DUMP_END } from './dump.js';
 import { assertWeldInvariant, resolve } from '../src/engine/cascade.js';
 
 describe('board dump interchange', () => {

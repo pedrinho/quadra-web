@@ -31,9 +31,11 @@ export const TAPE_FORMAT_VERSION = 1;
  * tapes. If it cannot (a comment, a rename, a type), leave `SIM_VERSION` alone. Either way,
  * paste the digest the test prints in here.
  *
- * Last answered for `.rec` playback (net_version 20): **no**. Every branch it added is behind
+ * Last answered when the C++ board-dump parser moved out of `src/engine/` into the tests, the
+ * only place that used it: **no**. Nothing the simulation runs changed. Before that, for `.rec`
+ * playback (net_version 20), also no: every branch it added is behind
  * `netVersion < MODERN_RULES_FROM` or a demo byte source, and both default to what this build
  * already did — which `test/verify.test.ts` and `test/demo.test.ts` still agreeing is the
  * evidence for. `SIM_VERSION` stayed 1 and no stored recording moved.
  */
-export const SIM_SOURCE_HASH = '527e2f305723d419';
+export const SIM_SOURCE_HASH = 'be505b7c8322312f';

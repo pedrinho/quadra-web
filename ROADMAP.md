@@ -20,8 +20,8 @@ Hosted, with a leaderboard that cannot be lied to.
 The load-bearing idea is that **the leaderboard entry and the replay are the same artifact.** A
 score a client sends is worthless — anyone can POST a number — so the client submits the *input
 recording* and the server re-simulates it with the same engine module the browser ran. That
-recording is exactly what a replay is, and per 0.9.0 below it is also the netcode wire format, so
-one piece of work pays for three features.
+recording is exactly what a replay is, and per 0.9.0 below it is the starting point for the
+netcode wire format, so one piece of work pays for three features.
 
 - Tape format, recorder, playback, and a verifier written for hostile input
 - A guard that fails the build when `src/engine/` changes without someone deciding what that
@@ -31,7 +31,7 @@ one piece of work pays for three features.
 - Sign in with Google, or by e-mail and password where the deployment can send mail; **a guest
   can play, and nothing is kept**
 - Server-issued seeds, so a ranked run cannot be restarted until the pieces fall kindly
-- Every row on the board watchable, and verifiable in the browser against the server's score
+- Every row on the board watchable, re-simulated in the browser from the same recording
 
 ### 0.7.0 — garbage and attacks
 
@@ -57,6 +57,9 @@ Proves the versus plumbing with no network involved.
 - An authoritative server running the same engine module stack as the client
 - The fixed 100 Hz deterministic simulation is what makes this tractable: same seed and same
   inputs give the same board, so the wire only has to carry inputs
+- The server owns the clock. A solo tape records the client's own frame schedule, its pauses
+  and the time it skipped after a stall; a versus match can trust none of those, so its input
+  stream is stamped by tick and the tape format is adapted rather than reused as it stands
 - Transport is **WebSocket**. Quadra's 1998 TCP/UDP protocol, its packet catalogue and the Perl
   Qserv metaserver are **not** being ported — the constraints they were designed around no
   longer exist

@@ -115,13 +115,6 @@ export class Screen {
     this.level = -1;
   }
 
-  /** Hand the framebuffer to a screen with a palette of its own, such as a menu. */
-  usePalette(palette: Uint8Array): void {
-    this.fb.setPalette(palette);
-    this.scrollers?.invalidateFont();
-    this.invalidate();
-  }
-
   present(): void {
     this.fb.presentRegion(this.ctx, this.view.x, this.view.y, this.view.width, this.view.height);
   }

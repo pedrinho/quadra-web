@@ -59,7 +59,7 @@ if (process.argv[3] === 'search') {
 
 const known = KNOWN[LINES]!;
 const SEED = Number(process.argv[3] ?? known.seed);
-const OUT = new URL(`../public/assets/clean${LINES}.qtape`, import.meta.url).pathname;
+const OUT = new URL(`../test/fixtures/clean${LINES}.qtape`, import.meta.url).pathname;
 
 const solution = solveSeed(SEED, LINES, SEED === known.seed ? { tower: known.tower } : {});
 if (!solution) {
@@ -153,7 +153,7 @@ if (!game.canvas.isClean()) throw new Error('the board did not end clean');
 if (result.lines !== LINES) throw new Error(`cleared ${result.lines} lines, wanted ${LINES}`);
 
 writeFileSync(OUT, bytes);
-console.log(`\nwrote ${bytes.length} bytes to public/assets/clean${LINES}.qtape`);
+console.log(`\nwrote ${bytes.length} bytes to test/fixtures/clean${LINES}.qtape`);
 console.log(
   `  seed ${SEED}, storeys missing ${wellsToString(solution.shape.wells)} (fuse last)\n` +
     `  score ${result.score}, ${result.lines} lines in one move, ${result.frames} frames, ` +

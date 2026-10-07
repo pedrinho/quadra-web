@@ -206,12 +206,6 @@ export class ReplayViewer {
     this.onVisibility?.(false);
   }
 
-  dispose(): void {
-    this.pause();
-    window.removeEventListener('keydown', this.onKeyDown, true);
-    this.root.remove();
-  }
-
   /* --- transport ----------------------------------------------------------- */
 
   play(): void {

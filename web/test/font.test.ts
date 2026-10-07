@@ -10,7 +10,6 @@ const load = (name: string) => {
 };
 
 const normal = load('font');
-const courrier = load('courrier');
 
 /** A palette with a usable spread, so nearest-colour has something to choose between. */
 const palette = (() => {
@@ -47,11 +46,6 @@ describe('the original lettering', () => {
     const end = font.draw(fb, 'Score', 10, 10);
     // width() includes the trailing overlap the last glyph does not consume.
     expect(end - 10).toBe(font.width('Score') - normal.shrink);
-  });
-
-  it('keeps the monospaced face monospaced, so a column of numbers lines up', () => {
-    expect(courrier.width('0000')).toBe(courrier.width('1111'));
-    expect(courrier.width('1234567890')).toBe(courrier.width('0000000000'));
   });
 });
 

@@ -7,9 +7,9 @@
  * canvas the game uses, at the speed it was played. It is the page's only ambient motion, and it
  * is also the page's argument: what you are watching is what the leaderboard stores.
  *
- * It shows the best run in this browser, or a recording shipped with the build when there is
- * none yet, and the facts beside it come from verifying that recording rather than from anything
- * written down.
+ * It shows the top run on the board, or a recording shipped with the build when the board cannot
+ * be reached or is empty, and the facts beside it come from verifying that recording rather than
+ * from anything written down.
  */
 
 import { TICK_MS } from '../engine/game.js';

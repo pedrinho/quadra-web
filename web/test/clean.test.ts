@@ -25,7 +25,7 @@ describe.each([
   { lines: 12, seed: 77n, score: 111_760, frames: 1717, state: '8d524199c7446a88' },
 ])('the $lines-line clean', ({ lines, seed, score, frames, state }) => {
   const bytes = new Uint8Array(
-    readFileSync(new URL(`../public/assets/clean${lines}.qtape`, import.meta.url)),
+    readFileSync(new URL(`./fixtures/clean${lines}.qtape`, import.meta.url)),
   );
 
   it('still verifies against this engine', () => {

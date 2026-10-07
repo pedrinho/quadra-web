@@ -11,7 +11,7 @@
  * which, and welding is what decides how a cascade behaves.
  */
 
-import { Board, PLAY_HEIGHT, PLAY_LEFT, PLAY_TOP, PLAY_RIGHT, idx } from './board.js';
+import { Board, PLAY_HEIGHT, PLAY_LEFT, PLAY_TOP, PLAY_RIGHT, idx } from '../src/engine/board.js';
 
 export const DUMP_START = '=== QUADRA_BOARD_DUMP ===';
 export const DUMP_END = '=== END QUADRA_BOARD_DUMP ===';

@@ -3,8 +3,8 @@
  * Copyright (C) 2026 Quadra Web contributors
  * Licensed under the GNU LGPL v2.1 or later. See LICENSE at the repo root.
  *
- * Its own module because the board and the stage both want it, and they live on different pages
- * now — the hero should not have to import the records component to say how long a run took.
+ * Its own module because the board and the replay viewer both want it, and neither should have to
+ * import the other to say how long a run took.
  */
 
 /** `m:ss`, the length of a run. */
