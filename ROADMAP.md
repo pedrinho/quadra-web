@@ -51,6 +51,10 @@ Proves the versus plumbing with no network involved.
 - Attacks routed between them
 - A CPU player good enough to be worth playing
 - Hot-seat / shared-keyboard play
+- The museum's packet-form recordings play: 17 of its 19 are multiplayer games, or solo games the
+  later versions recorded as network traffic. Playing one means reading the 1998 packets for the
+  moves they carry (reading only; the protocol itself is still not ported, see 0.9.0), with
+  attacks and several boards in place. `canPlay` in `web/src/museum/recordings.ts` is the switch
 
 ### 0.9.0 — netcode
 

@@ -11,6 +11,16 @@ Quadra is online. The solo game is unchanged; what is new is everywhere it now g
 
 ### Added
 
+- **The museum**, at `/museum`: Quadra's first ten years. Ludus Design's own story, from Remtris
+  to the closing, taken from its archived news page; a sourced timeline; the founders, the
+  testers, the players and the clans; the two archived world top-100 lists with a chart; the
+  original game's menus, backdrops and sounds; curiosities from the source; and every source
+  linked. Its archive holds all nineteen surviving recordings for download, with their dates,
+  servers and players read from the files themselves (`web/test/museum.test.ts` checks every
+  line). The two in the old single-player form play on the board; the rest wait for multiplayer.
+  The pictures are frames of the original game replaying those recordings, taken with
+  `patches/0002-screenshot-frames.patch` and `museum/tools/shoot.sh`. The research is in
+  `museum/`, with the third-party texts kept out of the repository.
 - **The tape.** A recording of a run — the keys pressed and the frames they were pressed on, one
   record per rendered frame. `web/src/replay/`: the byte format, the recorder, playback, a state
   hasher and a verifier written for input that is assumed hostile. It never throws, it bounds its

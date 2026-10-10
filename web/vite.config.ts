@@ -62,14 +62,15 @@ logger.error = (msg, options) => {
 };
 
 /*
- * Four documents, one app: the stage at `/`, the board at `/records`, every run at
- * `/player-highscores` and `/about`. Once one has loaded, moving between them is the app's own
- * router and never reloads — but each still has to exist as a file, because a link can land on any
- * of them and Workers Assets serves `records.html` at `/records` with `not_found_handling = "none"`.
+ * Five documents, one app: the stage at `/`, the board at `/records`, every run at
+ * `/player-highscores`, then `/museum` and `/about`. Once one has loaded, moving between them is
+ * the app's own router and never reloads — but each still has to exist as a file, because a link
+ * can land on any of them and Workers Assets serves `records.html` at `/records` with
+ * `not_found_handling = "none"`.
  *
- * So the four are thin: a title, a description and a `data-route`. Everything inside `<body>` is
+ * So the five are thin: a title, a description and a `data-route`. Everything inside `<body>` is
  * `src/shell.html`, spliced in where each says `<!--shell-->`, so there is one copy of the app's
- * markup rather than four that drift apart.
+ * markup rather than five that drift apart.
  */
 const page = (name: string) => fileURLToPath(new URL(name, import.meta.url));
 const SHELL = page('src/shell.html');
@@ -104,6 +105,7 @@ export default defineConfig({
         records: page('records.html'),
         playerHighscores: page('player-highscores.html'),
         about: page('about.html'),
+        museum: page('museum.html'),
       },
     },
   },

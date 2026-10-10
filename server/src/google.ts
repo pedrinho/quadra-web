@@ -53,7 +53,7 @@ const FLOW_TTL_S = 10 * 60;
 const SIGNUP_TTL_MS = 30 * 60 * 1000;
 
 /** Where a sign-in may send the browser back to. Anything else would be an open redirect. */
-const RETURNS = new Set(['/', '/records']);
+const RETURNS = new Set(['/', '/records', '/museum']);
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();

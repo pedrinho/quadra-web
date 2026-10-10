@@ -120,6 +120,11 @@ describe('starting a sign-in', () => {
     expect(header).toContain('HttpOnly');
   });
 
+  it('can send the browser back to the museum', async () => {
+    const { flow } = await start('/museum');
+    expect(flow.split('.')[2]).toBe('/museum');
+  });
+
   it('will only send the browser back to a page of its own', async () => {
     for (const elsewhere of ['https://evil.example/', '//evil.example', '/v1/auth/me', '']) {
       const { flow } = await start(elsewhere);
