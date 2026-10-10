@@ -1,0 +1,102 @@
+Subject: [PATCH] Save frames of the running game, for the museum's pictures
+
+Applies to: upstream Quadra, master at d6c7226 (https://github.com/quadra-game/quadra)
+Apply with: git apply patches/0002-screenshot-frames.patch
+Build with: make CXXFLAGS="-g -O2 -Wno-reserved-user-defined-literal"
+            (source/update.cc predates C++11's rule on string literal suffixes)
+
+Like 0001, this is a modification of the licensed work, stated here because the
+LGPL requires it and because the upstream tree is not vendored. It is only ever
+built to take pictures; nothing it produces is shipped as code.
+
+What it does:
+
+- QUADRA_SHOT_DIR=<dir> saves the 640x480 paletted frame as <dir>/<frame>.bmp
+  every QUADRA_SHOT_EVERY game frames (1/100 s each, default 100). The frame is
+  the game's own surface, so a picture has no window chrome and no Retina
+  scaling: it is exactly what the game drew.
+- QUADRA_SHOT_TURBO=<ms> advances the game that many milliseconds per displayed
+  frame instead of following the wall clock, so a thirty-minute recording can be
+  photographed in a few minutes. Below 290, so the catch-up clamp never drops
+  time.
+- "-play <file>" reads the file from disk. In 1.3.0 it looks the name up in
+  quadra.res only, so it can play the four shipped demos and nothing else.
+
+Inert unless the variables are set. See museum/tools/shoot.sh.
+
+diff --git a/source/quadra.cc b/source/quadra.cc
+index 2d7ba0b..312cc99 100644
+--- a/source/quadra.cc
++++ b/source/quadra.cc
+@@ -412,6 +412,11 @@ void main_loop(Executor& menu, bool demo_verif) {
+ 
+ 	uint32_t acc(0);
+ 	bool reset_time(false);
++	// QUADRA_SHOT_TURBO=<ms> advances the game that many milliseconds per
++	// displayed frame instead of following the wall clock, so a long recording
++	// can be photographed without watching it in real time. Keep it under 290.
++	const char* const turbo_env(getenv("QUADRA_SHOT_TURBO"));
++	const uint32_t turbo(turbo_env ? strtoul(turbo_env, NULL, 10) : 0);
+ 	while (!menu.done) {
+ 		const uint32_t last(SDL_GetTicks());
+ 		if (demo_verif) {
+@@ -492,7 +497,7 @@ void main_loop(Executor& menu, bool demo_verif) {
+ 		case TIME_FAST:
+ 			acc += 80; break;
+ 		default:
+-			acc += SDL_GetTicks() - last;
++			acc += turbo ? turbo : SDL_GetTicks() - last;
+ 		}
+ 		if (acc > 300 && !video_is_dumb) {
+ 			overmind.framecount += acc - 300;
+@@ -775,7 +780,7 @@ int start_game() {
+ 		}
+ 	}
+ 	else {
+-		Res_compress *res = new Res_compress(ResName(buf), RES_TRY);
++		Res_compress *res = new Res_compress(buf, RES_TRY, false);
+ 		if(res->exist) {
+ 			menu.add(new Demo_multi_player(res));
+ 			// le 'delete res' est fait par ~Demo_multi_player
+diff --git a/source/video.cc b/source/video.cc
+index 174a17b..1c52b29 100644
+--- a/source/video.cc
++++ b/source/video.cc
+@@ -26,6 +26,10 @@
+ 
+ #include "SDL.h"
+ 
++#include <stdio.h>
++#include <stdlib.h>
++
++#include "overmind.h"
+ #include "sprite.h"
+ #include "video_dumb.h"
+ 
+@@ -99,8 +103,26 @@ public:
+ 
+     SDL_RenderCopy(renderer_, texture_, NULL, NULL);
+     SDL_RenderPresent(renderer_);
++    shoot();
+     ++framecount;
+   }
++  // Save the 640x480 paletted frame as a BMP every QUADRA_SHOT_EVERY game
++  // frames (1/100 s each) into QUADRA_SHOT_DIR. Inert unless that is set.
++  void shoot() {
++    static const char* const dir(getenv("QUADRA_SHOT_DIR"));
++    if (!dir)
++      return;
++    static const char* const every_env(getenv("QUADRA_SHOT_EVERY"));
++    static const uint32_t every(every_env ? strtoul(every_env, NULL, 10) : 100);
++    static uint32_t next(0);
++    const uint32_t now(overmind.framecount);
++    if (!every || now < next)
++      return;
++    char path[1024];
++    snprintf(path, sizeof(path), "%s/%08u.bmp", dir, now);
++    SDL_SaveBMP(surface_, path);
++    next = now - now % every + every;
++  }
+   virtual void dosetpal(const SDL_Color pal[256], int size) {
+     SDL_SetPaletteColors(surface_->format->palette, pal, 0, size);
+   }

@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Museum · Quadra</title>
+    <meta
+      name="description"
+      content="Quadra’s first ten years: Ludus Design, the world high scores, the clans, and the recordings that survive."
+    />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <meta name="theme-color" content="#121414" />
+
+    <!-- The two faces the first screen is set in. The other weights can wait for the stylesheet.
+         crossorigin is required on font preloads even same-origin, or the fetch is made twice. -->
+    <link
+      rel="preload"
+      href="/assets/fonts/SofiaSans-Regular-latin.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      href="/assets/fonts/SofiaSansExtraCondensed-Light-latin.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+  </head>
+  <!-- One of five doors into the same app; see vite.config.ts. The route is where it opens. -->
+  <body>
+<!--shell-->
+    <script type="module" src="/src/app.ts"></script>
+  </body>
+</html>

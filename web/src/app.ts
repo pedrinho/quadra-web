@@ -1,5 +1,5 @@
 /*
- * Browser entry point: the whole app, whichever of its four documents it was loaded through.
+ * Browser entry point: the whole app, whichever of its five documents it was loaded through.
  * Copyright (C) 2026 Quadra Web contributors
  * Licensed under the GNU LGPL v2.1 or later. See LICENSE at the repo root.
  *
@@ -32,6 +32,8 @@ import { record, type TapeRecorder } from './replay/recorder.js';
 import { parseRec, RecError, recRefusal } from './replay/rec.js';
 import { RecPlayer } from './replay/rec-playback.js';
 import { Router, type Route } from './router.js';
+import type { Museum } from './ui/museum.js';
+import { findRecording, recordingUrl, type MuseumRecording } from './museum/recordings.js';
 import {
   createAudio,
   createIdentity,
@@ -48,6 +50,7 @@ const TITLES: Record<Route, string> = {
   play: 'Quadra, the 1998 puzzle game in your browser',
   board: 'Leaderboard · Quadra',
   runs: 'Every run · Quadra',
+  museum: 'Museum · Quadra',
   about: 'How it works · Quadra',
 };
 
@@ -162,12 +165,38 @@ async function main(): Promise<void> {
     idle: el('play-idle'),
     game: el('play-game'),
     board: el('view-board'),
+    museumWatch: el('museum-watch'),
     about: el('view-about'),
   };
 
+  /*
+   * The museum takes the board's place and the panel's, because a room of tables and 640x480
+   * pictures does not fit in a panel. Watching one of its recordings gives both back: the board
+   * plays it, and the panel says what it is and leads back to the room.
+   */
+  const app = document.querySelector<HTMLElement>('.app')!;
+  const museumHost = el('view-museum');
+  let museum: Museum | null = null;
+  /** What is on the board while the museum is the route, or null when nothing is. */
+  let museumWatching: MuseumRecording | 'file' | null = null;
+
   const renderPanel = (): void => {
-    const shown = route === 'play' ? (playing ? 'game' : 'idle') : isList(route) ? 'board' : 'about';
+    const shown =
+      route === 'play'
+        ? playing
+          ? 'game'
+          : 'idle'
+        : isList(route)
+          ? 'board'
+          : route === 'museum'
+            ? museumWatching
+              ? 'museumWatch'
+              : null
+            : 'about';
     for (const [name, section] of Object.entries(sections)) section.hidden = name !== shown;
+    app.classList.toggle('is-museum', route === 'museum');
+    app.classList.toggle('is-watching', route === 'museum' && museumWatching !== null);
+    museumHost.hidden = route !== 'museum';
     const nav = isList(route) ? 'board' : route;
     for (const a of document.querySelectorAll<HTMLElement>('.menu a[data-nav]')) {
       if (a.dataset['nav'] === nav) a.setAttribute('aria-current', 'page');
@@ -220,6 +249,12 @@ async function main(): Promise<void> {
         return;
       }
       records.setWatching(null);
+      if (museumWatching) {
+        museumWatching = null;
+        renderPanel();
+        // Back in the room the recording was opened from, on the control that opened it.
+        if (route === 'museum') museum?.unpark();
+      }
       if (!playing) {
         hero.paint();
         if (!matchMedia('(prefers-reduced-motion: reduce)').matches) hero.start();
@@ -520,6 +555,8 @@ async function main(): Promise<void> {
     route = next;
     document.title = TITLES[next];
     if (previous === 'play' && next !== 'play') pauseForAway();
+    if (previous === 'museum' && next !== 'museum' && !museumWatching) museum?.park();
+    if (next === 'museum') void openMuseum();
     // A replay belongs to the view it was opened from — except between the two lists, which are
     // one view with a switch on it.
     if (viewer.isOpen && !(isList(previous) && isList(next))) viewer.hide();
@@ -529,8 +566,11 @@ async function main(): Promise<void> {
     }
     renderPanel();
     syncKeyboard();
+    // The museum comes back where it was left, scrolled and focused as it was.
+    if (next === 'museum' && museum?.unpark()) return;
     // For a screen reader the panel *is* the page that changed, so focus goes to its heading.
-    const heading = document.querySelector<HTMLElement>('.pane .view:not([hidden]) h1');
+    const heading =
+      next === 'museum' ? museum?.heading ?? null : document.querySelector<HTMLElement>('.pane .view:not([hidden]) h1');
     if (heading) {
       heading.tabIndex = -1;
       heading.focus({ preventScroll: true });
@@ -582,7 +622,65 @@ async function main(): Promise<void> {
     }
   });
 
-  openRecDemos(el<HTMLInputElement>('rec-file'), el('rec-note'), viewer);
+  const openRec = openRecDemos(el<HTMLInputElement>('rec-file'), el('rec-note'), viewer, () => {
+    if (route !== 'museum') return;
+    if (!museumWatching) museum?.park();
+    museumWatching = 'file';
+    paintMuseumWatch(null);
+    renderPanel();
+  });
+
+  /* --- the museum ---------------------------------------------------------- */
+
+  /** The panel beside the board while a museum recording plays. */
+  const paintMuseumWatch = (rec: MuseumRecording | null): void => {
+    el('museum-watch-title').textContent = rec ? rec.title : 'A recording from your disk';
+    el('museum-watch-when').textContent = rec
+      ? `Played ${rec.played}.`
+      : 'Watched here, not uploaded anywhere.';
+    el('museum-watch-note').textContent = rec?.note ?? '';
+    el('museum-watch-meta').textContent = rec ? `Quadra ${rec.quadra}. ${rec.source}.` : '';
+  };
+
+  const watchMuseumRecording = async (rec: MuseumRecording): Promise<void> => {
+    try {
+      const res = await fetch(recordingUrl(rec));
+      if (!res.ok) throw new Error(`${res.status}`);
+      const demo = await parseRec(new Uint8Array(await res.arrayBuffer()));
+      const refusal = recRefusal(demo);
+      if (refusal) throw new Error(refusal);
+      const player = new RecPlayer(demo);
+      if (!museumWatching) museum?.park();
+      museumWatching = rec;
+      paintMuseumWatch(rec);
+      viewer.showSource(player, rec.title);
+      renderPanel();
+    } catch (err) {
+      // The museum's own files are checked by test/museum.test.ts, so this is a deploy gone wrong
+      // or a connection dropped, not a visitor's problem to solve.
+      console.warn(`could not play ${rec.file}:`, err);
+    }
+  };
+
+  el('museum-back').addEventListener('click', () => viewer.hide());
+
+  /** Built on first visit, from a chunk of its own: Play never loads the museum. */
+  async function openMuseum(): Promise<void> {
+    if (!museum) {
+      const { Museum } = await import('./ui/museum.js');
+      museum ??= new Museum({
+        host: museumHost,
+        onWatch: (rec) => void watchMuseumRecording(rec),
+        onOpenFile: (file) => void openRec(file),
+      });
+      museum.show();
+      // `enter` looked for this heading before the chunk had arrived.
+      if (route === 'museum' && !museumWatching) museum.heading?.focus({ preventScroll: true });
+    }
+    const id = takeParam('watch');
+    const rec = id ? findRecording(id) : undefined;
+    if (rec) void watchMuseumRecording(rec);
+  }
 
   /* --- first paint --------------------------------------------------------- */
 
@@ -599,6 +697,7 @@ async function main(): Promise<void> {
   });
   void loadTopRuns();
   void startAttract();
+  if (route === 'museum') void openMuseum();
 
   /* Dev hook: requestAnimationFrame is throttled to a stop in a background tab, so automated
    * checks cannot drive the game through the normal loop. */
@@ -651,7 +750,12 @@ async function main(): Promise<void> {
  * this engine still plays the game the 1998 one played, which is a question only somebody else's
  * recording can answer.
  */
-function openRecDemos(input: HTMLInputElement, note: HTMLElement, viewer: ReplayViewer): void {
+function openRecDemos(
+  input: HTMLInputElement,
+  note: HTMLElement,
+  viewer: ReplayViewer,
+  onOpened: () => void,
+): (file: File) => Promise<void> {
   const say = (text: string, bad = false): void => {
     note.textContent = text;
     note.classList.toggle('is-error', bad);
@@ -672,6 +776,7 @@ function openRecDemos(input: HTMLInputElement, note: HTMLElement, viewer: Replay
       const player = new RecPlayer(demo);
       const who = demo.info?.name.trim();
       viewer.showSource(player, who ? `${who}, ${file.name}` : file.name);
+      onOpened();
       say(invitation);
     } catch (err) {
       // A `.rec` comes off a stranger's disk, so failing to read one is expected traffic rather
@@ -707,6 +812,8 @@ function openRecDemos(input: HTMLInputElement, note: HTMLElement, viewer: Replay
     document.body.classList.remove('is-dropping');
     void openRec(file);
   });
+
+  return openRec;
 }
 
 main().catch((err: unknown) => {

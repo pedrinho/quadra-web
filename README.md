@@ -52,9 +52,12 @@ and line a behaviour came from — `web/src/engine/random.ts:2` cites `source/ra
 Quadra 1.3.0**, not to files in this repository. Please keep them intact: they are both the licence
 trail and the map back to the reference implementation.
 
-**Changes to the original**, as the LGPL requires be stated: one, a debug board dump used to
-transfer real in-game positions into the port. It is preserved as
-[`patches/0001-dump-board-for-port.patch`](patches/0001-dump-board-for-port.patch). Nothing else
+**Changes to the original**, as the LGPL requires be stated: two, neither of them shipped.
+A debug board dump used to transfer real in-game positions into the port,
+[`patches/0001-dump-board-for-port.patch`](patches/0001-dump-board-for-port.patch); and a frame
+saver that photographs the game replaying a recording, for the museum's pictures, which also lets
+`-play` open a file from disk,
+[`patches/0002-screenshot-frames.patch`](patches/0002-screenshot-frames.patch). Nothing else
 upstream was modified.
 
 ---
@@ -194,12 +197,15 @@ web/src/render/     indexed-palette framebuffer and board drawing
 web/src/replay/     the tape format, the recorder, playback, and the verifier
 web/src/audio/      mixer, sample bank, event-to-sound mapping
 web/src/input/      keyboard and DAS
-web/src/ui/         the page's own controls: the board, the panels, the stage
+web/src/ui/         the page's own controls: the board, the panels, the stage, the museum
+web/src/museum/     what the museum says, and the recordings it holds
 web/public/assets/  the original art and sound, converted (see Licensing)
+web/public/museum/  the museum's recordings, pictures, and the game's art and sound as shipped
 web/test/           tests, including fixtures captured from the real game
 server/src/         the Worker: accounts, seed grants, submission, the board
 server/migrations/  the D1 schema
-patches/            the one modification made to the upstream C++
+patches/            the two modifications made to the upstream C++
+museum/             the research behind the museum, and every source it used
 docs/FIDELITY.md    hazards, deliberate divergences, regenerating from upstream
 ```
 

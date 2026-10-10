@@ -9,7 +9,7 @@
  * still says where you are, so Back and a copied link both work.
  */
 
-export type Route = 'play' | 'board' | 'runs' | 'about';
+export type Route = 'play' | 'board' | 'runs' | 'museum' | 'about';
 
 /** The address each view lives at. The `.html` spellings are what `vite dev` serves them as. */
 const PATHS: Record<string, Route> = {
@@ -19,6 +19,8 @@ const PATHS: Record<string, Route> = {
   '/records.html': 'board',
   '/player-highscores': 'runs',
   '/player-highscores.html': 'runs',
+  '/museum': 'museum',
+  '/museum.html': 'museum',
   '/about': 'about',
   '/about.html': 'about',
 };

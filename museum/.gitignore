@@ -1,0 +1,12 @@
+# Third-party pages and texts, kept here for reference only. Their addresses are in sources.md:
+# the public repository links to them rather than republishing them.
+writing/*
+!writing/hellfire-and-quadra.md
+highscores/*.raw.html
+
+# Originals of what web/public/museum/ publishes. One of them still carries the network addresses
+# its published copy has blanked.
+recordings/*/*.rec
+recordings/*/*.qrec
+recordings/*/*.zip
+pictures/

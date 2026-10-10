@@ -1,5 +1,5 @@
     <!--
-      The app, the same in all four documents (see vite.config.ts). A menu fixed on the left, the
+      The app, the same in all five documents (see vite.config.ts). A menu fixed on the left, the
       board fixed in the middle, and a panel on the right that changes with what you are doing.
       Moving between Play, Leaderboard and About swaps the panel and nothing else: the board keeps
       its pixels, the sound keeps playing, and nothing is fetched twice.
@@ -31,6 +31,12 @@
               <path d="M4 20v-7h5v7M9.5 20V8h5v12M15 20v-9h5v9M3 20h18" />
             </svg>
             <span>Leaderboard</span>
+          </a>
+          <a href="/museum" data-link data-nav="museum">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3 9.5L12 4l9 5.5zM5 20h14M3 20h18M6.5 10v8M10 10v8M14 10v8M17.5 10v8" />
+            </svg>
+            <span>Museum</span>
           </a>
           <a href="/about" data-link data-nav="about">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true">
@@ -150,6 +156,19 @@
           </div>
         </section>
 
+        <!-- A museum recording on the board: what it is, and the way back to the room it came from -->
+        <section class="view" id="museum-watch" aria-labelledby="museum-watch-title" hidden>
+          <div class="pane-body">
+            <h1 class="title" id="museum-watch-title"></h1>
+            <p class="lede" id="museum-watch-when"></p>
+            <p class="about-note" id="museum-watch-note"></p>
+            <p class="hint left" id="museum-watch-meta"></p>
+          </div>
+          <div class="pane-foot">
+            <button class="btn btn-ghost btn-wide" type="button" id="museum-back">Back to the museum</button>
+          </div>
+        </section>
+
         <!-- About -->
         <section class="view" id="view-about" aria-labelledby="about-title" hidden>
           <div class="pane-body">
@@ -202,4 +221,9 @@
           </div>
         </section>
       </aside>
+
+      <!-- The museum, which needs more room than the panel has: it takes the board's place and the
+           panel's, and gives them back when one of its recordings is watched. Filled by
+           ui/museum.ts the first time it is opened. -->
+      <section class="museum" id="view-museum" aria-label="Museum" hidden></section>
     </div>

@@ -1,0 +1,26 @@
+The museum's files are not original work of the Quadra Web project.
+
+art/      Menus, backdrops and the logo from Quadra's own images/ folder, unchanged PNGs.
+sounds/   Six of Quadra's own sound samples, unchanged WAVs.
+
+          Quadra                  (c) 1998-2000 Ludus Design
+                                  (c) 2006 Pierre Phaneuf and contributors
+          Upstream source         https://github.com/quadra-game/quadra
+          License                 GNU LGPL, version 2.1 or later
+
+shots/    ludus-1999-*.jpg are the three screenshots Ludus Design published on its own site
+          (www.ludusdesign.com/images/quadra_shot0-2.jpg), recovered from the Wayback Machine.
+          The PNGs are frames of Quadra 1.3.0, built from source in 2026 with
+          patches/0002-screenshot-frames.patch, replaying recordings from rec/. Each is the
+          game's own 640x480 frame, unscaled.
+
+rec/      Recordings written by the game itself, kept by the people who played them or
+          published by them: the four demos from inside quadra.res, three files attached to
+          Google Code bug reports in 2008, one from a fan site, one the world high-score server
+          stored, and others from a private collection. Their provenance, file by file, is in
+          src/museum/recordings.ts and museum/recordings/CATALOG.md. Every file is byte for byte
+          as found except issue4-local0.qrec, in which the player's network addresses, written
+          into it by the game, are replaced with x's.
+
+They are redistributed under the same LGPL-2.1-or-later licence as the game. The words quoted
+on the museum page belong to their authors and are linked to where they were published.
